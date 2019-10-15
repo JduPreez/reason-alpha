@@ -1,0 +1,1 @@
+sqlline --verbose=true -u jdbc:ignite:thin://127.0.0.1/
