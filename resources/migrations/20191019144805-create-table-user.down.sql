@@ -1,0 +1,3 @@
+DROP TABLE IF EXISTS "REASON-ALPHA".user;
+;;--
+DROP INDEX IF EXISTS idx_user_user_name;

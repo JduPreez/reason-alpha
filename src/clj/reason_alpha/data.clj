@@ -6,7 +6,7 @@
 
 (defn db
   ([]
-   (jdbc/get-connection db-conf))
-  ([db-conf]
-   (jdbc/get-connection db-conf)))
+   (jdbc/get-connection db-config))
+  ([conf]
+   (jdbc/get-connection conf)))
 
