@@ -11,7 +11,8 @@
                  [org.apache.ignite/ignite-spring "2.7.5"]
                  [org.apache.ignite/ignite-spring-data "2.7.5"]
                  [migratus "1.2.6"]
-                 [org.clojure/java.jdbc "0.7.10"]] #_[org.slf4j/slf4j-log4j12 "1.7.28"]
+                 [org.clojure/java.jdbc "0.7.10"]
+                 [org.slf4j/slf4j-log4j12 "1.7.29"]]
 
   :main ^:skip-aot reason-alpha.core
 

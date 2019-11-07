@@ -1,15 +1,14 @@
-(ns reason-alpha.repositories)
+(ns reason-alpha.repositories
+  (:require [reason-alpha.infrastructure.db :as db]))
 
-(defn to-entity [query-result]
-  nil)
-#_(-> [[:security/name          := "Donnie Brasco"]]
-     [:and
-      [:security/owner-user-id :< 898]]
-    (to-sql)
-    (to-entity))
+(defn add! [entity]
+  0)
 
-(defprotocol Repository
-  (add'       [repo entity])  
-  (remove'    [repo id])  
-  (get'       [repo spec])  
-  (get-by-id' [repo id]))
+(defn remove! [spec]
+  0)
+
+(defn get>> [spec]
+  (db/query spec))
+
+(defn get> [spec]
+  (db/query spec))
