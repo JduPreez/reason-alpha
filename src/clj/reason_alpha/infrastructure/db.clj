@@ -20,16 +20,23 @@
          (string/replace #"_" "-")
          keyword) val]))
 
+(defn- add-schema [table]
+  (str "\"" db-schema "\"." table))
+
+(defn- table-name-str [table]
+  (string/replace table #"-" "_"))
+
 (defn- table-name [keywrd]
   (-> (namespace keywrd)
-      (string/replace #"-" "_")))
+      table-name-str))
+
+(defn- full-table-name-str [table]
+  (-> (table-name-str table)
+      add-schema))
 
 (defn- full-table-name [keywrd]
   (-> (table-name keywrd)
-      (#(str "\"" db-schema "\"." %))))
-
-  #_(-> (str db-schema "." (namespace keywrd))
-        (string/replace #"-" "_"))
+      add-schema))
 
 (defn- column-name [keywrd]
   (-> (name keywrd)
@@ -39,7 +46,7 @@
 (defn- combine-name [keywrd]
   (string/upper-case (name keywrd)))
 
-(defn to-query
+(defn- to-query
   "Only supports simple equality comparison conditions & non-nested combinators (AND/OR)"
   [spec]
   (reduce (fn [query condition]
@@ -60,7 +67,6 @@
                                     (first query))]
               (cond (and  is-cond (= children 3))
                     (let [[table-column comparison value] condition
-                          ;tbl                             (full-table-name table-column)
                           col                             (column-name table-column)
                           comp                            (name comparison)
                           sql                             (str (default-sql-if table-column)
@@ -72,7 +78,6 @@
 
                     (and is-cond (= children 4))
                     (let [[combine table-column comparison value] condition
-                          ;tbl                                     (full-table-name table-column)
                           col                                     (column-name table-column)
                           comp                                    (name comparison)
                           sql                                     (str (default-sql-if table-column)
@@ -100,15 +105,43 @@
   (->> (jdbc/query db-config (to-query query-spec))
        (map map-row)))
 
+(defn insert-by-table! [[table attrs]]
+  [(full-table-name-str table) (apply hash-map
+                                      (flatten attrs))]
+  #_(jdbc/insert! (full-table-name-str table)
+                  (apply hash-map
+                         (flatten attrs))))
+
+; TODO: Remember to generate PK value - Ignite shortcoming
+(defn insert! [entity]
+  (->> (seq entity)
+       (group-by (fn [[attr _]] (namespace attr)))
+       seq
+       (map insert-by-table!)))
+
+(defn update! [entity] nil)
+
+(defn delete! [entity] nil)
+
 (comment
+  (namespace "security")
+  (apply hash-map [[:security/id 1] [:security/owner-user-id 5] [:security/name "Facebook"]])
+
+  (insert! {:security/id            1
+            :security/name          "Facebook"
+            :security/owner-user-id 5
+            :user/id                4
+            :user/name              "Frikkie"
+            :user/email             "j@j.com"})
+
   (map-row {:id                 2
             :name               "Facebook"
             :owner_user_id      345
             :reason_alpha_table "security"})
 
   (jdbc/query db-config "SELECT 'security' table, security.*, 'user' table, user.user_name name FROM \"REASON-ALPHA\".security JOIN \"REASON-ALPHA\".user ON user.id = security.owner_user_id")
-  
-  (jdbc/insert-multi! db-config "\"REASON-ALPHA\".security" 
+
+  (jdbc/insert-multi! db-config "\"REASON-ALPHA\".security"
                       [{:id            1
                         :name          "Facebook"
                         :owner_user_id 1}

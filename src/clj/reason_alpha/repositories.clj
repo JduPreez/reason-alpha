@@ -2,7 +2,7 @@
   (:require [reason-alpha.infrastructure.db :as db]))
 
 (defn add! [entity]
-  0)
+  )
 
 (defn remove! [spec]
   0)
@@ -11,4 +11,4 @@
   (db/query spec))
 
 (defn get> [spec]
-  (db/query spec))
+  (first (db/query spec)))
