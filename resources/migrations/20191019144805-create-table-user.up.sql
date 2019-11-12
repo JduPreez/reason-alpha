@@ -1,5 +1,5 @@
 CREATE TABLE IF NOT EXISTS "REASON-ALPHA".user (
-  id          bigint PRIMARY KEY,
+  id          uuid PRIMARY KEY,
   user_name   varchar,
   email       varchar);
 --;;

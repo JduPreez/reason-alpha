@@ -1,6 +1,6 @@
 (ns reason-alpha.data.migrations
   (:require [migratus.core :as migratus]
-            [reason-alpha.infrastructure.db :as db]))
+            [reason-alpha.data.db :as db]))
 
 (defn config [] 
   {:store                :database

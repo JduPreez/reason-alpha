@@ -1,9 +1,9 @@
 CREATE TABLE IF NOT EXISTS "reason-alpha".trade_pattern (
-  id          int PRIMARY KEY,
+  id          uuid PRIMARY KEY,
   name        varchar,
   description varchar,
-  parent_id   int,
-  user_id     bigint);
+  parent_id   uuid,
+  user_id     uuid);
 --;;
 CREATE INDEX IF NOT EXISTS idx_trade_pattern_name ON "REASON-ALPHA".trade_pattern (name);
 --;;

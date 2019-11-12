@@ -1,5 +1,5 @@
-CREATE TABLE IF NOT EXISTS "reason-alpha".time_frame (
-  id          int PRIMARY KEY,
+CREATE TABLE IF NOT EXISTS "REASON-ALPHA".time_frame (
+  id          uuid PRIMARY KEY,
   name        varchar
 );
 --;;

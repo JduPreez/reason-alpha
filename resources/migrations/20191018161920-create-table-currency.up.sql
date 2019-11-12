@@ -1,5 +1,5 @@
 CREATE TABLE IF NOT EXISTS "reason-alpha".currency (
-  id          int PRIMARY KEY,
+  id          uuid PRIMARY KEY,
   name        varchar,
   code        varchar
 );

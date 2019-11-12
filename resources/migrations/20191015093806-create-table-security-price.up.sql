@@ -1,6 +1,6 @@
 CREATE TABLE IF NOT EXISTS "REASON-ALPHA".security_price (
-  id          bigint PRIMARY KEY,
-  security_id bigint,
+  id          uuid PRIMARY KEY,
+  security_id uuid,
   date        timestamp,
   openp       double,
   high        double,

@@ -1,4 +1,5 @@
-(ns reason-alpha.infrastructure.db
+(ns reason-alpha.data.db
+  (:import [com.github.f4b6a3.uuid UuidCreator])
   (:require [clojure.java.jdbc :as jdbc]
             [clojure.string :as string]
             [clojure.zip :as zip]))
@@ -42,6 +43,11 @@
   (-> (name keywrd)
       (string/replace #"-" "_")
       (#(str (full-table-name keywrd) "." %))))
+
+(defn- column-name-kw [attr]
+  (let [name (string/replace (name attr) #"-" "_")
+        ns   (string/replace (namespace attr) #"-" "_")]
+    (keyword (str ns "/" name))))
 
 (defn- combine-name [keywrd]
   (string/upper-case (name keywrd)))
@@ -94,45 +100,67 @@
                (take-while #(not (zip/end? %)))
                (map zip/node))))
 
-(defn- map-row [row]
+(defn- to-entity [row]
   (let [table (:reason_alpha_table row)]
     (->> (dissoc row :reason_alpha_table)
          seq
          (mapcat (attribute-kv table))
          (apply hash-map))))
 
-(defn query [query-spec]
+(defn get>> [query-spec]
   (->> (jdbc/query db-config (to-query query-spec))
-       (map map-row)))
+       (map to-entity)))
 
-(defn insert-by-table! [[table attrs]]
-  [(full-table-name-str table) (apply hash-map
-                                      (flatten attrs))]
-  #_(jdbc/insert! (full-table-name-str table)
-                  (apply hash-map
-                         (flatten attrs))))
+(defn get> [query-spec]
+  (first (get>> query-spec)))
 
-; TODO: Remember to generate PK value - Ignite shortcoming
-(defn insert! [entity]
-  (->> (seq entity)
-       (group-by (fn [[attr _]] (namespace attr)))
-       seq
-       (map insert-by-table!)))
+(defn- update-or-insert!
+  "Updates columns or inserts a new row in the specified table"
+  [type table row & [id]]
+  (if (= ::update type)
+    (jdbc/update! db-config table row 
+                  [(str (column-name-kw id) " = ?" (id row))])
+    (jdbc/insert! db-config table row)))
 
-(defn update! [entity] nil)
+(defn- save-entity! [save!-fn]
+  (fn [[entity [[attr] :as attrs]]]
+    (let [id          (column-name-kw
+                       (keyword (str entity "/id")))
+          full-tbl-nm (full-table-name attr)
+          row         (->> attrs
+                           (map (fn [[attr val]]
+                                  [(column-name-kw attr) val]))
+                           flatten
+                           (apply hash-map))]
+      (if (contains? row id)
+        (save!-fn ::update full-tbl-nm row id)
+        (save!-fn ::insert full-tbl-nm (assoc row id (UuidCreator/getLexicalOrderGuid)) id)))))
 
-(defn delete! [entity] nil)
+; TODO: Do this in a transaction
+; TODO: Test update scenario
+(defn save!
+  "rentity = Root-Entity"
+  ([rentity]
+   (save! rentity update-or-insert!))
+  ([rentity save!-fn]
+   (->> (seq rentity)
+        (group-by (fn [[attr _]] (namespace attr)))
+        seq
+        (map (save-entity! save!-fn)))))
+
+(defn delete! [rentity] nil)
 
 (comment
-  (namespace "security")
-  (apply hash-map [[:security/id 1] [:security/owner-user-id 5] [:security/name "Facebook"]])
+  (save! {:security/name          "Facebook"
+          :security/owner-user-id 5
+          :user/user-name         "Frikkie"
+          :user/email             "j@j.com"})
 
-  (insert! {:security/id            1
-            :security/name          "Facebook"
-            :security/owner-user-id 5
-            :user/id                4
-            :user/name              "Frikkie"
-            :user/email             "j@j.com"})
+  (contains? {:security/id            0
+              :security/name          "Facebook"
+              :security/owner-user-id 5
+              :user/user-name         "Frikkie"
+              :user/email             "j@j.com"} :id)
 
   (map-row {:id                 2
             :name               "Facebook"

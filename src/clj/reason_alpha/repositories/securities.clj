@@ -1,7 +1,6 @@
 (ns ^{:doc "Security serves as a domain root aggregate."}
  reason-alpha.repositories.securities
-  (:require [reason-alpha.repositories :as repos]
-            [clojure.java.jdbc :as jdbc]))
+  (:require [clojure.java.jdbc :as jdbc]))
 
 #_(def security (reify repos/Repository
                 (add [_ entity]
