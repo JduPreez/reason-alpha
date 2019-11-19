@@ -1,0 +1,1 @@
+["^ ","~:resource-id",["~:shadow.build.modules/append","~:app"],"~:source","","~:js",""]

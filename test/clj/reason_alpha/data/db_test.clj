@@ -1,5 +1,6 @@
 (ns reason-alpha.data.db-test
   (:use midje.sweet)
+  (:import [com.github.f4b6a3.uuid UuidCreator])
   (:require [clojure.string :as string]
             [reason-alpha.data.db :as db]))
 
@@ -23,13 +24,24 @@
                                                             :security/name          "Facebook"
                                                             :security/owner-user-id 345})
 
-(fact "`db/save!` should convert entity to DB record"
-      (let [row (db/upsert! {:security/name          "Facebook"
-                             :security/owner-user-id 5
-                             :user/user-name         "Frikkie"
-                             :user/email             "j@j.com"}
+(fact "`db/save!` should convert entity to DB insert record"
+      (let [rows (db/save! {:security/name          "Facebook"
+                            :security/owner-user-id 5
+                            :user/user-name         "Frikkie"
+                            :user/email             "j@j.com"}
                             (fn [_ _ rw _] rw))]
-        (some #(contains? % :security/id) row) => true
-        (some #(contains? % :security/owner_user_id) row) => true
-        (some #(contains? % :user/id) row) => true
-        (some #(contains? % :user/user_name) row) => true))
+        (some #(contains? % :security/id) rows) => true
+        (some #(contains? % :security/owner_user_id) rows) => true
+        (some #(contains? % :user/id) rows) => true
+        (some #(contains? % :user/user_name) rows) => true))
+
+(fact "`db/save!` should convert entity to DB update record"
+      (let [entity {:security/id            (UuidCreator/getLexicalOrderGuid)
+                    :security/name          "Facebook"
+                    :security/owner-user-id 5
+                    :user/id                (UuidCreator/getLexicalOrderGuid)
+                    :user/user-name         "Frikkie"
+                    :user/email             "j@j.com"}
+            rows   (db/save! entity (fn [_ _ rw _] rw))]
+        (some #(= (:security/id %) (:security/id entity)) rows) => true
+        (some #(= (:user/id %) (:user/id entity)) rows) => true))

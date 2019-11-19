@@ -1,0 +1,5 @@
+Compiling build :app to "target/cljsbuild/public/js/app.js" from ["src/cljs" "env/dev/cljs"]...
+Successfully compiled build :app to "target/cljsbuild/public/js/app.js" in 1.604 seconds.
+notifying browser that file changed:  target/cljsbuild/public/js/out/goog/deps.js
+notifying browser that file changed:  target/cljsbuild/public/js/out/cljs_deps.js
+notifying browser that file changed:  target\cljsbuild\public\js\out\reason_alpha\core.js

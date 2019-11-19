@@ -1,0 +1,282 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+	<head>
+		<meta charset="UTF-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1">
+		<meta http-equiv="X-UA-Compatible" content="IE=edge">
+		<meta name="msapplication-TileColor" content="#0670f0">
+		<meta name="theme-color" content="#1643a3">
+		<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+		<meta name="apple-mobile-web-app-capable" content="yes">
+		<meta name="mobile-web-app-capable" content="yes">
+		<meta name="HandheldFriendly" content="True">
+		<meta name="MobileOptimized" content="320">
+		<link rel="icon" href="favicon.ico" type="image/x-icon"/>
+		<link rel="shortcut icon" type="image/x-icon" href="favicon.ico" />
+
+		<!-- Title -->
+		<title>Reason Alpha</title>
+
+    <!--Font Awesome-->
+		<link href="assets/plugins/fontawesome-free/css/all.css" rel="stylesheet">
+
+		<!-- Font Family -->
+		<link href="https://fonts.googleapis.com/css?family=Poppins:300,400,500" rel="stylesheet">
+
+		<!-- Dashboard Css -->
+		<link href="assets/css/dashboard.css" rel="stylesheet" />
+
+		<!-- Custom scroll bar css-->
+		<link href="assets/plugins/scroll-bar/jquery.mCustomScrollbar.css" rel="stylesheet" />
+
+		<!-- Sidemenu Css -->
+		<link href="assets/plugins/toggle-sidebar/css/sidemenu.css" rel="stylesheet">
+
+		<!-- Data table css -->
+		<link href="assets/plugins/datatable/dataTables.bootstrap4.min.css" rel="stylesheet" />
+
+		<!-- Select2 css -->
+		<link href="assets/plugins/select2/select2.min.css" rel="stylesheet" />
+
+		<!---Font icons-->
+		<link href="assets/plugins/iconfonts/plugin.css" rel="stylesheet" />
+	</head>
+	<body class="app" data-gr-c-s-loaded="true">
+    <div id="global-loader" style="display: none;">
+      <div class="showbox">
+        <div class="lds-ring">
+          <div></div>
+          <div></div>
+          <div></div>
+          <div></div>
+        </div>
+      </div>
+    </div>
+		<div class="page">
+			<div class="page-main">				
+				<!-- Horizantal menu-->
+				<div class="ren-navbar" id="headerMenuCollapse">
+					<div class="container">
+						<ul class="nav">
+              <li class="nav-item">
+                <a class="nav-link" href="widgets.html">
+                  <i class="fas fa-cog"></i>
+                </a>
+                <div class="sub-item">
+                  <ul>
+                    <li>
+                      <a href="index.html">Profile</a>
+                    </li>
+                    <li>
+                      <a href="index2.html">Settings</a>
+                    </li>
+                  </ul>
+                </div>
+              </li>
+              <li class="nav-item">
+                <a class="nav-link" href="widgets.html">
+                  <i class="fas fa-exchange-alt"></i>
+                  <span>TRADING</span>
+                </a>
+              </li>
+              <li class="nav-item">
+                <a class="nav-link" href="widgets.html">
+                  <i class="fas fa-chart-line"></i>
+                  <span>ANALYSIS</span>
+                </a>
+              </li>
+							<li class="nav-item">
+								<a class="nav-link" href="widgets.html">
+									<i class="fas fa-file-import"></i>
+									<span>IMPORT</span>
+								</a>
+              </li>
+              <li class="nav-item">
+                <a class="nav-link" href="widgets.html">
+                  <i class="fas fa-hand-holding-usd"></i>
+                  <span>SECURITIES</span>
+                </a>
+              </li>
+              <li class="nav-item">
+                <a class="nav-link" href="widgets.html">
+                  <i class="fas fa-project-diagram"></i>
+                  <span>REFERENCE</span>
+                </a>
+              </li>
+							<li class="nav-item">
+								<a class="nav-link" href="gallery.html">
+									<i class="fas fa-save"></i>
+									<span>SAVE</span>
+									<span class="square-8"></span>
+								</a>
+              </li>
+              <li class="nav-item">
+								<a class="nav-link" href="gallery.html">
+									<i class="fas fa-undo"></i>
+									<span>CANCEL</span>
+									<span class="square-8"></span>
+								</a>
+							</li>
+						</ul>
+					</div>
+				</div>
+				<!-- Horizontal menu-->
+				
+				<div class="container">
+					<div class="side-app">
+						<div class="page-header">
+							<h4 class="page-title">Portfolio Trades</h4>
+							<ol class="breadcrumb">
+								<li class="breadcrumb-item active" aria-current="page"><a href="#">Portfolio Trades</a></li>
+							</ol>
+						</div>
+						<div class="row">
+							<div class="col-md-12 col-lg-12">
+								<div class="card">
+									<div class="card-status bg-yellow br-tr-3 br-tl-3"></div>
+									<!--<div class="card-header">
+										<div class="card-title">Portfolio Trades</div>
+									</div>-->
+									<div id="app" class="card-body">
+										<div class="table-responsive">
+											<table id="example" class="table table-striped table-bordered" style="table-layout: fixed;"> <!--style="width:100%"-->
+												<thead>
+													<tr>
+														<th style="width: 75px">Open Date</th>
+                            <th style="width: 240px">Trade Pattern</th>
+                            <th style="width: 75px">Security</th>
+                            <th style="width: 40px">Long/ Short</th>
+                            <th style="width: 100px">Trading <br/>Time Frame</th>
+                            <th style="width: 70px">Quantity</th>
+                            <th style="width: 70px">Open</th>
+                            <th style="width: 70px">Close</th>
+                            <th style="width: 70px">Currency</th>
+                            <th style="width: 70px">Cost</th>
+                            <th style="width: 60px">Interest/ Day</th>
+                            <th style="width: 110px">Interest Total</th>
+                            <th style="width: 90px">Total Cost</th>
+                            <th style="width: 100px">Profit Target</th>
+                            <th style="width: 100px">Profit Target Total</th>
+                            <th style="width: 120px">Profit Target %</th>
+                            <th style="width: 150px">Profit Target Total Incl. Costs</th>
+                            <th style="width: 140px">Profit Target % Incl. Costs</th>
+                            <th style="width: 90px">Close Date</th>
+                            <th style="width: 90px">Profit/Loss</th>
+                            <th style="width: 90px">Profit/Loss Incl. Costs</th>
+                            <th style="width: 75px">Profit/Loss (ZAR)</th>
+                            <th style="width: 90px">Profit/Loss Incl. Costs (ZAR)</th>
+                            <th style="width: 75px">Profit/Loss % Risk</th>
+                            <th style="width: 70px">Stop</th>
+                            <th style="width: 75px">Stop Loss Total</th>
+                            <th style="width: 75px">Loss %</th>
+                            <th style="width: 100px">1st Deviation</th>
+                            <th style="width: 100px">1st Deviation Stop</th>
+                            <th style="width: 130px">Conversion Rate (ZAR)</th>
+													</tr>
+												</thead>
+												<tbody>
+													<tr>
+                            <td>2019/05/28</td>                         <!-- 1. Open Date-->
+                            <td>Breakout - Entering Preceding Base</td> <!-- 2. Trade Pattern-->
+                            <td>IGG</td>                                <!-- 3. Security-->
+                            <td>L</td>                                  <!-- 4. Long/Short-->
+                            <td>Day</td>                                <!-- 5. Trading Time Frame-->
+                            <td>400</td>                                <!-- 6. Quantity-->
+                            <td>5.49600</td>                            <!-- 7. Open-->
+                            <td>5.55000</td>                            <!-- 8. Close-->
+                            <td>GBP</td>                                <!-- 9. Currency-->
+                            <td>8</td>                                  <!-- 10. Cost-->
+                            <td>0.23</td>                               <!-- 11. Interest/ Day-->
+                            <td>2.99</td>                               <!-- 12. Interest Total-->
+                            <td>10.990</td>                             <!-- 13. Total Cost-->
+                            <td>5.75000</td>                            <!-- 14. Profit Target-->
+                            <td>101.60000</td>                          <!-- 15. Profit Target Total-->
+                            <td>4.62%</td>                              <!-- 16. Profit Target %-->
+                            <td>90.61000</td>                           <!-- 17. Profit Target Total Incl. Costs-->
+                            <td>4.08%</td>                              <!-- 18. Profit Target % Incl. Costs-->
+                            <td>2019/06/10</td>                         <!-- 19. Close Date-->
+                            <td>21.600</td>                             <!-- 20. Profit/Loss-->
+                            <td>10.610</td>                             <!-- 21. Profit/Loss Incl. Costs-->
+                            <td>402.192</td>                            <!-- 22. Profit/Loss (Home Currency)-->
+                            <td>197.558</td>                            <!-- 23. Profit/Loss Incl. Costs (Home Currency)-->
+                            <td>0.97%</td>                              <!-- 24. Profit/Loss % Risk-->
+                            <td>5.36000</td>                            <!-- 25. Stop-->
+                            <td>-54.400</td>                            <!-- 26. Stop Loss Total-->
+                            <td>-2.45%</td>                             <!-- 27. Loss %-->
+                            <td>11</td>                                 <!-- 28. 1st Deviation-->
+                            <td>17.36000</td>                           <!-- 29. 1st Deviation Stop-->
+                            <td>18.62</td>                              <!-- 30. Conversion Rate (Home Currency)-->
+													</tr>
+												</tbody>
+											</table>
+										</div>
+									</div>
+									<!-- table-wrapper -->
+								</div>
+								<!-- section-wrapper -->
+
+							</div>
+						</div>
+					</div>
+				</div>
+				<!--footer-->
+				<!--<footer class="footer">
+					<div class="container">
+						<div class="row align-items-center flex-row-reverse">
+							<div class="col-md-12 col-sm-12 mt-3 mt-lg-0 text-center">
+								Copyright © 2019
+							</div>
+						</div>
+					</div>
+				</footer>-->
+				<!-- End Footer-->
+			</div>
+		</div>
+
+		<!--Back to top-->
+		<a href="#top" id="back-to-top" style="display: inline;"><i class="fas fa-angle-up"></i></a>
+
+		<!-- Dashboard js -->
+		<script src="assets/js/vendors/jquery-3.2.1.min.js"></script>
+		<script src="assets/js/vendors/bootstrap.bundle.min.js"></script>
+		<script src="assets/js/vendors/selectize.min.js"></script>
+		<script src="assets/js/vendors/circle-progress.min.js"></script>
+		<script src="assets/plugins/rating/jquery.rating-stars.js"></script>
+		<!-- Side menu js -->
+		<script src="assets/plugins/toggle-sidebar/js/sidemenu.js"></script>
+
+		<!-- Custom scroll bar Js-->
+		<script src="assets/plugins/scroll-bar/jquery.mCustomScrollbar.concat.min.js"></script>
+
+		<!-- Data tables -->
+		<script src="./assets/plugins/datatable/jquery.dataTables.min.js"></script>
+		<script src="./assets/plugins/datatable/dataTables.bootstrap4.min.js"></script>
+
+		<!-- Select2 js -->
+		<script src="assets/plugins/select2/select2.full.min.js"></script>
+
+		<!-- Animation -->
+    <!--<script src="assets/plugins/particles/particles.js"></script>
+    <script src="assets/plugins/particles/particlesapp_default.js"></script>-->
+
+		<!--Counters -->
+		<script src="assets/plugins/counters/counterup.min.js"></script>
+		<script src="assets/plugins/counters/waypoints.min.js"></script>
+
+		<!-- Custom js -->
+    <script src="assets/js/custom.js"></script>
+    <script src="assets/js-dark/headerfix.js"></script>
+
+		<!-- Data table js -->
+		<script>
+			$(function(e) {
+				$('#example').dataTable();
+			} );
+		</script>
+
+    <script type="text/javascript">
+      var csrfToken = "{{csrf-token}}";
+    </script>
+    {% script "/js/app.js" %}
+	</body>
+</html>

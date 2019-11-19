@@ -137,7 +137,6 @@
         (save!-fn ::insert full-tbl-nm (assoc row id (UuidCreator/getLexicalOrderGuid)) id)))))
 
 ; TODO: Do this in a transaction
-; TODO: Test update scenario
 (defn save!
   "rentity = Root-Entity"
   ([rentity]
@@ -151,10 +150,18 @@
 (defn delete! [rentity] nil)
 
 (comment
-  (save! {:security/name          "Facebook"
-          :security/owner-user-id 5
-          :user/user-name         "Frikkie"
-          :user/email             "j@j.com"})
+
+  (let [sid (UuidCreator/getLexicalOrderGuid)
+        uid (UuidCreator/getLexicalOrderGuid)]
+    (save! {:security/id            sid
+            :security/name          "Facebook"
+            :security/owner-user-id 5
+            :user/id                uid
+            :user/user-name         "Frikkie"
+            :user/email             "j@j.com"} (fn [type _ rw _] {:type type
+                                                                  :data rw
+                                                                  :sid  (= sid (:security/id rw))
+                                                                  :uid  uid})))
 
   (contains? {:security/id            0
               :security/name          "Facebook"
