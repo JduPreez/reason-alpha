@@ -6,6 +6,7 @@
 
   :dependencies [[cheshire "5.8.1"]
                  [cljs-ajax "0.8.0"]
+                 [com.andrewmcveigh/cljs-time "0.5.2"]
                  [com.cognitect/transit-clj "0.8.319"]
                  [com.github.f4b6a3/uuid-creator "1.4.2"]
                  [com.google.javascript/closure-compiler-unshaded "v20190618" :scope "provided"]
@@ -66,7 +67,9 @@
   :npm-deps [[shadow-cljs "2.8.69"]
              [create-react-class "15.6.3"]
              [react "16.8.6"]
-             [react-dom "16.8.6"]]
+             [react-dom "16.8.6"]
+             ["@ag-grid-enterprise/all-modules" "^22.0.0"]
+             ["@ag-grid-community/react" "^22.0.0"]]
 
   :profiles {:uberjar {:aot :all}
              :dev     {:dependencies   [[binaryage/devtools "0.9.10"]
