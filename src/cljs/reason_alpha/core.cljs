@@ -120,17 +120,33 @@
                        :field      "conversion-rate-home-currency"}]
             :data (get-trades 100)})
 
+;; -------------------------
+;; Routes
+(def router
+  (reitit/router
+   [["/" :home]
+    ["/about" :about]]))
+
+(defn get-header-menus [params]  
+  (let [col    (.-column params)
+        col-id (.-colId col)]
+    (cond (= "trade-pattern" col-id)
+          (clj->js [{"name"  "Edit"
+                     :action #(rf/dispatch-sync [:navigate (reitit/match-by-name router :about)])}])
+          :else (.-defaultItems col))))
+
 (defn about-page []
   [:section.section>div.container>div.content
    [:img {:src "/assets/images/warning_clojure.png"}]])
 
 (defn home-page []
-  [:div.ag-theme-balham-dark {:style {:width "100%" :height "100%"}}
+  [:div.ag-theme-balham-dark {:style {:width  "100%"
+                                      :height "100%"}}
    [:> ag-grd-react/AgGridReact
-    {:columnDefs (:columns state)
-     :rowData    (:data state)
-     :modules    ag-grd/AllCommunityModules
-     }]]) ; :domLayout "autoHeight"
+    {:columnDefs       (:columns state)
+     :rowData          (:data state)
+     :modules          ag-grd/AllModules
+     :getMainMenuItems get-header-menus}]])
 
 (def pages
   {:home  #'home-page
@@ -138,13 +154,6 @@
 
 (defn page [] [(pages @(rf/subscribe [:page]))])
 
-;; -------------------------
-;; Routes
-
-(def router
-  (reitit/router
-   [["/" :home]
-    ["/about" :about]]))
 ;; -------------------------
 ;; History
 ;; must be called after routes have been defined
