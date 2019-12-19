@@ -17,4 +17,5 @@ CREATE TABLE IF NOT EXISTS "reason-alpha".trade (
   home_currency_id                  uuid,
   home_currency_conversion_rate     double,
   account_id                        uuid,
-  account_currency_conversion_rate  double);
+  account_currency_conversion_rate  double,
+  rank                              int);

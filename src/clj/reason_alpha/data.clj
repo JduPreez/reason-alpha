@@ -1,19 +1,15 @@
-(ns reason-alpha.data.db
+(ns reason-alpha.data
   (:import [com.github.f4b6a3.uuid UuidCreator])
   (:require [clojure.java.jdbc :as jdbc]
             [clojure.string :as string]
-            [clojure.zip :as zip]))
+            [clojure.zip :as zip])
+  (:gen-class))
 
 (def db-schema "REASON-ALPHA")
 
 (def db-config {:classname      "org.apache.ignite.IgniteJdbcThinDriver"
-                :connection-uri "jdbc:ignite:thin://127.0.0.1"})
-
-(defn connect
-  ([]
-   (jdbc/get-connection db-config))
-  ([conf]
-   (jdbc/get-connection conf)))
+                :connection-uri "jdbc:ignite:thin://127.0.0.1"
+                :db-schema      "REASON-ALPHA"})
 
 (defn- attribute-kv [table]
   (fn [[column val]]
@@ -30,10 +26,6 @@
 (defn- table-name [keywrd]
   (-> (namespace keywrd)
       table-name-str))
-
-(defn- full-table-name-str [table]
-  (-> (table-name-str table)
-      add-schema))
 
 (defn- full-table-name [keywrd]
   (-> (table-name keywrd)
@@ -65,10 +57,10 @@
                                     ; Add a column with the table name. This will be used when the
                                     ; result-set is mapped back to a Clojure map, so that we know
                                     ; what namespace to prefix keyword attributes with 
-                                    (str "SELECT '" 
-                                         (table-name %) 
-                                         "' reason_alpha_table, * FROM " 
-                                         (full-table-name %) 
+                                    (str "SELECT '"
+                                         (table-name %)
+                                         "' reason_alpha_table, * FROM "
+                                         (full-table-name %)
                                          " WHERE")
                                     (first query))]
               (cond (and  is-cond (= children 3))
@@ -107,22 +99,15 @@
          (mapcat (attribute-kv table))
          (apply hash-map))))
 
-(defn get>> [query-spec]
-  (->> (jdbc/query db-config (to-query query-spec))
-       (map to-entity)))
-
-(defn get> [query-spec]
-  (first (get>> query-spec)))
-
 (defn- update-or-insert!
   "Updates columns or inserts a new row in the specified table"
   [type table row & [id]]
   (if (= ::update type)
-    (jdbc/update! db-config table row 
+    (jdbc/update! db-config table row
                   [(str (column-name-kw id) " = ?" (id row))])
     (jdbc/insert! db-config table row)))
 
-(defn- save-entity! [save!-fn]
+(defn- save-entity! [update-or-insert!-fn]
   (fn [[entity [[attr] :as attrs]]]
     (let [id          (column-name-kw
                        (keyword (str entity "/id")))
@@ -133,21 +118,46 @@
                            flatten
                            (apply hash-map))]
       (if (contains? row id)
-        (save!-fn ::update full-tbl-nm row id)
-        (save!-fn ::insert full-tbl-nm (assoc row id (UuidCreator/getLexicalOrderGuid)) id)))))
+        (update-or-insert!-fn ::update full-tbl-nm row id)
+        (update-or-insert!-fn ::insert full-tbl-nm (assoc row id (UuidCreator/getLexicalOrderGuid)) id)))))
 
-; TODO: Do this in a transaction
-(defn save!
-  "rentity = Root-Entity"
-  ([rentity]
-   (save! rentity update-or-insert!))
-  ([rentity save!-fn]
-   (->> (seq rentity)
-        (group-by (fn [[attr _]] (namespace attr)))
-        seq
-        (map (save-entity! save!-fn)))))
+(defprotocol DataBase
+  (connect [_])
+  (choose [_ query-spec])
+  (any [_ query-spec])
+  (save! ; TODO: Do this in a transaction
+   [_ rentity]
+   [_ rentity update-or-insert!-fn] 
+   "rentity = Root-Entity:
+   Each keyword ns constitutes an entity, and together they
+   are the root entity.")
+  (remove! [_ rentity]))
 
-(defn delete! [rentity] nil)
+(def db (let [to-ent     to-entity
+              db-conf    db-config
+              to-qry     to-query
+              sav-ent!   save-entity!
+              upd-insrt! update-or-insert!]
+          (reify DataBase
+            (connect [_] (jdbc/get-connection db-conf))
+
+            (choose [_ query-spec]
+              (->> (jdbc/query db-conf (to-qry query-spec))
+                   (map to-ent)))
+
+            (any [this query-spec]
+              (first (choose this query-spec)))
+
+            (save! [_ rentity]
+              (save! rentity upd-insrt!))
+
+            (save! [_ rentity update-or-insert!-fn]
+              (->> (seq rentity)
+                   (group-by (fn [[attr _]] (namespace attr)))
+                   seq
+                   (map (sav-ent! update-or-insert!-fn))))
+
+            (remove! [_ rentity]))))
 
 (comment
 

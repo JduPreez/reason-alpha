@@ -125,13 +125,25 @@
 (def router
   (reitit/router
    [["/" :home]
-    ["/about" :about]]))
+    ["/about" :about]
+    ["/trade-patterns" :trade-patterns]]))
 
-(defn get-header-menus [params]  
+(defn get-menu-items [menu-items]
+  (fn [params]
+    (let [col    (.-column params)
+          col-id (.-colId col)]
+      (map (fn [item field route]
+             (if (= (name field) col-id)
+               (clj->js [{"name"    item
+                          :action #(rf/dispatch-sync 
+                                    [:navigate (reitit/match-by-name router route)])}])
+               (.-defaultItems col)) menu-items)))))
+
+#_(defn- get-header-menus [params]  
   (let [col    (.-column params)
         col-id (.-colId col)]
     (cond (= "trade-pattern" col-id)
-          (clj->js [{"name"  "Edit"
+          (clj->js [{"name"  "Manage"
                      :action #(rf/dispatch-sync [:navigate (reitit/match-by-name router :about)])}])
           :else (.-defaultItems col))))
 
@@ -146,7 +158,7 @@
     {:columnDefs       (:columns state)
      :rowData          (:data state)
      :modules          ag-grd/AllModules
-     :getMainMenuItems get-header-menus}]])
+     :getMainMenuItems (get-menu-items [["Edit" :trade-pattern :trade-patterns]]) }]])
 
 (def pages
   {:home  #'home-page
@@ -174,7 +186,8 @@
   (r/render [#'page] (.getElementById js/document "app")))
 
 (defn init! []
-  (rf/dispatch-sync [:navigate (reitit/match-by-name router :home)]) 
+  (rf/dispatch-sync [:navigate (reitit/match-by-name router :home)])
+  #_(ajax/load-interceptors!)
   #_(rf/dispatch [:fetch-docs])
   (hook-browser-navigation!)
   (mount-components))

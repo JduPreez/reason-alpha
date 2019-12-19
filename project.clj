@@ -11,10 +11,12 @@
                  [com.github.f4b6a3/uuid-creator "1.4.2"]
                  [com.google.javascript/closure-compiler-unshaded "v20190618" :scope "provided"]
                  [day8.re-frame/http-fx "0.1.6"]
+                 [functionalbytes/mount-lite "2.1.1"]
                  [luminus-transit "0.1.1"]
                  [markdown-clj "1.10.0"]
                  [metosin/muuntaja "0.6.4"]
                  [metosin/reitit "0.3.10"]
+                 [metosin/ring-http-response "0.9.1"]
                  [migratus "1.2.6"]
                  [nrepl "0.6.0"]
                  [org.clojure/clojure "1.10.0"]
@@ -60,10 +62,12 @@
                    :modules    {:app {:entries [reason-alpha.app]}}
                    :devtools   {:watch-dir "resources/public"
                                 :preloads  [re-frisk.preload]}
-                   :dev        {:closure-defines {"re_frame.trace.trace_enabled_QMARK_" true}}}
+                   :dev        {:closure-defines {"re_frame.trace.trace_enabled_QMARK_"        true
+                                                  "day8.re_frame.tracing.trace_enabled_QMARK_" true}}}
             :test {:target    :node-test
-                   :output-to "target/test/test.js"
+                   :output-to "target/test/tests.js"                   
                    :autorun   true}}}
+  
   :npm-deps [[shadow-cljs "2.8.69"]
              [create-react-class "15.6.3"]
              [react "16.8.6"]
@@ -71,16 +75,21 @@
              ["@ag-grid-enterprise/all-modules" "^22.0.0"]
              ["@ag-grid-community/react" "^22.0.0"]]
 
-  :profiles {:uberjar {:aot :all}
-             :dev     {:dependencies   [[binaryage/devtools "0.9.10"]
-                                        [cider/piggieback "0.4.2"]                                        
-                                        [javax.servlet/servlet-api "2.5"]
-                                        [midje "1.9.9"]
-                                        [prone "2019-07-08"]
-                                        [re-frisk "0.5.4.1"]
-                                        [ring/ring-devel "1.8.0"]
-                                        [ring/ring-mock "0.4.0"]]
-                       :plugins        [[jonase/eastwood "0.3.5"]]
-                       :source-paths   ["env/dev/clj" "env/dev/cljs" "test/cljs"]
-                       :resource-paths ["env/dev/resources"]
-                       :repl-options   {:init-ns user}}})
+  :profiles {:uberjar      {:aot :all}
+
+             :dev          [:project/dev]
+             :test         [:project/dev :project/test]
+             :project/dev  {:dependencies   [[binaryage/devtools "0.9.10"]
+                                             [cider/piggieback "0.4.2"]
+                                             [day8.re-frame/tracing "0.5.1"]
+                                             [javax.servlet/servlet-api "2.5"]
+                                             [prone "2019-07-08"]
+                                             [re-frisk "0.5.4.1"]
+                                             [ring/ring-devel "1.8.0"]
+                                             [ring/ring-mock "0.4.0"]]
+                            :plugins        [[jonase/eastwood "0.3.5"]]
+                            :source-paths   ["env/dev/clj" "env/dev/cljs" "test/cljs"]
+                            :resource-paths ["env/dev/resources"]
+                            :repl-options   {:init-ns user}}
+             :project/test {:jvm-opts       ["-Dconf=test-config.edn"]
+                            :resource-paths ["env/test/resources"]}})

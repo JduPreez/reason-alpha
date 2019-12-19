@@ -59,8 +59,23 @@
 				<div class="ren-navbar" id="headerMenuCollapse">
 					<div class="container">
 						<ul class="nav">
-              <li class="nav-item">
-                <a class="nav-link" href="widgets.html">
+              <li>
+                  <a class="nav-link" data-toggle="dropdown" href="#" aria-expanded="true">
+                      <i class="fas fa-cog"></i>
+                      <span>&nbsp;</span>
+                  </a>
+                  <div class="dropdown-menu dropdown-menu-right dropdown-menu-arrow" x-placement="bottom-end" style="position: absolute; transform: translate3d(-32px, 46px, 0px); top: 0px; left: 0px; will-change: transform;">
+                    <a class="dropdown-item" href="#"><i class="dropdown-icon mdi mdi-account-outline"></i> Profile</a>
+                    <a class="dropdown-item" href="#"><i class="dropdown-icon mdi mdi-settings"></i> Settings</a>
+                    <a class="dropdown-item" href="#"><span class="float-right"><span class="badge badge-primary">6</span></span> <i class="dropdown-icon mdi mdi-message-outline"></i> Inbox</a>
+                    <a class="dropdown-item" href="#"><i class="dropdown-icon mdi mdi-comment-check-outline"></i> Message</a>
+                    <div class="dropdown-divider"></div>
+                    <a class="dropdown-item" href="#"><i class="dropdown-icon mdi mdi-compass-outline"></i> Need help?</a>
+                    <a class="dropdown-item" href="login.html"><i class="dropdown-icon mdi mdi-logout-variant"></i> Sign out</a>
+                  </div>
+                </li>
+              <!--<li class="nav-item with-sub dropdown">
+                <a class="nav-link" href="javascript:void(0)" class="nav-link" data-toggle="dropdown">
                   <i class="fas fa-cog"></i>
                 </a>
                 <div class="sub-item">
@@ -73,7 +88,7 @@
                     </li>
                   </ul>
                 </div>
-              </li>
+              </li>-->
               <li class="nav-item">
                 <a class="nav-link" href="widgets.html">
                   <i class="fas fa-exchange-alt"></i>
@@ -91,17 +106,17 @@
 									<i class="fas fa-file-import"></i>
 									<span>IMPORT</span>
 								</a>
+              </li>              
+              <li class="nav-item">
+                <a class="nav-link" href="javascript:void(0)" class="nav-link" data-toggle="dropdown">
+                  <i class="fas fa-plus-square"></i>
+                  <span>ADD</span>
+                </a>                
               </li>
               <li class="nav-item">
                 <a class="nav-link" href="widgets.html">
-                  <i class="fas fa-hand-holding-usd"></i>
-                  <span>SECURITIES</span>
-                </a>
-              </li>
-              <li class="nav-item">
-                <a class="nav-link" href="widgets.html">
-                  <i class="fas fa-project-diagram"></i>
-                  <span>REFERENCE</span>
+                  <i class="far fa-trash-alt"></i>
+                  <span>DELETE</span>
                 </a>
               </li>
 							<li class="nav-item">
@@ -128,7 +143,9 @@
 						<div class="page-header">
 							<h4 class="page-title">Portfolio Trades</h4>
 							<ol class="breadcrumb">
-								<li class="breadcrumb-item active" aria-current="page"><a href="#">Portfolio Trades</a></li>
+								<li class="breadcrumb-item active" aria-current="page">
+                  <a href="#">Portfolio Trades</a>
+                </li>
 							</ol>
 						</div>
 						<div class="row h-4-perc">
