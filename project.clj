@@ -12,7 +12,7 @@
                  [com.google.javascript/closure-compiler-unshaded "v20190618" :scope "provided"]
                  [day8.re-frame/http-fx "0.1.6"]
                  [functionalbytes/mount-lite "2.1.1"]
-                 [luminus-transit "0.1.1"]
+                 [luminus-transit "0.1.2"]
                  [markdown-clj "1.10.0"]
                  [metosin/muuntaja "0.6.4"]
                  [metosin/reitit "0.3.10"]
@@ -22,8 +22,9 @@
                  [org.clojure/clojure "1.10.0"]
                  [org.clojure/clojurescript "1.10.520" :scope "provided"]
                  [org.clojure/core.async "0.4.500"]
+                 [org.clojure/google-closure-library "0.0-20190213-2033d5d9" :scope "provided"]
                  [org.clojure/tools.cli "0.4.2"]
-                 [org.clojure/tools.logging "0.5.0"]                 
+                 [org.clojure/tools.logging "0.5.0"]
                  [org.clojure/tools.reader "1.3.2"]
                  [org.apache.ignite/ignite-core "2.7.5"]
                  [org.apache.ignite/ignite-indexing "2.7.5"]
@@ -65,15 +66,15 @@
                    :dev        {:closure-defines {"re_frame.trace.trace_enabled_QMARK_"        true
                                                   "day8.re_frame.tracing.trace_enabled_QMARK_" true}}}
             :test {:target    :node-test
-                   :output-to "target/test/tests.js"                   
+                   :output-to "target/test/tests.js"
                    :autorun   true}}}
-  
-  :npm-deps [[shadow-cljs "2.8.69"]
+
+  :npm-deps [["@ag-grid-enterprise/all-modules" "^22.0.0"]
+             ["@ag-grid-community/react" "^22.0.0"]
              [create-react-class "15.6.3"]
              [react "16.8.6"]
              [react-dom "16.8.6"]
-             ["@ag-grid-enterprise/all-modules" "^22.0.0"]
-             ["@ag-grid-community/react" "^22.0.0"]]
+             [shadow-cljs "2.8.69"]]
 
   :profiles {:uberjar      {:aot :all}
 
@@ -81,6 +82,7 @@
              :test         [:project/dev :project/test]
              :project/dev  {:dependencies   [[binaryage/devtools "0.9.10"]
                                              [cider/piggieback "0.4.2"]
+                                             [circleci/circleci.test "0.4.2"]
                                              [day8.re-frame/tracing "0.5.1"]
                                              [javax.servlet/servlet-api "2.5"]
                                              [prone "2019-07-08"]
@@ -92,4 +94,8 @@
                             :resource-paths ["env/dev/resources"]
                             :repl-options   {:init-ns user}}
              :project/test {:jvm-opts       ["-Dconf=test-config.edn"]
-                            :resource-paths ["env/test/resources"]}})
+                            :resource-paths ["env/test/resources"]}}
+
+  :aliases {"test"   ["run" "-m" "circleci.test/dir" :project/test-paths]
+            "tests"  ["run" "-m" "circleci.test"]
+            "retest" ["run" "-m" "circleci.test.retest"]})
