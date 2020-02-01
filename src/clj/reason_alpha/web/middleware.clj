@@ -33,10 +33,17 @@
       ;; since they're not compatible with this middleware
       ((if (:websocket? request) handler wrapped) request))))
 
-(defn wrap-base [handler]  
+#_(defn wrap-base [handler]  
   (-> ((:middleware defaults) handler)
       (wrap-defaults
        (-> site-defaults
            (assoc-in [:security :anti-forgery] false)
            (assoc-in  [:session :store] (ttl-memory-store (* 60 30)))))
       wrap-internal-error))
+
+(defn wrap-base [handler]
+  (-> ((:middleware defaults) handler)
+      (wrap-defaults
+       (-> site-defaults
+           (assoc-in [:security :anti-forgery] false)
+           (assoc-in  [:session :store] (ttl-memory-store (* 60 30)))))))
