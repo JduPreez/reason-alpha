@@ -179,15 +179,18 @@
           [:navigate (reitit/match-by-path router uri)]))))
     (.setEnabled true)))
 
-;; -------------------------
-;; Initialize app
-(defn mount-components []
+(defn stop []
+  ;; stop is called before any code is reloaded
+  ;; this is controlled by :before-load in the config
+  (js/console.log "stop"))
+
+(defn start []
   (rf/clear-subscription-cache!)
   (r/render [#'page] (.getElementById js/document "app")))
 
-(defn init! []
+(defn ^:export init []
   (rf/dispatch-sync [:navigate (reitit/match-by-name router :home)])
   #_(ajax/load-interceptors!)
   #_(rf/dispatch [:fetch-docs])
   (hook-browser-navigation!)
-  (mount-components))
+  (start))

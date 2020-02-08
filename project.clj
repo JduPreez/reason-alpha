@@ -58,11 +58,15 @@
   :shadow-cljs
   {:nrepl  {:port 7002}
    :builds {:app  {:target     :browser
-                   :output-dir "target/cljsbuild/public/js"
-                   :asset-path "/js"
-                   :modules    {:app {:entries [reason-alpha.app]}}
-                   :devtools   {:watch-dir "resources/public"
-                                :preloads  [re-frisk.preload]}
+                   :output-dir "resources/public/js/compiled"
+                   :asset-path "/js/compiled"
+                   :modules    {:app {:entries [reason-alpha.core]}}
+                   :devtools   {:http-root   "resources/public"
+                                :http-port   8700
+                                ;:watch-dir "resources/public"
+                                :before-load reason-alpha.core/stop
+                                :after-load  reason-alpha.core/start
+                                :preloads    [devtools.preload]} ; re-frisk.preload
                    :dev        {:closure-defines {"re_frame.trace.trace_enabled_QMARK_"        true
                                                   "day8.re_frame.tracing.trace_enabled_QMARK_" true}}}
             :test {:target    :node-test
