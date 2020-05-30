@@ -14,6 +14,7 @@
                  [functionalbytes/mount-lite "2.1.1"]
                  [luminus-transit "0.1.2"]
                  [markdown-clj "1.10.0"]
+                 [medley "1.3.0"]
                  [metosin/muuntaja "0.6.4"]
                  [metosin/reitit "0.3.10"]
                  [metosin/ring-http-response "0.9.1"]
@@ -57,18 +58,18 @@
 
   :shadow-cljs
   {:nrepl  {:port 7002}
-   :builds {:app  {:target     :browser
-                   :output-dir "resources/public/js/compiled"
-                   :asset-path "/js/compiled"
-                   :modules    {:app {:entries [reason-alpha.core]}}
-                   :devtools   {:http-root   "resources/public"
-                                :http-port   8700
-                                ;:watch-dir "resources/public"
-                                :before-load reason-alpha.core/stop
-                                :after-load  reason-alpha.core/start
-                                :preloads    [devtools.preload]} ; re-frisk.preload
-                   :dev        {:closure-defines {"re_frame.trace.trace_enabled_QMARK_"        true
-                                                  "day8.re_frame.tracing.trace_enabled_QMARK_" true}}}
+   :builds {:app  {:target                                       :browser
+                   :output-dir                                   "resources/public/js/compiled"
+                   :asset-path                                   "/js/compiled"
+                   :modules                                      {:app {:entries [reason-alpha.core]}}
+                   :devtools                                     {:http-root   "resources/public"
+                                                                  :http-port   8700
+                                        ;:watch-dir "resources/public"
+                                                                  :before-load reason-alpha.core/stop
+                                                                  :after-load  reason-alpha.core/start
+                                                                  :preloads    [devtools.preload]} ; re-frisk.preload
+                   :dev                                          {:compiler-options {:clojure-defines {re-frame.trace/trace-enabled?        true
+                                                                                                       day8.re-frame.tracing/trace-enabled? true}}}}
             :test {:target    :node-test
                    :output-to "target/test/tests.js"
                    :autorun   true}}}
@@ -80,7 +81,7 @@
              [react-dom "16.8.6"]
              [shadow-cljs "2.8.69"]]
 
-  :profiles {:uberjar      {:aot :all}
+  :profiles {:uberjar {:aot :all}
 
              :dev          [:project/dev]
              :test         [:project/dev :project/test]

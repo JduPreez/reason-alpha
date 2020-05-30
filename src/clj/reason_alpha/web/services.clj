@@ -4,8 +4,8 @@
 
 ; TODO: Improve error handling
 
-(defn get-trade-patterns [{{{user-id :user-id} :path} :parameters}]  
-  (ok {:result (choose db [:trade-pattern/user-id := user-id]) }))
+(defn get-trade-patterns [] #_[{{{user-id :user-id} :path} :parameters}]  
+  (ok {:result (choose db [:trade-pattern/id :<> nil]) }))
 
 (defn get-trade-pattern [{{:keys [id]} :path-params}]
   (ok (any db [:trade-pattern/id = id])))

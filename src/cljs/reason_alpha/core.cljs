@@ -10,6 +10,8 @@
             [reagent.core :as r]
             [reason-alpha.events]
             [reason-alpha.utils :as utils]
+            [reason-alpha.views.main :as main]
+            [reason-alpha.views.trade-patterns :as trade-patterns]
             [reitit.core :as reitit])
   (:import goog.History))
 
@@ -128,22 +130,19 @@
     ["/about" :about]
     ["/trade-patterns" :trade-patterns]]))
 
-(defn get-menu-items [menu-items]
-  (fn [params]
-    (let [col    (.-column params)
-          col-id (.-colId col)]
-      (map (fn [item field route]
-             (if (= (name field) col-id)
-               (clj->js [{"name"    item
-                          :action #(rf/dispatch-sync 
-                                    [:navigate (reitit/match-by-name router route)])}])
-               (.-defaultItems col)) menu-items)))))
+(defn get-header-menu-items [menu-items params]
+  (let [col    (.-column params)
+        col-id (.-colId col)]
+    (if-let [[name route] (get menu-items col-id)]
+      (clj->js [{"name"    name
+                 :action #(rf/dispatch-sync [:navigate (reitit/match-by-name router route)])}])
+      (.-defaultItems col))))
 
-#_(defn- get-header-menus [params]  
+#_(defn- get-header-menus [params]
   (let [col    (.-column params)
         col-id (.-colId col)]
     (cond (= "trade-pattern" col-id)
-          (clj->js [{"name"  "Manage"
+          (clj->js [{"name"    "Manage"
                      :action #(rf/dispatch-sync [:navigate (reitit/match-by-name router :about)])}])
           :else (.-defaultItems col))))
 
@@ -158,13 +157,17 @@
     {:columnDefs       (:columns state)
      :rowData          (:data state)
      :modules          ag-grd/AllModules
-     :getMainMenuItems (get-menu-items [["Edit" :trade-pattern :trade-patterns]]) }]])
+     :getMainMenuItems (partial get-header-menu-items {"trade-pattern" ["Edit" :trade-patterns]})}]])
 
 (def pages
-  {:home  #'home-page
-   :about #'about-page})
+  {:home           #'home-page
+   :trade-patterns #'trade-patterns/view
+   :about          #'about-page})
 
-(defn page [] [(pages @(rf/subscribe [:page]))])
+(defn page []
+  (let [active-view @(rf/subscribe [:active-view])]
+    (js/console.log (str "page ==> " active-view))
+    [main/view (pages active-view)]))
 
 ;; -------------------------
 ;; History

@@ -46,3 +46,10 @@
           rows   (save! db entity (fn [{row :row}] row))]
       (is (= (some #(= (:security/id %) (:security/id entity)) rows) true))
       (is (= (some #(= (:user/id %) (:user/id entity)) rows) true)))))
+
+;; TODO: Add test for (to-query [[:security/*]]) 
+
+(comment
+  (clojure.test/run-tests 'reason-alpha.data-test)
+
+  )

@@ -42,30 +42,34 @@
 (defn- combine-name [keywrd]
   (string/upper-case (name keywrd)))
 
+(defn- maybe-default-sql [query table-column with-where]
+  (if (empty? query)
+    ; Add a column with the table name. This will be used when the
+    ; result-set is mapped back to a Clojure map, so that we know
+    ; what namespace to prefix keyword attributes with 
+    (str "SELECT '"
+         (table-name table-column)
+         "' reason_alpha_table, * FROM "
+         (full-table-name table-column)
+         (when (true? with-where) " WHERE"))
+    (first query)))
+
 (defn- to-query
   "Only supports simple equality comparison conditions & non-nested combinators (AND/OR)"
   [spec]
   (reduce (fn [query condition]
-            (let [is-vec            (vector? condition)
-                  is-cond           (and is-vec
-                                         (not (vector? (first condition))))
-                  children          (when is-vec (count condition))
-                  query-is-empty    (empty? query)
-                  maybe-default-sql #(if query-is-empty
-                                    ; Add a column with the table name. This will be used when the
-                                    ; result-set is mapped back to a Clojure map, so that we know
-                                    ; what namespace to prefix keyword attributes with 
-                                       (str "SELECT '"
-                                            (table-name %)
-                                            "' reason_alpha_table, * FROM "
-                                            (full-table-name %)
-                                            " WHERE")
-                                       (first query))]
+            #_(clojure.pprint/pprint {:q query
+                                      :c condition})
+            (let [is-vec         (vector? condition)
+                  is-cond        (and is-vec
+                                      (not (vector? (first condition))))
+                  children       (when is-vec (count condition))
+                  query-is-empty (empty? query)]
               (cond (and  is-cond (= children 3))
                     (let [[table-column comparison value] condition
                           col                             (column-name table-column)
                           comp                            (name comparison)
-                          sql                             (str (maybe-default-sql table-column)
+                          sql                             (str (maybe-default-sql query table-column true)
                                                                " " col " " comp " ?")]
                       (if query-is-empty
                         (conj [] sql value)
@@ -76,12 +80,16 @@
                     (let [[combine table-column comparison value] condition
                           col                                     (column-name table-column)
                           comp                                    (name comparison)
-                          sql                                     (str (maybe-default-sql table-column)
+                          sql                                     (str (maybe-default-sql query table-column true)
                                                                        " " (combine-name combine) " " col " " comp " ?")]
                       (if query-is-empty
                         (conj [] sql value)
                         (-> (conj query value)
                             (assoc 0 sql))))
+
+                    (and is-cond (= children 1))
+                    (let [[table-column] condition]
+                      (maybe-default-sql query table-column false))
 
                     :else query)))
           []
@@ -89,6 +97,16 @@
                (iterate zip/next)
                (take-while #(not (zip/end? %)))
                (map zip/node))))
+
+(comment
+
+  (to-query [[:security/name := "Facebook"]
+             [:or :security/owner-user-id := 4]
+             #_[:and :security/name :<> "Playtech"]])
+
+  (to-query [[:security/*]])
+
+)
 
 (defn- row->entity [row]
   (let [table (:reason_alpha_table row)]
@@ -272,6 +290,5 @@
          (mapcat (partial attribute-kv table))
          (apply hash-map)))
   (attribute-kv "security" [:owner_user_id 2])
-  (to-query [[:security/name := "Facebook"]
-             [:or :security/owner-user-id := 4]
-             [:and :security/name :<> "Playtech"]]))
+ 
+  )

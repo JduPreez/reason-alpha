@@ -1,69 +1,11 @@
 (ns reason-alpha.events
-  (:require
-   [re-frame.core :as rf]
-   [ajax.core :as ajax]))
+  (:require [ajax.core :as ajax]
+            [clojure.string :as str]
+            [re-frame.core :as rf]
+            [reason-alpha.web.service-api :as svc-api]
+            [reason-alpha.utils :as utils]))
 
-;;dispatchers
-
-(rf/reg-event-db
- :navigate
- (fn [db [_ route]]
-   (assoc db :route route)))
-
-(rf/reg-event-db
- :set-docs
- (fn [db [_ docs]]
-   (assoc db :docs docs)))
-
-(rf/reg-event-fx
- :fetch-docs
- (fn [_ _]
-   {:http-xhrio {:method          :get
-                 :uri             "/docs"
-                 :response-format (ajax/raw-response-format)
-                 :on-success      [:set-docs]}}))
-
-(rf/reg-event-db
- :common/set-error
- (fn [db [_ error]]
-   (assoc db :common/error error)))
-
-;;subscriptions
-
-(rf/reg-sub
- :route
- (fn [db _]
-   (-> db :route)))
-
-(rf/reg-sub
- :page
- :<- [:route]
- (fn [route _]
-   (-> route :data :name)))
-
-(rf/reg-sub
- :docs
- (fn [db _]
-   (:docs db)))
-
-(rf/reg-sub
- :common/error
- (fn [db _]
-   (:common/error db)))
-
-(comment
-  (ns reason-alpha.events
-    (:require [clojure.string :as str]
-              [day8.re-frame.tracing :refer-macros [fn-traced]]
-              [re-frame.core :as rf]
-              [ajax.core :as ajax])))
-
-(def api-url "/api")
-
-(defn- endpoint 
-  "Concat any params to api-url separated by /"
-  [& params]
-  (str/join "/" (concat [api-url] params)))
+(def api-url "http://localhost:3000/api/users/8ffd2541-0bbf-4a4b-adee-f3a2bd56d83f")
 
 (defn- standard-headers 
   "Adds:
@@ -74,77 +16,69 @@
     (when-let [token (get-in db [:user :token])]
       (conj headers :Authorization (str "Token " token)))))
 
-;; Dispatchers
+(defn- endpoint 
+  "Concat any params to api-url separated by /"
+  [& params]
+  (str/join "/" (concat [api-url] params)))
 
-;;; Navigation
-(rf/reg-event-db
+;; Events
+(rf/reg-event-fx
  :navigate
- (fn [db [_ route]]
-   (assoc db :route route)))
-
-;;; Trade Patterns
-(rf/reg-event-fx
- :get-trade-patterns->
- (fn-traced [{:keys [db]} [_ params]]
-            {:http-xhrio {:method     :get
-                          :uri        (endpoint "trade-patterns")
-                          :params     params
-                          :headers    (standard-headers db)
-                          :on-success [:store-trade-patterns]}
-             :db (-> db
-                     (assoc-in [:loading :trade-patterns] true))}))
-
-(rf/reg-event-db
- :store-trade-patterns
- (fn-traced [db [_ trade-patterns]]
-            (-> db
-                (assoc-in [:loading :trade-patterns] false)
-                (assoc :trade-patterns trade-patterns))))
-
-;;; Documents
-(rf/reg-event-db
- :set-docs
- (fn [db [_ docs]]
-   (assoc db :docs docs)))
+ (fn [{:keys [db] } [_ {{:keys [name]} :data}]]
+   #_(js/console.log (str "navigate: " name))
+   #_(cljs.pprint/pprint x)
+   (let [updated-route-db (assoc db :active-view name)] 
+     (case name
+       :trade-patterns {:db       updated-route-db
+                        :dispatch [:get-trade-patterns]}
+       {:db updated-route-db}))))
 
 (rf/reg-event-fx
- :fetch-docs
- (fn [_ _]
-   {:http-xhrio {:method          :get
-                 :uri             "/docs"
-                 :response-format (ajax/raw-response-format)
-                 :on-success      [:set-docs]}}))
+   :get-trade-patterns
+   (fn [{:keys [db]} [_ params]]
+     (js/console.log ":get-trade-patterns")
+     {:http-xhrio {:method          :get
+                   :uri             (endpoint "trade-patterns")
+                   :params          params
+                   :headers         (standard-headers db)
+                   :format          (ajax/transit-request-format)
+                   :response-format (ajax/transit-response-format)
+                   :on-success      [:save-local :trade-pattern]}
+      :db         (-> db
+                      (assoc-in [:loading :trade-pattern] true))}))
 
-;;; Common
+;; TODO: Merge results -> remove items without IDs, then replace existing ones
 (rf/reg-event-db
- :common/set-error
- (fn [db [_ error]]
-   (assoc db :common/error error)))
+ :save-local
+ (fn [db [_ type response]]
+   (-> db
+       (assoc-in [:loading type] false)
+       (assoc-in [:data type] (:result response)))))
 
-#_(reg-event-db
- :initialise-db
- (fn [_ _]
-   default-db))
+;; TODO: Make sure save-remote uses a collection arg
+(rf/reg-event-fx
+ :save-remote
+ (fn [_ [_ rentity]]
+   {:dispatch-n (svc-api/entity->commands rentity)}))
+
+(rf/reg-event-db
+ :save
+ (fn [db _]
+    ))
 
 ;; Subscriptions
+(rf/reg-sub
+ :active-view           ;; usage: (subscribe [:active-view])
+ (fn [db _]             ;; db is the (map) value stored in the app-db atom
+   (:active-view db)))  ;; extract a value from the application state
 
 (rf/reg-sub
- :route
+ :trade-patterns
  (fn [db _]
-   (-> db :route)))
+   (utils/str-keys (get-in [:data :trade-patterns] db))))
 
 (rf/reg-sub
- :page
- :<- [:route]
- (fn [route _]
-   (-> route :data :name)))
-
-(rf/reg-sub
- :docs
- (fn [db _]
-   (:docs db)))
-
-(rf/reg-sub
- :common/error
- (fn [db _]
-   (:common/error db)))
+ :loading
+ (fn [db [_ key']]
+   {key' (true?
+          (get-in db [:loading key']))}))

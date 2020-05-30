@@ -1,11 +1,12 @@
 {
   "dependencies": {
-    "@ag-grid-enterprise/all-modules": "^22.0.0",
     "@ag-grid-community/react": "^22.0.0",
+    "@ag-grid-enterprise/all-modules": "^22.0.0",
     "create-react-class": "15.6.3",
     "react": "16.8.6",
     "react-dom": "16.8.6",
-    "shadow-cljs": "2.8.69"
+    "shadow-cljs": "2.8.69",
+    "xmlhttprequest": "^1.8.0"
   },
   "devDependencies": {}
 }
