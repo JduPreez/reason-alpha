@@ -12,7 +12,7 @@
        [:i.fas.fa-cog]
        [:span " "]]
       [:div.dropdown-menu.dropdown-menu-right.dropdown-menu-arrow
-       {:x-placement "bottom-end"
+       {;:x-placement "bottom-end"
         :style       {:position    "absolute"
                       :transform   "translate3d(-32px, 46px, 0px)"
                       :top         "0px"
@@ -49,7 +49,7 @@
        [:i.fas.fa-exchange-alt] [:span "DELETE"]]]
      [:li.nav-item
       [:a.nav-link {:href "#"
-                    :on-click #(rf/dispatch [:delete-TO-DO-FIX-THIS])}
+                    :on-click #(rf/dispatch [:save])}
        [:i.fas.fa-exchange-alt] [:span "SAVE"]]]
      [:li.nav-item
       [:a.nav-link {:href "#"}

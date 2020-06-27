@@ -2,7 +2,8 @@
   (:require ["@ag-grid-community/react" :as ag-grd-react]
             ["@ag-grid-enterprise/all-modules" :as ag-grd]
             [medley.core :refer [assoc-some]]
-            [reason-alpha.utils :as utils]))
+            [reason-alpha.utils :as utils]
+            [re-frame.core :as rf]))
 
 (defn- value [params]
   (let [clj-params (js->clj params)
@@ -24,15 +25,24 @@
              (assoc-some :maxWidth max-width)
              (assoc-some :editable editable))) (seq cols)))
 
-(defn view [data cols]
+(defn- save [type event]
+  (let [data (-> event
+                 (js->clj)
+                 (get "data")
+                 (utils/kw-keys))]
+    (rf/dispatch [:save type data])))
+
+(defn view [type data cols]
+  (js/console.log "data-grid/view " (pr-str data))
   [:div.ag-theme-balham-dark {:style {#_:width #_ "100%"
                                       :height  "100%"}}
    [:> ag-grd-react/AgGridReact
-    {:defaultColDef       {:resizable true}
-     :columnDefs          (columns cols)
-     :rowData             data
-     :modules             ag-grd/AllModules
-     :onFirstDataRendered #(-> % .-api .sizeColumnsToFit)}]])
+    {:defaultColDef        {:resizable true}
+     :columnDefs           (columns cols)
+     :rowData              data
+     :modules              ag-grd/AllModules
+     :onFirstDataRendered  #(-> % .-api .sizeColumnsToFit)
+     :onCellEditingStopped (partial save type) #_#(js/console.log (pr-str (js->clj %)))}]])
 
 (comment
   .-api .sizeColumnsToFit %

@@ -143,14 +143,14 @@
 
     {:table table
      :rows  rows}))
-  
+
 (defn- rentity->save-cmds [rentity]
   (->> (seq rentity)
        (group-by (fn [[attr _]] (namespace attr)))
        seq
        (map (fn [[entity [[attr] :as attrs]]]
               (let [id    (ent-name->id entity)
-                    table (full-table-name attr)                    
+                    table (full-table-name attr)
                     row   (->> attrs
                                (map (fn [[attr val]]
                                       [(column-name-kw attr) val]))
@@ -185,7 +185,7 @@
 
 (defprotocol DataBase
   (connect [_])
-  (choose [_ query-spec]) ; TODO: Cater for choose all, :security/* ...
+  (choose [_ query-spec])
   (any [this query-spec])
   (save! ; todo: Do this in a transaction
     [this rentity]
@@ -279,6 +279,8 @@
                         :owner_user_id 3}])
 
   (doall (choose db [[:trade-pattern/user-id := "8ffd2541-0bbf-4a4b-adee-f3a2bd56d83f"]]))
+
+  (doall (choose db [[:trade-pattern/*]]))
 
   (let [row   {:id                 2
                :name               "Facebook"

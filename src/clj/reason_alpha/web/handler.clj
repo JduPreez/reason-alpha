@@ -14,32 +14,6 @@
             [reitit.ring.middleware.parameters :as parameters]
             [ring.util.http-response :refer :all]))
 
-#_(def routes-defs
-  ["/api"
-   ["/users/:user-id/trade-patterns" {:name       :trade-pattern/get
-                                      :parameters {:path {:user-id uuid?}}
-                                      :get        svc/get-trade-patterns}]
-
-   ["/ping" {:name :ping
-             :get (constantly (ok {:message "pong"}))}]])
-
-#_(def route-defs
-  (routes/defs {:trade-pattern {:get svc/get-trade-patterns}
-                :ping          {:get (constantly (ok {:message "pong"}))}}))
-
-#_(def router (ring/router
-             [route-defs]
-             {;:compile coercion/compile-request-coercers
-              :data    {:coercion   spec-coercion/coercion
-                        :muuntaja   formats/instance
-                        :middleware [parameters/parameters-middleware
-                                     muuntaja/format-negotiate-middleware
-                                     muuntaja/format-response-middleware
-                                     exception/exception-middleware
-                                     muuntaja/format-request-middleware
-                                     ring-coercion/coerce-request-middleware
-                                     ring-coercion/coerce-response-middleware
-                                     multipart/multipart-middleware]}}))
 (def router (routes/app-router {:trade-pattern {:get svc/get-trade-patterns}
                                 :ping          {:get (constantly (ok {:message "pong"}))}}
                                {:coercion   spec-coercion/coercion

@@ -1,5 +1,6 @@
 CREATE TABLE IF NOT EXISTS "reason-alpha".trade_pattern (
   id          uuid PRIMARY KEY,
+  creation_id uuid,
   name        varchar,
   description varchar,
   parent_id   uuid,

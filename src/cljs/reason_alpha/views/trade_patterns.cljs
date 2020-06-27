@@ -7,11 +7,13 @@
 ;; TODO 2: Hookup to toolbar menu's Add button event & add a new row to
 ;;         the data grid similar to
 ;;         https://www.ag-grid.com/javascript-grid-data-update/?framework=javascript#example-updating-with-transaction
-;; TODO 2: Group data by parent
+;; TODO 2: Nest Master/Detail
+;;         |> https://www.ag-grid.com/javascript-grid-master-detail-nesting/
 ;;         |> https://stackoverflow.com/questions/42605168/ag-grid-try-to-make-tree-demo-work-using-own-data
 
 (defn view []
-  (data-grid/view @(rf/subscribe [:trade-patterns]) 
+  (data-grid/view :trade-pattern
+                  @(rf/subscribe [:trade-patterns])
                   {:trade-pattern/name        {:header    "Trade Pattern"
                                                :flex      1
                                                :min-width 200

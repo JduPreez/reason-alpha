@@ -3,6 +3,7 @@
             [clojure.string :as str]
             [cognitect.transit :as transit]
             [luminus-transit.time :as time]
+            [reason-alpha.utils :as utils]
             [reason-alpha.web.routes :as routes]
             [reitit.core :as reitit]))
 
@@ -52,10 +53,10 @@
 
 (def router (routes/app-router))
 
-(defn entity->commands
+(defn entity->command
   ([token [type-kw entity]]
    (let [type-nm (name type-kw)
-         id      (keyword (str type-nm "/id"))]
+         id      (utils/id-key type-kw) #_(keyword (str type-nm "/id"))]
      (if (contains? entity id)
        [:http-xhrio {:method          :put
                      :params          entity
@@ -112,12 +113,12 @@
                                                           (keyword (str ent-type "/*"))
                                                           {:user-id "NA"}))}]))))
         vec))
-  ([rentity]
-   (entity->commands nil rentity)))
+  ([type-entity]
+   (entity->command nil type-entity)))
 
 (defn entities->commands
   ([entities token]
-   (let [fn-ent->cmds (partial entity->commands token)]
+   (let [fn-ent->cmds (partial entity->command token)]
      (map fn-ent->cmds entities)))
   ([entities]
    (entities->commands entities nil)))

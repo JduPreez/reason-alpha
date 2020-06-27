@@ -2,10 +2,10 @@
   (:require [ajax.core :as ajax]
             [clojure.string :as str]
             [re-frame.core :as rf]
-            [reason-alpha.web.service-api :as svc-api]
-            [reason-alpha.utils :as utils]))
+            [reason-alpha.utils :as utils]
+            [reason-alpha.web.service-api :as svc-api]))
 
-(def api-url "http://localhost:3000/api/users/8ffd2541-0bbf-4a4b-adee-f3a2bd56d83f")
+(def api-url "http://localhost:3000/api")
 
 (defn- standard-headers 
   "Adds:
@@ -47,24 +47,34 @@
       :db         (-> db
                       (assoc-in [:loading :trade-pattern] true))}))
 
-;; TODO: Merge results -> remove items without IDs, then replace existing ones
 (rf/reg-event-db
  :save-local
- (fn [db [_ type response]]
-   (-> db
-       (assoc-in [:loading type] false)
-       (assoc-in [:data type] (:result response)))))
+ (fn [db [_ type new]]
+   (js/console.log "save-local" (str type) (pr-str new))
+   (let [current     (get-in db [:data type])
+         new-coll    (cond
+                       (contains? new :result) (:result new)
+                       (map? new)              [new]
+                       :else                   new)
+         _           (js/console.log "save-local" "new-coll" (pr-str new-coll))
+         merged-coll (utils/merge-by-id type current new-coll)]
+     (js/console.log "save-local" "merged-coll" (pr-str merged-coll))
+     (-> db
+         (assoc-in [:loading type] false)
+         (assoc-in [:data type] merged-coll)))))
 
 ;; TODO: Make sure save-remote uses a collection arg
 (rf/reg-event-fx
  :save-remote
- (fn [_ [_ rentity]]
-   {:dispatch-n (svc-api/entity->commands rentity)}))
+ (fn [_ [_ type entity]]
+   (js/console.log "save-remote" (str type) (pr-str entity))
+   #_{:dispatch (svc-api/entity->command [type entity])}))
 
-(rf/reg-event-db
+(rf/reg-event-fx
  :save
- (fn [db _]
-    ))
+ (fn [_ [_ type entity]]
+   {:dispatch-n [[:save-local type entity]
+                 [:save-remote type entity]]}))
 
 ;; Subscriptions
 (rf/reg-sub
@@ -72,10 +82,6 @@
  (fn [db _]             ;; db is the (map) value stored in the app-db atom
    (:active-view db)))  ;; extract a value from the application state
 
-(rf/reg-sub
- :trade-patterns
- (fn [db _]
-   (utils/str-keys (get-in [:data :trade-patterns] db))))
 
 (rf/reg-sub
  :loading
