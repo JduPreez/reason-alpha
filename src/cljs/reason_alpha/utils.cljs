@@ -39,10 +39,13 @@
                       (into maps2))]
     updated))
 
-(defn log [kw data]
-  (js/console.log (str kw) (pr-str data)))
+(defn log [& args]
+  (apply js/console.log (conj (vec (map str (butlast args)))
+                              (pr-str (last args)))))
 
 (comment
+  (log ::something :another-thing {:and "data"})
+
   (merge-by-id :trade-pattern
                [{:trade-pattern/creation-id 123
                  :trade-pattern/name        "First Name"}

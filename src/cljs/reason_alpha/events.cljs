@@ -7,7 +7,7 @@
 
 (def api-url "http://localhost:3000/api")
 
-(defn- standard-headers 
+(defn- standard-headers
   "Adds:
     * The user token and format for API authorization
     * CSRF token"
@@ -16,7 +16,7 @@
     (when-let [token (get-in db [:user :token])]
       (conj headers :Authorization (str "Token " token)))))
 
-(defn- endpoint 
+(defn- endpoint
   "Concat any params to api-url separated by /"
   [& params]
   (str/join "/" (concat [api-url] params)))
@@ -50,15 +50,12 @@
 (rf/reg-event-db
  :save-local
  (fn [db [_ type new]]
-   (js/console.log "save-local" (str type) (pr-str new))
    (let [current     (get-in db [:data type])
          new-coll    (cond
                        (contains? new :result) (:result new)
                        (map? new)              [new]
                        :else                   new)
-         _           (js/console.log "save-local" "new-coll" (pr-str new-coll))
          merged-coll (utils/merge-by-id type current new-coll)]
-     (js/console.log "save-local" "merged-coll" (pr-str merged-coll))
      (-> db
          (assoc-in [:loading type] false)
          (assoc-in [:data type] merged-coll)))))
@@ -67,8 +64,10 @@
 (rf/reg-event-fx
  :save-remote
  (fn [_ [_ type entity]]
-   (js/console.log "save-remote" (str type) (pr-str entity))
-   #_{:dispatch (svc-api/entity->command [type entity])}))
+   (utils/log ::save-remote type "entity" entity)
+   (let [command (svc-api/entity->command [type entity])]
+     (utils/log ::save-remote type "command" command)
+     command)))
 
 (rf/reg-event-fx
  :save

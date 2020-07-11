@@ -7,7 +7,7 @@
 (defn app-router
   ([method-handlers routes-data]
    (ring/router
-    [["/api" 
+    [["/api"
       ["/trade-patterns" {:name       :trade-pattern/*
                           ;:parameters {:path {:user-id uuid?}}
                           :get        (or (get-in method-handlers [:trade-pattern :get])
@@ -15,7 +15,7 @@
                           :post       (or (get-in method-handlers [:trade-pattern :post])
                                           default-handler)}]
       ["/trade-patterns/:id" {:name       :trade-pattern
-                              :parameters {:path {:id      uuid?}}
+                              ;:parameters {:path {:id      uuid?}}
                               :put        (or (get-in method-handlers [:trade-pattern :put])
                                               default-handler)}]
       ["/ping" {:name :ping

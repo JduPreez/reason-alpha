@@ -4,7 +4,7 @@
             [reason-alpha.dev-data :as dev-data]))
 
 (defn start
-  ([migrate-db?] 
+  ([migrate-db?]
    (dev-data/load-entity-test-data migrate-db?)
    (core/-main))
   ([]

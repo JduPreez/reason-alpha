@@ -1,6 +1,6 @@
 (ns reason-alpha.web.middleware
   (:require
-   [clojure.tools.logging :as log]   
+   [clojure.tools.logging :as log]
    [muuntaja.middleware :refer [wrap-format wrap-params]]
    [reason-alpha.env :refer [defaults]]
    [reason-alpha.web.layout :refer [error-page]]
@@ -32,7 +32,7 @@
       (println "wrap-cors")
       (-> response
           (assoc-in [:headers "Access-Control-Allow-Origin"] "http://localhost:8700")
-          (assoc-in [:headers "Access-Control-Allow-Headers"] "x-requested-with, content-type")
+          (assoc-in [:headers "Access-Control-Allow-Headers"] "x-requested-with, content-type, x-csrf-token")
           (assoc-in [:headers "Access-Control-Allow-Methods"] "*")))))
 
 (defn wrap-formats [handler]
@@ -42,7 +42,7 @@
       ;; since they're not compatible with this middleware
       ((if (:websocket? request) handler wrapped) request))))
 
-#_(defn wrap-base [handler]  
+#_(defn wrap-base [handler]
   (-> ((:middleware defaults) handler)
       (wrap-defaults
        (-> site-defaults

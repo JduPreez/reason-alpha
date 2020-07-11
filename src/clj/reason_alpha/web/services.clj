@@ -10,7 +10,8 @@
 (defn get-trade-pattern [{{:keys [id]} :path-params}]
   (ok (any db [:trade-pattern/id = id])))
 
-(defn save-trade-pattern! [req]
+(defn save-trade-pattern! [{{:keys [id]} :path-params
+                            :as req}]
   (let [trade-pattern (:params req)]
     (ok (save! db trade-pattern))))
 

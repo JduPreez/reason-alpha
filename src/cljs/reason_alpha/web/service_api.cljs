@@ -7,10 +7,10 @@
             [reason-alpha.web.routes :as routes]
             [reitit.core :as reitit]))
 
-(def base-uri "http://localhost:3000/api")
+(def base-uri "http://localhost:3000")
 
 ;; TODO: Tidy this function up
-(defn- standard-headers 
+(defn- standard-headers
   "Adds:
     * The user token and format for API authorization
     * CSRF token"
@@ -20,9 +20,6 @@
     (if token
       (conj headers :Authorization (str "Token " token))
       headers)))
-
-(defn- resource [uri]
-  (str/join "/" [base-uri uri]))
 
 (defn- default-handler [response]
   (js/console.log (str response)))
@@ -38,7 +35,7 @@
           :writer          (transit/writer :json time/time-serialization-handlers)}
          opts))
 
-(defn trade-patterns [& [handler]]
+#_(defn trade-patterns [& [handler]]
   (let [url (resource "trade-patterns")]
     (GET url (as-transit {:handler       (if handler handler default-handler)
                           :error-handler error-handler}))))
@@ -53,32 +50,40 @@
 
 (def router (routes/app-router))
 
+(defn- resource
+  ([type-kw]
+   (resource type-kw nil))
+  ([type-kw params]
+   (str base-uri
+        (:path (reitit/match-by-name
+                router
+                type-kw
+                params)))))
+
 (defn entity->command
   ([token [type-kw entity]]
    (let [type-nm (name type-kw)
-         id      (utils/id-key type-kw) #_(keyword (str type-nm "/id"))]
+         id      (utils/id-key type-kw) #_ (keyword (str type-nm "/id"))]
      (if (contains? entity id)
-       [:http-xhrio {:method          :put
+       {:http-xhrio {:method          :put
                      :params          entity
                      :headers         (standard-headers token)
                      :format          (ajax/transit-request-format)
                      :response-format (ajax/transit-response-format)
                      :on-success      [:save-local type-kw]
-                     :uri             (:path (reitit/match-by-name
-                                              router
-                                              type-kw
-                                              {:user-id "NA"
-                                               :id      (id entity)}))}]
-       [:http-xhrio {:method          :post
+                     ;; TODO!!!: Prefix correct server side base URL here!
+                     :uri             (resource type-kw {:id (id entity)})}}
+       {:http-xhrio {:method          :post
                      :params          entity
                      :headers         (standard-headers token)
                      :format          (ajax/transit-request-format)
                      :response-format (ajax/transit-response-format)
                      :on-success      [:save-local type-kw]
-                     :uri             (:path (reitit/match-by-name
+                     :uri             (resource (keyword (str type-nm "/*")))
+                     #_(:path (reitit/match-by-name
                                               router
                                               (keyword (str type-nm "/*"))
-                                              {:user-id "NA"}))}]))
+                                              {:user-id "NA"}))}}))
    #_(->> (seq rentity)
         (group-by (fn [[attr _]] (namespace attr)))
         seq
@@ -132,6 +137,8 @@
                          :trade-pattern/owner-user-id 5
                          :user/user-name              "Frikkie"
                          :user/email                  "j@j.com"})))
+(resource :trade-pattern {:id "8789798"})
+
 
    )
 
