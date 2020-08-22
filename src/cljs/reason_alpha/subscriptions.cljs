@@ -5,6 +5,7 @@
 (rf/reg-sub
  :trade-patterns
  (fn [db _]
+   ;; TODO: Add path to leaf node
    (utils/log ::trade-patterns (get-in db [:data :trade-pattern]))
    (utils/str-keys (sort-by :trade-pattern/name
                             (get-in db [:data :trade-pattern])))))

@@ -40,9 +40,12 @@
                  [ring/ring-defaults "0.3.2"]
                  [ring-ttl-session "0.3.1"]
                  [selmer "1.12.17"]
-                 [thheller/shadow-cljs "2.8.71" :scope "provided"]]
+                 [thheller/shadow-cljs "2.8.71" :scope "provided"]
+                 [traversy "0.5.0"]]
 
   :main ^:skip-aot reason-alpha.core
+
+  :jvm-opts ["-Xmx2g"]
 
   :plugins [[lein-shadow "0.1.7"]
             [migratus-lein "0.7.2"]]
@@ -58,18 +61,18 @@
 
   :shadow-cljs
   {:nrepl  {:port 7002}
-   :builds {:app  {:target                                       :browser
-                   :output-dir                                   "resources/public/js/compiled"
-                   :asset-path                                   "/js/compiled"
-                   :modules                                      {:app {:entries [reason-alpha.core]}}
-                   :devtools                                     {:http-root   "resources/public"
-                                                                  :http-port   8700
+   :builds {:app  {:target                                                                                                           :browser
+                   :output-dir                                                                                                       "resources/public/js/compiled"
+                   :asset-path                                                                                                       "/js/compiled"
+                   :modules                                                                                                          {:app {:entries [reason-alpha.core]}}
+                   :devtools                                                                                                         {:http-root   "resources/public"
+                                                                                                                                      :http-port   8700
                                         ;:watch-dir "resources/public"
-                                                                  :before-load reason-alpha.core/stop
-                                                                  :after-load  reason-alpha.core/start
-                                                                  :preloads    [devtools.preload]} ; re-frisk.preload
-                   :dev                                          {:compiler-options {:clojure-defines {re-frame.trace/trace-enabled?        true
-                                                                                                       day8.re-frame.tracing/trace-enabled? true}}}}
+                                                                                                                                      :before-load reason-alpha.core/stop
+                                                                                                                                      :after-load  reason-alpha.core/start
+                                                                                                                                      :preloads    [devtools.preload]} ; re-frisk.preload
+                   :dev                                                                                                              {:compiler-options {:clojure-defines {re-frame.trace/trace-enabled?        true
+                                                                                                                                                                           day8.re-frame.tracing/trace-enabled? true}}}}
             :test {:target    :node-test
                    :output-to "target/test/tests.js"
                    :autorun   true}}}

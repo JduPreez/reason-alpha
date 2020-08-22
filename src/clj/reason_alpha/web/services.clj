@@ -10,12 +10,17 @@
 (defn get-trade-pattern [{{:keys [id]} :path-params}]
   (ok (any db [:trade-pattern/id = id])))
 
-(defn save-trade-pattern! [{{:keys [id]} :path-params
-                            :as req}]
-  (let [trade-pattern (:params req)]
-    (ok (save! db trade-pattern))))
+(defn save-trade-pattern! [{trade-pattern :body-params}]
+  (clojure.pprint/pprint [:data trade-pattern])
+  (ok {:result (save! db trade-pattern)}))
 
 (comment
   (choose db [:trade-pattern/*])
-
+  (save! db {:trade-pattern/name "Buy Support or Short Resistance",
+             :trade-pattern/creation-id nil,
+             :trade-pattern/id #uuid "01738610-a026-1f53-5d94-219803fa47e1",
+             :trade-pattern/parent-id
+             #uuid "32429cdf-99d6-4893-ae3a-891f8c22aec6",
+             :trade-pattern/user-id #uuid "8ffd2541-0bbf-4a4b-adee-f3a2bd56d83f",
+             :trade-pattern/description "another test"})
   )

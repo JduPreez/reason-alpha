@@ -31,7 +31,7 @@
 
 (defn- column-name [keywrd]
   (-> (name keywrd)
-      sql-name      
+      sql-name
       (#(str (full-table-name keywrd) "." %))))
 
 (defn- column-name-kw [attr]
@@ -108,16 +108,18 @@
 
 )
 
-(defn- row->entity [row]
-  (let [table (:reason_alpha_table row)]
-    (->> (dissoc row :reason_alpha_table)
-         seq
-         (mapcat (partial attribute-kv table))
-         (apply hash-map))))
+(defn- row->entity [{table :reason_alpha_table
+                     :as   row}]
+  (->> (dissoc row :reason_alpha_table)
+       seq
+       (mapcat (partial attribute-kv table))
+       (apply hash-map)))
 
 (defn- ent-name->id [ent-name]
-  (column-name-kw
-   (keyword (str ent-name "/id"))))
+  (keyword (str ent-name "/id")))
+
+(defn- ent-name->db-id [ent-name]
+  (column-name-kw (ent-name->id ent-name)))
 
 (defn- entities->add-all-cmd [entities]
   (let [attr->column-fn #(-> %
@@ -128,7 +130,7 @@
                             keys
                             first
                             namespace
-                            ent-name->id)
+                            ent-name->db-id)
         table           (full-table-name id)
         rows            (->> entities
                              (map (fn [entity]
@@ -149,34 +151,42 @@
        (group-by (fn [[attr _]] (namespace attr)))
        seq
        (map (fn [[entity [[attr] :as attrs]]]
-              (let [id    (ent-name->id entity)
-                    table (full-table-name attr)
-                    row   (->> attrs
-                               (map (fn [[attr val]]
-                                      [(column-name-kw attr) val]))
-                               flatten
-                               (apply hash-map))]
-                (if (contains? row id)
-                  {:type  :data/update
-                   :table table
-                   :row   row
-                   :id    id}
-                  {:type  :data/insert
-                   :table table
-                   :row   (assoc row id (UuidCreator/getLexicalOrderGuid))
-                   :id    id}))))))
+              (let [db-id  (ent-name->db-id entity)
+                    id     (ent-name->id entity)
+                    table  (full-table-name attr)
+                    entity (->> attrs
+                                flatten
+                                (apply hash-map))
+                    row    (->> attrs
+                                (map (fn [[attr val]]
+                                       [(column-name-kw attr) val]))
+                                flatten
+                                (apply hash-map))]
+                (if (contains? row db-id)
+                  {:type   :data/update
+                   :table  table
+                   :row    row
+                   :entity entity
+                   :id     db-id}
+                  (let [id-val (UuidCreator/getLexicalOrderGuid)]
+                    {:type   :data/insert
+                     :table  table
+                     :row    (assoc row db-id id-val)
+                     :entity (assoc entity id id-val)
+                     :id     db-id})))))))
 
 (defn- save-impl!
   "Updates columns or inserts a new row in the specified table"
-  [{type  :type
-    table :table
-    row   :row
-    id    :id}]
+  [{type   :type
+    table  :table
+    row    :row
+    entity :entity
+    id     :id}]
   (if (= :data/update type)
-    (jdbc/update! db-config table row
-                  [(str (column-name-kw id) " = ?" (id row))])
+    (jdbc/update! db-config table (dissoc row id)
+                  ["id = ?" (id row)])
     (jdbc/insert! db-config table row))
-  row)
+  entity)
 
 (defn- add-all-impl! [{table :table
                        rows  :rows}]
@@ -216,7 +226,7 @@
 
             (save! [this rentity]
               (save! this rentity sav-impl!))
-
+;; TODO: Save should return entity clj, not row sql format
             (save! [_ rentity save-impl!-fn]
               (->> rentity
                    rentity->save-cmds
@@ -234,63 +244,11 @@
 
 (comment
 
-  (let [sid (UuidCreator/getLexicalOrderGuid)
-        uid (UuidCreator/getLexicalOrderGuid)]
-    (save! {:security/id            sid
-            :security/name          "Facebook"
-            :security/owner-user-id 5
-            :user/id                uid
-            :user/user-name         "Frikkie"
-            :user/email             "j@j.com"} (fn [type _ rw _] {:type type
-                                                                  :data rw
-                                                                  :sid  (= sid (:security/id rw))
-                                                                  :uid  uid})))
-
-
-  (let [rentity {:security/id            0
-                 :security/name          "Facebook"
-                 :security/owner-user-id 5
-                 :user/user-name         "Frikkie"
-                 :user/email             "j@j.com"}]
-    (->> (seq rentity)
-         (group-by (fn [[attr _]] (namespace attr)))))
-
-  (->> [{:security/name          "Facebook"
-         :security/owner-user-id 1}
-        {:security/name          "Exxon Mobil"
-         :security/owner-user-id 2}
-        {:security/name          "Microsoft"
-         :security/owner-user-id 3}
-        {:security/name          "GSK"
-         :security/owner-user-id 4}]
-       entities->add-all-cmd)
-
-  (jdbc/query db-config "SELECT 'security' table, security.*, 'user' table, user.user_name name FROM \"REASON-ALPHA\".security JOIN \"REASON-ALPHA\".user ON user.id = security.owner_user_id")
-
-  (jdbc/insert-multi! db-config "\"REASON-ALPHA\".security"
-                      [{:id            1
-                        :name          "Facebook"
-                        :owner_user_id 1}
-                       {:id            2
-                        :name          "Facebook"
-                        :owner_user_id 2}
-                       {:id            3
-                        :name          "Facebook"
-                        :owner_user_id 3}])
-
-  (doall (choose db [[:trade-pattern/user-id := "8ffd2541-0bbf-4a4b-adee-f3a2bd56d83f"]]))
-
-  (doall (choose db [[:trade-pattern/*]]))
-
-  (let [row   {:id                 2
-               :name               "Facebook"
-               :owner_user_id      345
-               :reason_alpha_table "security"}
-        table (:reason_alpha_table row)]
-    (->> (dissoc row :reason_alpha_table)
-         seq
-         (mapcat (partial attribute-kv table))
-         (apply hash-map)))
-  (attribute-kv "security" [:owner_user_id 2])
- 
+  (rentity->save-cmds {:trade-pattern/name "Buy Support or Short Resistance",
+                       :trade-pattern/creation-id nil,
+                       :trade-pattern/id #uuid "01738610-a026-1f53-5d94-219803fa47e1",
+                       :trade-pattern/parent-id
+                       #uuid "32429cdf-99d6-4893-ae3a-891f8c22aec6",
+                       :trade-pattern/user-id #uuid "8ffd2541-0bbf-4a4b-adee-f3a2bd56d83f",
+                       :trade-pattern/description "another test"})
   )

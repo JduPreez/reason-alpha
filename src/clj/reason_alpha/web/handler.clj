@@ -42,6 +42,6 @@
   (coercion/coerce! 
    (r/match-by-path  router "/api/users/8ffd2541-0bbf-4a4b-adee-f3a2bd56d83f/trade-patterns"))
 
-   (r/match-by-name :trade-pattern)
+   (r/match-by-path router "/api/trade-patterns/01733e8b-8817-38e8-af69-bbc8e5444829")
   
   (remove-ns 'reason-alpha.web.handler))

@@ -5,8 +5,9 @@
     "create-react-class": "15.6.3",
     "react": "16.8.6",
     "react-dom": "16.8.6",
-    "shadow-cljs": "2.8.69",
     "xmlhttprequest": "^1.8.0"
   },
-  "devDependencies": {}
+  "devDependencies": {
+    "shadow-cljs": "^2.8.69"
+  }
 }
