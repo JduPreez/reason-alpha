@@ -4,7 +4,7 @@
             [migratus.core :as migratus]
             [reason-alpha.data :as data :refer [db connect]]))
 
-(defn config [] 
+(defn config []
   {:store                :database
    :migration-dir        "migrations/"
    :init-in-transaction? false
@@ -24,7 +24,7 @@
                              (into-array sots))))))))
 
 (defn exists? [sql-obj-type sql-obj & [schema]]
-  (not 
+  (not
    (nil? (some #(and (= (:table_name %) sql-obj)
                      (= (:table_schem %) (if schema
                                            schema

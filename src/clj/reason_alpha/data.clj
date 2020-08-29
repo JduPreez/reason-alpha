@@ -44,9 +44,9 @@
 
 (defn- maybe-default-sql [query table-column with-where]
   (if (empty? query)
-    ; Add a column with the table name. This will be used when the
-    ; result-set is mapped back to a Clojure map, so that we know
-    ; what namespace to prefix keyword attributes with 
+    ;; Add a column with the table name. This will be used when the
+    ;; result-set is mapped back to a Clojure map, so that we know
+    ;; what namespace to prefix keyword attributes with 
     (str "SELECT '"
          (table-name table-column)
          "' reason_alpha_table, * FROM "
@@ -58,8 +58,6 @@
   "Only supports simple equality comparison conditions & non-nested combinators (AND/OR)"
   [spec]
   (reduce (fn [query condition]
-            #_(clojure.pprint/pprint {:q query
-                                      :c condition})
             (let [is-vec         (vector? condition)
                   is-cond        (and is-vec
                                       (not (vector? (first condition))))
