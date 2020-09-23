@@ -13,7 +13,8 @@
     (let [with-ancestors-path (data-structs/conj-ancestors-path
                                data
                                :parent
-                               :name)]
+                               :name
+                               :id)]
       (is (every? (fn [{:keys [ancestors-path]}]
                     (some? ancestors-path)) with-ancestors-path))
       (is (= (:ancestors-path (nth with-ancestors-path 0 nil))
@@ -31,6 +32,7 @@
                                data
                                :parent
                                :name
+                               :id
                                :trade-pattern/ancestors-path)]
       (is (contains? (nth with-ancestors-path 0)
                      :trade-pattern/ancestors-path)))))

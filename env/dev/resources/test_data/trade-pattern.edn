@@ -7,4 +7,7 @@
   :trade-pattern/name        "Buy Support or Short Resistance"
   :trade-pattern/description ""
   :trade-pattern/parent-id   #uuid "32429cdf-99d6-4893-ae3a-891f8c22aec6"
+  :trade-pattern/user-id     #uuid "8ffd2541-0bbf-4a4b-adee-f3a2bd56d83f"}
+ {:trade-pattern/name        "Breakout"
+  :trade-pattern/description ""
   :trade-pattern/user-id     #uuid "8ffd2541-0bbf-4a4b-adee-f3a2bd56d83f"}]

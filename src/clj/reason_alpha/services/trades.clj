@@ -7,9 +7,5 @@
     (data-structs/conj-ancestors-path trade-patrns
                                       :trade-pattern/parent-id
                                       :trade-pattern/name
+                                      :trade-pattern/id
                                       :trade-pattern/ancestors-path)))
-
-(comment
-  (get-trade-patterns)
-
-  )
