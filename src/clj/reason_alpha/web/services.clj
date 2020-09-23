@@ -1,11 +1,12 @@
 (ns reason-alpha.web.services
   (:require  [reason-alpha.data :refer [choose any save! db]]
+             [reason-alpha.services.trades :as trades-svc]
              [ring.util.http-response :refer :all]))
 
 ; TODO: Improve error handling
 
 (defn get-trade-patterns [_] #_[{{{user-id :user-id} :path} :parameters}]  
-  (ok {:result (choose db [:trade-pattern/*]) }))
+  (ok {:result (trades-svc/get-trade-patterns)})) ;; (choose db [:trade-pattern/*])
 
 (defn get-trade-pattern [{{:keys [id]} :path-params}]
   (ok (any db [:trade-pattern/id = id])))

@@ -132,13 +132,16 @@
         table           (full-table-name id)
         rows            (->> entities
                              (map (fn [entity]
-                                    (let [attrs (seq entity)
-                                          row   (->> attrs
-                                                     (map (fn [[attr val]]
-                                                            [(attr->column-fn attr) val]))
-                                                     flatten
-                                                     (apply hash-map))]
-                                      (assoc row (attr->column-fn id) (UuidCreator/getLexicalOrderGuid)))))
+                                    (let [attrs      (seq entity)
+                                          row        (->> attrs
+                                                          (map (fn [[attr val]]
+                                                                 [(attr->column-fn attr) val]))
+                                                          flatten
+                                                          (apply hash-map))
+                                          id-colm-kw (attr->column-fn id)]
+                                      (if (contains? row id-colm-kw)
+                                        row
+                                        (assoc row id-colm-kw (UuidCreator/getLexicalOrderGuid))))))
                              vec)]
 
     {:table table
@@ -241,12 +244,27 @@
             #_(remove! [_ rentity]))))
 
 (comment
+  (entities->add-all-cmd [{:trade-pattern/id          #uuid "32429cdf-99d6-4893-ae3a-891f8c22aec6"
+                           :trade-pattern/name        "Pullback"
+                           :trade-pattern/description ""
+                           :trade-pattern/parent-id   nil
+                           :trade-pattern/user-id     #uuid "8ffd2541-0bbf-4a4b-adee-f3a2bd56d83f"}
+                          {:trade-pattern/id          #uuid "3c2d368f-aae5-4d13-a5bd-c5b340f09016"
+                           :trade-pattern/name        "Buy Support or Short Resistance"
+                           :trade-pattern/description ""
+                           :trade-pattern/parent-id   #uuid "32429cdf-99d6-4893-ae3a-891f8c22aec6"
+                           :trade-pattern/user-id     #uuid "8ffd2541-0bbf-4a4b-adee-f3a2bd56d83f"}
+                          {:trade-pattern/name        "Just another test"
+                           :trade-pattern/description ""
+                           :trade-pattern/parent-id   #uuid "32429cdf-99d6-4893-ae3a-891f8c22aec6"
+                           :trade-pattern/user-id     #uuid "8ffd2541-0bbf-4a4b-adee-f3a2bd56d83f"}])
 
-  (rentity->save-cmds {:trade-pattern/name "Buy Support or Short Resistance",
+
+  (rentity->save-cmds {:trade-pattern/name        "Buy Support or Short Resistance",
                        :trade-pattern/creation-id nil,
-                       :trade-pattern/id #uuid "01738610-a026-1f53-5d94-219803fa47e1",
+                       :trade-pattern/id          #uuid "01738610-a026-1f53-5d94-219803fa47e1",
                        :trade-pattern/parent-id
                        #uuid "32429cdf-99d6-4893-ae3a-891f8c22aec6",
-                       :trade-pattern/user-id #uuid "8ffd2541-0bbf-4a4b-adee-f3a2bd56d83f",
+                       :trade-pattern/user-id     #uuid "8ffd2541-0bbf-4a4b-adee-f3a2bd56d83f",
                        :trade-pattern/description "another test"})
   )

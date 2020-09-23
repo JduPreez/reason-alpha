@@ -47,9 +47,49 @@
       (is (= (some #(= (:security/id %) (:security/id entity)) rows) true))
       (is (= (some #(= (:user/id %) (:user/id entity)) rows) true)))))
 
+(deftest test-add-all
+  (testing "`entities->add-all-cmd` should not overwrite id"
+    (let [id1            #uuid "32429cdf-99d6-4893-ae3a-891f8c22aec6"
+          id2            #uuid "3c2d368f-aae5-4d13-a5bd-c5b340f09016"
+          entities       [{:trade-pattern/id          id1
+                           :trade-pattern/name        "Pullback"
+                           :trade-pattern/description ""
+                           :trade-pattern/parent-id   nil
+                           :trade-pattern/user-id     #uuid "8ffd2541-0bbf-4a4b-adee-f3a2bd56d83f"}
+                          {:trade-pattern/id          id2
+                           :trade-pattern/name        "Buy Support or Short Resistance"
+                           :trade-pattern/description ""
+                           :trade-pattern/parent-id   #uuid "32429cdf-99d6-4893-ae3a-891f8c22aec6"
+                           :trade-pattern/user-id     #uuid "8ffd2541-0bbf-4a4b-adee-f3a2bd56d83f"}
+                          {:trade-pattern/name        "Just another test"
+                           :trade-pattern/description ""
+                           :trade-pattern/parent-id   #uuid "32429cdf-99d6-4893-ae3a-891f8c22aec6"
+                           :trade-pattern/user-id     #uuid "8ffd2541-0bbf-4a4b-adee-f3a2bd56d83f"}]
+          {:keys [rows]} (#'data/entities->add-all-cmd entities)]
+      (is (some (fn [{:keys [id]}]
+                  (= id id1)) rows))
+      (is (some (fn [{:keys [id]}]
+                  (= id id2)) rows)))))
+
 ;; TODO: Add test for (to-query [[:security/*]]) 
 
 (comment
+  (let [id1            #uuid "32429cdf-99d6-4893-ae3a-891f8c22aec6"
+        id2            #uuid "3c2d368f-aae5-4d13-a5bd-c5b340f09016"
+        entities       [{:trade-pattern/id          id1
+                         :trade-pattern/name        "Pullback"
+                         :trade-pattern/description ""
+                         :trade-pattern/parent-id   nil
+                         :trade-pattern/user-id     #uuid "8ffd2541-0bbf-4a4b-adee-f3a2bd56d83f"}
+                        {:trade-pattern/id          id2
+                         :trade-pattern/name        "Buy Support or Short Resistance"
+                         :trade-pattern/description ""
+                         :trade-pattern/parent-id   #uuid "32429cdf-99d6-4893-ae3a-891f8c22aec6"
+                         :trade-pattern/user-id     #uuid "8ffd2541-0bbf-4a4b-adee-f3a2bd56d83f"}]
+        {:keys [rows]} (#'data/entities->add-all-cmd entities)]
+    (some (fn [{:keys [id]}]
+               (= id id1)) rows))
+
   (clojure.test/run-tests 'reason-alpha.data-test)
 
   )

@@ -1,0 +1,2 @@
+- Fix trade-patterns service end-point: Ancestors-path is empty for some reason.
+- Get reason-alpha.views.trade-patterns to show tree hierarchy.

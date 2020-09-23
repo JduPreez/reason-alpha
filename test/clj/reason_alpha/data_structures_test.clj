@@ -2,14 +2,15 @@
   (:require [clojure.test :refer :all]
             [reason-alpha.data-structures :as data-structs]))
 
+(def data [{:id 1 :name "One" :parent 2}
+           {:id 2 :name "Two" :parent 4}
+           {:id 3 :name "Three" :parent 4}
+           {:id 4 :name "Four" :parent 5}
+           {:id 5 :name "Five"}])
+
 (deftest test-data-structures
   (testing "`data-structures/conj-ancestors-path` should add ancestors path"
-    (let [data                [{:id 1 :name "One" :parent 2}
-                               {:id 2 :name "Two" :parent 4}
-                               {:id 3 :name "Three" :parent 4}
-                               {:id 4 :name "Four" :parent 5}
-                               {:id 5 :name "Five"}]
-          with-ancestors-path (data-structs/conj-ancestors-path
+    (let [with-ancestors-path (data-structs/conj-ancestors-path
                                data
                                :parent
                                :name)]
@@ -24,7 +25,15 @@
       (is (= (:ancestors-path (nth with-ancestors-path 3 nil))
              '("Five")))
       (is (= (:ancestors-path (nth with-ancestors-path 4 nil))
-             '())))))
+             '()))))
+  (testing "`data-structures/conj-ancestors-path` should use specified key"
+    (let [with-ancestors-path (data-structs/conj-ancestors-path
+                               data
+                               :parent
+                               :name
+                               :trade-pattern/ancestors-path)]
+      (is (contains? (nth with-ancestors-path 0)
+                     :trade-pattern/ancestors-path)))))
 
 (comment
   (clojure.test/run-tests 'reason-alpha.data-structures-test)

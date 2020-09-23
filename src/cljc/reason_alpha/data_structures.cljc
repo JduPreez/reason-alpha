@@ -16,20 +16,13 @@
 (defn conj-ancestors-path
   "Gets the path of ancestor parents of each item. Doesn't check for any
   circular references. TODO: Should check for circular references"
-  [items find-parent path-val]
+  [items find-parent path-val & [ancestors-path-key]]
   (let [indexed (->> (map (fn [{:keys [id] :as itm}] ;; Index items into map by ID
                             {(keyword (str id)) itm})
                           items)
                      (apply merge))]
     (map (fn [item]
            (assoc item
-                  :ancestors-path
+                  (or ancestors-path-key :ancestors-path)
                   (get-ancestors-path item indexed find-parent path-val)))
          items)))
-
-(comment
-  
-
-
-  )
-

@@ -25,5 +25,6 @@
                                                :max-width 250}
                    :trade-pattern/description {:header   "Description"
                                                :flex     2
-                                               :editable true}}))
+                                               :editable true}}
+                  :trade-pattern/ancestors-path))
 
