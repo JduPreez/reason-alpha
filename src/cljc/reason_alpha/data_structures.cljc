@@ -5,13 +5,13 @@
    (get-ancestors-path item indexed find-parent path-val nil))
   ([item indexed find-parent path-val path]
    (let [parent (when-let [p (find-parent item)]
-                  ((keyword (str p)) indexed))]
-     (let [pth (or path '())]
-       (if (and parent
-                (not= item parent)) ;; Check for most basic version of circular ref
-         (get-ancestors-path parent indexed find-parent path-val
-                   (conj pth (path-val parent)))
-         pth)))))
+                  ((keyword (str p)) indexed))
+         pth    (or path (list (path-val item)))]
+     (if (and parent
+              (not= item parent)) ;; Check for most basic version of circular ref
+       (get-ancestors-path parent indexed find-parent path-val
+                           (conj pth (path-val parent)))
+       pth))))
 
 (defn conj-ancestors-path
   "Gets the path of ancestor parents of each item. Doesn't check for any
@@ -21,7 +21,6 @@
                             {(keyword (str (id-key itm))) itm})
                           items)
                      (apply merge))]
-    (println indexed)
     (map (fn [item]
            (assoc item
                   (or ancestors-path-key :ancestors-path)
@@ -59,4 +58,4 @@
                          :trade-pattern/name
                          :trade-pattern/id
                          :trade-pattern/ancestors-path))
-  )
+ )

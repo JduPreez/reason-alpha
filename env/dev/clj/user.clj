@@ -12,3 +12,8 @@
 
 (defn stop []
   (mount/stop))
+
+(comment
+  (start true)
+
+)

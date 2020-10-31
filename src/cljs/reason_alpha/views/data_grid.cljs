@@ -34,7 +34,6 @@
     (rf/dispatch [:save type data])))
 
 (defn view [type data cols & [tree-path]]
-  (js/console.log "data-grid/view " (pr-str data))
   [:div.ag-theme-balham-dark {:style {#_:width #_ "100%"
                                       :height  "100%"}}
    [:> ag-grd-react/AgGridReact
@@ -44,11 +43,15 @@
              :modules              ag-grd/AllModules
              :onFirstDataRendered  #(-> % .-api .sizeColumnsToFit)
              :onCellEditingStopped (partial save type)}
-      tree-path (assoc :getDataPath #(goog.object/get
+      tree-path (assoc :treeData true
+                       :getDataPath #(goog.object/get
                                       %
                                       (utils/keyword->str tree-path))))]])
 
 (comment
+  (cond-> {:prop1 1}
+    :trade-pattern/ancestors-path (assoc :getPathData 2))
+
   .-api .sizeColumnsToFit %
   (columns {:trade-pattern/name        {:header "Name"}
             :trade-pattern/description {:header "Description"}}))
