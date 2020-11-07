@@ -13,7 +13,7 @@
 
 (defn save-trade-pattern! [{trade-pattern :body-params}]
   (clojure.pprint/pprint [:data trade-pattern])
-  (ok {:result (save! db trade-pattern)}))
+  (ok {:result (trades-svc/save-trade-pattern! trade-pattern)}))
 
 (comment
   (choose db [:trade-pattern/*])

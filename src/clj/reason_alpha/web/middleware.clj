@@ -29,7 +29,6 @@
 (defn wrap-cors [handler]
   (fn [request]
     (let [response (handler request)]
-      (println "wrap-cors")
       (-> response
           (assoc-in [:headers "Access-Control-Allow-Origin"] "http://localhost:8700")
           (assoc-in [:headers "Access-Control-Allow-Headers"] "x-requested-with, content-type, x-csrf-token")
