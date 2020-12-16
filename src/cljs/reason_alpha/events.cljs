@@ -49,13 +49,18 @@
 
 (rf/reg-event-db
  :save-local
- (fn [db [_ type new]]
+ (fn [db [_ type {:keys [result] :as new}]]
+   (cljs.pprint/pprint {::save-local [type new]})
    (let [current     (get-in db [:data type])
+         new-val     (or result new)
          new-coll    (cond
-                       (contains? new :result) (:result new)
-                       (map? new)              [new]
-                       :else                   new)
+                       (and (coll? new-val)
+                            (not (map? new-val))) new-val
+                       (map? new-val)             [new-val]
+                       :else                      new-val)
          merged-coll (utils/merge-by-id type current new-coll)]
+     (cljs.pprint/pprint {::save-local {:new-coll    new-coll
+                                        :merged-coll merged-coll}})
      (-> db
          (assoc-in [:loading type] false)
          (assoc-in [:data type] merged-coll)))))
