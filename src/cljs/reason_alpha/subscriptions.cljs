@@ -13,7 +13,12 @@
  :trade-pattern-options
  :<- [:trade-patterns]
  (fn [trade-patterns]
-   (map (fn [{:keys [trade-pattern/id
-                     trade-pattern/name]}]
-          {:label name
-           :value id}) trade-patterns)))
+   (->> trade-patterns
+        (filter (fn [{:keys [trade-pattern/parent-id]
+                      :as   tp}]
+                  ;; Only return parent/non-child trade-patterns
+                  (when (not parent-id) tp)))
+        (map (fn [{:keys [trade-pattern/id
+                          trade-pattern/name]}]
+               {:label name
+                :value id})))))

@@ -4,19 +4,21 @@
             [goog.object]
             [medley.core :refer [assoc-some]]
             [re-frame.core :as rf]
-            [reason-alpha.utils :as utils]
             [reason-alpha.utils :as utils]))
 
-(defn- value [params]
+(defn- get-value [*options params]
   (let [clj-params (js->clj params)
         field      (get-in clj-params ["colDef" "field"])
-        item       (get clj-params "data")] 
-    (get item field)))
+        item       (get clj-params "data")
+        item-val   (get item field)]
+    (if *options
+      (some (fn [{:keys [label value]}]
+              (when (= value item-val) label)) @*options)
+      item-val)))
 
-(defn- format-value [items search-val]
-  (some (fn [{:keys [value label]}]
-          (when (= value search-val)
-            label)) items))
+(defn- format-value [*options val]
+  (some (fn [{:keys [label value]}]
+          (when (= val value) label)) @*options))
 
 (defn- columns [cols]
   (map (fn [[k {:keys [header
@@ -25,10 +27,12 @@
                        max-width
                        editable
                        select]}]]
-         (let [field (utils/keyword->str k)]
+         (let [field              (utils/keyword->str k)
+               {:keys [lookup-key
+                       *options]} select]
            (-> {:headerName  header
                 :field       field
-                :valueGetter value
+                :valueGetter (partial get-value *options)
                 :flex        flex}
                (assoc-some :minWidth min-width)
                (assoc-some :maxWidth max-width)
@@ -46,17 +50,16 @@
                            (when select
                              "agRichSelectCellEditor"))
                (assoc-some :cellEditorParams
-                           (when-let  [{:keys [lookup-key
-                                               values]} select]
+                           (when  select
                              (fn [params]
                                (let [clj-params  (js->clj params)
                                      slookup-key (utils/keyword->str lookup-key)]
-                                 (cljs.pprint/pprint ::select-column)
                                  (clj->js
-                                  {:values (->> @values
-                                                (map :value)
-                                                (filter #(when (not= (get-in clj-params ["data" slookup-key]) %)
-                                                           %)))}))))))))
+                                  {:formatValue (partial format-value *options)
+                                   :values      (->> @*options
+                                                     (map :value)
+                                                     (filter #(when (not= (get-in clj-params ["data" slookup-key]) %)
+                                                                %)))}))))))))
        (seq cols)))
 
 (comment

@@ -267,5 +267,5 @@
                        #uuid "32429cdf-99d6-4893-ae3a-891f8c22aec6",
                        :trade-pattern/user-id     #uuid "8ffd2541-0bbf-4a4b-adee-f3a2bd56d83f",
                        :trade-pattern/description "another test"})
-
+  (to-query [[:trade-pattern/parent-id := "123"]])
   )

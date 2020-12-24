@@ -26,7 +26,7 @@
                                                  :min-width 200
                                                  :max-width 250
                                                  :select    {:lookup-key :trade-pattern/id
-                                                             :values     (rf/subscribe [:trade-pattern-options])}
+                                                             :*options   (rf/subscribe [:trade-pattern-options])}
                                                  :editable  true}
                      :trade-pattern/description {:header   "Description"
                                                  :flex     2
