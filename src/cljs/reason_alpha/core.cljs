@@ -9,7 +9,8 @@
             [re-frame.core :as rf]
             [reagent.core :as r]
             [reason-alpha.events]
-            [reason-alpha.subscriptions]
+            [reason-alpha.events.trade-patterns]
+            [reason-alpha.subs]
             [reason-alpha.utils :as utils]
             [reason-alpha.views.main :as main]
             [reason-alpha.views.trade-patterns :as trade-patterns]
@@ -160,15 +161,15 @@
      :modules          ag-grd/AllModules
      :getMainMenuItems (partial get-header-menu-items {"trade-pattern" ["Edit" :trade-patterns]})}]])
 
-(def pages
+(def views
   {:home           #'home-page
    :trade-patterns #'trade-patterns/view
    :about          #'about-page})
 
-(defn page []
-  (let [active-view @(rf/subscribe [:active-view])]
-    (js/console.log (str "page ==> " active-view))
-    [main/view (pages active-view)]))
+(defn show []
+  (let [view @(rf/subscribe [:active-view])]
+    (js/console.log (str "active-view ==> " view))
+    [main/view (views view)]))
 
 ;; -------------------------
 ;; History
@@ -190,11 +191,9 @@
 
 (defn start []
   (rf/clear-subscription-cache!)
-  (r/render [#'page] (.getElementById js/document "app")))
+  (r/render [#'show] (.getElementById js/document "app")))
 
 (defn ^:export init []
   (rf/dispatch-sync [:navigate (reitit/match-by-name router :home)])
-  #_(ajax/load-interceptors!)
-  #_(rf/dispatch [:fetch-docs])
   (hook-browser-navigation!)
   (start))

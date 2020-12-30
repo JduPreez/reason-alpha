@@ -13,11 +13,11 @@
        [:span " "]]
       [:div.dropdown-menu.dropdown-menu-right.dropdown-menu-arrow
        {;:x-placement "bottom-end"
-        :style       {:position    "absolute"
-                      :transform   "translate3d(-32px, 46px, 0px)"
-                      :top         "0px"
-                      :left        "0px"
-                      :will-change "transform"}}
+        :style {:position    "absolute"
+                :transform   "translate3d(-32px, 46px, 0px)"
+                :top         "0px"
+                :left        "0px"
+                :will-change "transform"}}
        [:a.dropdown-item {:href "#"}
         [:i.dropdown-icon.mdi.mdi-account-outline] " Profile"]
        [:a.dropdown-item {:href "#"}
@@ -41,15 +41,16 @@
      [:li.nav-item
       [:a.nav-link {:href "#"}
        [:i.fas.fa-exchange-alt] [:span "IMPORT"]]]
-     [:li.nav-item
-      [:a.nav-link {:href "#"}
+     #_[:li.nav-item
+      [:a.nav-link {:href     "#"
+                    :on-click #(rf/dispatch [:add])}
        [:i.fas.fa-exchange-alt] [:span "ADD"]]]
      [:li.nav-item
       [:a.nav-link {:href "#"}
        [:i.fas.fa-exchange-alt] [:span "DELETE"]]]
-     [:li.nav-item
-      [:a.nav-link {:href "#"
-                    :on-click #(rf/dispatch [:save])}
+     #_[:li.nav-item
+        [:a.nav-link {:href     "#"
+                      :on-click #(rf/dispatch [:save])}
        [:i.fas.fa-exchange-alt] [:span "SAVE"]]]
      [:li.nav-item
       [:a.nav-link {:href "#"}

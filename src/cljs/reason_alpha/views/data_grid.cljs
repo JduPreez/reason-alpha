@@ -20,12 +20,23 @@
   (some (fn [{:keys [label value]}]
           (when (= val value) label)) @*options))
 
+(defn- is-editable? [select editable? field params]
+  ;; If the column is a parent-child-select one, then make sure
+  ;; editing is disabled for parent columns, to ensure the graph
+  ;; is only 2 levels deep.
+  (if (not select) editable?
+      (let [clj-params (js->clj params)
+            val        (get-in clj-params ["data" field])]
+        (if val
+          editable?
+          false))))
+
 (defn- columns [cols]
   (map (fn [[k {:keys [header
                        flex
                        min-width
                        max-width
-                       editable
+                       editable?
                        select]}]]
          (let [field              (utils/keyword->str k)
                {:keys [lookup-key
@@ -33,19 +44,10 @@
            (-> {:headerName  header
                 :field       field
                 :valueGetter (partial get-value *options)
-                :flex        flex}
+                :flex        flex
+                :editable    (partial is-editable? select editable? field)}
                (assoc-some :minWidth min-width)
                (assoc-some :maxWidth max-width)
-               (assoc-some :editable (fn [params]
-                                       ;; If the column is a parent-child-select one, then make sure
-                                       ;; editing is disabled for parent columns, to ensure the graph
-                                       ;; is only 2 levels deep.
-                                       (if (not select) editable
-                                           (let [clj-params (js->clj params)
-                                                 val        (get-in clj-params ["data" field])]
-                                             (if val
-                                               editable
-                                               false)))))
                (assoc-some :cellEditor
                            (when select
                              "agRichSelectCellEditor"))
@@ -78,6 +80,7 @@
   )
 
 (defn- save [type event]
+  (cljs.pprint/pprint {::save type})
   (let [data (-> event
                  (js->clj)
                  (get "data")

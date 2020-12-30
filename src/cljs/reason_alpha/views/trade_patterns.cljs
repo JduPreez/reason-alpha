@@ -7,29 +7,24 @@
 ;; TODO 2: Hookup to toolbar menu's Add button event & add a new row to
 ;;         the data grid similar to
 ;;         https://www.ag-grid.com/javascript-grid-data-update/?framework=javascript#example-updating-with-transaction
-;; TODO 2: Nest Master/Detail
-;;         |> https://www.ag-grid.com/javascript-grid-master-detail-nesting/
-;;         |> https://stackoverflow.com/questions/42605168/ag-grid-try-to-make-tree-demo-work-using-own-data
-;;      2: Or maybe rather tree structure
-;;         https://www.ag-grid.com/javascript-grid-tree-data/
 (defn view []
   (fn []
-    (data-grid/view :trade-pattern
+    (data-grid/view :trade-patterns
                     @(rf/subscribe [:trade-patterns])
                     {:trade-pattern/name        {:header    "Trade Pattern"
                                                  :flex      1
                                                  :min-width 200
                                                  :max-width 230
-                                                 :editable  true}
+                                                 :editable? true}
                      :trade-pattern/parent-id   {:header    "Parent"
                                                  :flex      1
                                                  :min-width 200
                                                  :max-width 250
                                                  :select    {:lookup-key :trade-pattern/id
                                                              :*options   (rf/subscribe [:trade-pattern-options])}
-                                                 :editable  true}
-                     :trade-pattern/description {:header   "Description"
-                                                 :flex     2
-                                                 :editable true}}
+                                                 :editable? true}
+                     :trade-pattern/description {:header    "Description"
+                                                 :flex      2
+                                                 :editable? true}}
                     :trade-pattern/ancestors-path)))
 
