@@ -62,18 +62,18 @@
 
   :shadow-cljs
   {:nrepl  {:port 7002}
-   :builds {:app  {:target                                                                                                           :browser
-                   :output-dir                                                                                                       "resources/public/js/compiled"
-                   :asset-path                                                                                                       "/js/compiled"
-                   :modules                                                                                                          {:app {:entries [reason-alpha.core]}}
-                   :devtools                                                                                                         {:http-root   "resources/public"
-                                                                                                                                      :http-port   8700
+   :builds {:app  {:target                                                                                                                                             :browser
+                   :output-dir                                                                                                                                         "resources/public/js/compiled"
+                   :asset-path                                                                                                                                         "/js/compiled"
+                   :modules                                                                                                                                            {:app {:entries [reason-alpha.core]}}
+                   :devtools                                                                                                                                           {:http-root   "resources/public"
+                                                                                                                                                                        :http-port   8700
                                         ;:watch-dir "resources/public"
-                                                                                                                                      :before-load reason-alpha.core/stop
-                                                                                                                                      :after-load  reason-alpha.core/start
-                                                                                                                                      :preloads    [devtools.preload]} ; re-frisk.preload
-                   :dev                                                                                                              {:compiler-options {:clojure-defines {re-frame.trace/trace-enabled?        true
-                                                                                                                                                                           day8.re-frame.tracing/trace-enabled? true}}}}
+                                                                                                                                                                        :before-load reason-alpha.core/stop
+                                                                                                                                                                        :after-load  reason-alpha.core/start
+                                                                                                                                                                        :preloads    [devtools.preload]} ; re-frisk.preload
+                   :dev                                                                                                                                                {:compiler-options {:clojure-defines {re-frame.trace/trace-enabled?        true
+                                                                                                                                                                                                             day8.re-frame.tracing/trace-enabled? true}}}}
             :test {:target    :node-test
                    :output-to "target/test/tests.js"
                    :autorun   true}}}
@@ -88,6 +88,7 @@
   :profiles {:uberjar {:aot :all}
 
              :dev          [:project/dev]
+             :production   [:project/dev]
              :test         [:project/dev :project/test]
              :project/dev  {:dependencies   [[binaryage/devtools "0.9.10"]
                                              [cider/piggieback "0.4.2"]
