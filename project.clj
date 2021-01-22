@@ -88,7 +88,7 @@
   :profiles {:uberjar {:aot :all}
 
              :dev                [:project/dev]
-             :production         [:project/dev]
+             :production         [:project/prod]
              :test               [:project/dev :project/test]
              :project/dev        {:dependencies   [[binaryage/devtools "0.9.10"]
                                                    [cider/piggieback "0.4.2"]
@@ -103,7 +103,7 @@
                                   :source-paths   ["env/dev/clj" "env/dev/cljs" "test/cljs"]
                                   :resource-paths ["env/dev/resources"]
                                   :repl-options   {:init-ns user}}
-             :project/production {:env {:production true}}
+             :project/prod       {:env {:production true}}
              :project/test       {:jvm-opts       ["-Dconf=test-config.edn"]
                                   :resource-paths ["env/test/resources"]}}
 
