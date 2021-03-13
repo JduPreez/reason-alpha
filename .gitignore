@@ -15,4 +15,6 @@ node_modules
 package-lock.json
 /node_modules
 /resources/public/js/compiled
+/.clj-kondo/*cache*
+sqlite.5.db
 
