@@ -15,11 +15,13 @@
 (rf/reg-event-fx
  :navigate
  (fn [{:keys [db]} [_ {{:keys [name]} :data}]]
-   (let [updated-route-db (assoc db :active-view name)]
+   (let [db-out (assoc db
+                       :active-view-model
+                       (get-in db [:view-models name]))]
      (case name
-       :trade-patterns {:db       updated-route-db
+       :trade-patterns {:db       db-out
                         :dispatch [:get-trade-patterns]}
-       {:db updated-route-db}))))
+       {:db db-out}))))
 
 (rf/reg-event-db
  :save-local
@@ -54,10 +56,21 @@
    {:dispatch-n [[:save-local type entity]
                  [:save-remote type entity]]}))
 
+(defn add
+  "Derives the correct add event-fx from the current active model, and
+  dispatches it."
+  [{:keys [db]} _]
+  (let [{:keys [model]} (get-in db [:active-view-model])]
+    (when model
+      {:dispatch [(keyword (str (name model)
+                                "/add"))]})))
+
 (rf/reg-event-fx
  :add
- (fn [{:keys [db]} _]
-   (let [active-type (get-in db [:active-view :type])]
-     {:dispatch [(keyword (str (name active-type)
-                               "/add"))]})))
+ add)
+
+(rf/reg-event-db
+ :set-view-models
+ (fn [db [_ view-models]]
+   (assoc db :view-models view-models)))
 

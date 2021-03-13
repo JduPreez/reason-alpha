@@ -4,12 +4,14 @@
             [re-frame.core :as rf]
             [reason-alpha.views.data-grid :as data-grid]))
 
+(def model :trade-patterns)
+
 ;; TODO 2: Hookup to toolbar menu's Add button event & add a new row to
 ;;         the data grid similar to
 ;;         https://www.ag-grid.com/javascript-grid-data-update/?framework=javascript#example-updating-with-transaction
 (defn view []
   (fn []
-    (data-grid/view :trade-patterns
+    (data-grid/view model
                     @(rf/subscribe [:trade-patterns])
                     {:trade-pattern/name        {:header    "Trade Pattern"
                                                  :flex      1

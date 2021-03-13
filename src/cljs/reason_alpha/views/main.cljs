@@ -41,7 +41,7 @@
      [:li.nav-item
       [:a.nav-link {:href "#"}
        [:i.fas.fa-exchange-alt] [:span "IMPORT"]]]
-     #_[:li.nav-item
+     [:li.nav-item
       [:a.nav-link {:href     "#"
                     :on-click #(rf/dispatch [:add])}
        [:i.fas.fa-exchange-alt] [:span "ADD"]]]

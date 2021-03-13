@@ -1,11 +1,14 @@
 (ns reason-alpha.subs
-  (:require [re-frame.core :as rf]))
+  (:require [re-frame.core :as rf]
+            [reason-alpha.data.trade-patterns :as data.trade-patterns]))
+
+;; Trade patterns
 
 (rf/reg-sub
  :trade-patterns
  (fn [db _]
    (sort-by :trade-pattern/name
-            (get-in db [:data :trade-patterns]))))
+            (get-in db data.trade-patterns/root))))
 
 (rf/reg-sub
  :trade-pattern-options
@@ -21,10 +24,12 @@
                {:label name
                 :value id})))))
 
+;; System
+
 (rf/reg-sub
- :active-view           ;; usage: (subscribe [:active-view])
+ :active-view-model     ;; usage: (subscribe [:active-view])
  (fn [db _]             ;; db is the (map) value stored in the app-db atom
-   (:active-view db)))  ;; extract a value from the application state
+   (:active-view-model db)))  ;; extract a value from the application state
 
 (rf/reg-sub
  :loading

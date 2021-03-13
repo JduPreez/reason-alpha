@@ -1,14 +1,15 @@
 (ns reason-alpha.events.trade-patterns
   (:require [re-frame.core :as rf]
-            [reason-alpha.web.service-api :as svc-api]))
+            [reason-alpha.data.trade-patterns :as data]
+            [reason-alpha.web.service-api :as svc-api]
+            [reason-alpha.utils :as utils]))
 
 (rf/reg-event-db
  :trade-patterns/add
  (fn [db _]
-  (cljs.pprint/pprint :trade-patterns/add)
-  db))
-
-(js/console.log "HERE!!!")
+   (update-in db
+              data/root
+              #(conj % (utils/new-entity :trade-pattern)))))
 
 (rf/reg-event-fx
  :get-trade-patterns

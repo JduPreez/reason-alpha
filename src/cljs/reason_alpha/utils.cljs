@@ -73,11 +73,14 @@
   (apply js/console.log (conj (vec (map str (butlast args)))
                               (pr-str (last args)))))
 
+(defn new-entity [entity]
+  {(keyword (str (name entity) "/creation-id")) (random-uuid)})
+
 (comment
   (merge-by-id nil #_[{:trade-pattern/creation-id 123
-                 :trade-pattern/name       "First Name"}
-                {:trade-pattern/creation-id 356
-                 :trade-pattern/name        "blah"}]
+                       :trade-pattern/name              "First Name"}
+                      {:trade-pattern/creation-id 356
+                       :trade-pattern/name        "blah"}]
                [{:trade-pattern/creation-id 123
                  :trade-pattern/name        "2nd Name"}
                 {:trade-pattern/creation-id 789

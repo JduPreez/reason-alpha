@@ -161,15 +161,16 @@
      :modules          ag-grd/AllModules
      :getMainMenuItems (partial get-header-menu-items {"trade-pattern" ["Edit" :trade-patterns]})}]])
 
-(def views
-  {:home           #'home-page
-   :trade-patterns #'trade-patterns/view
-   :about          #'about-page})
+(def view-models
+  {:home           {:view #'home-page}
+   :trade-patterns {:view  #'trade-patterns/view
+                    :model :trade-patterns}
+   :about          {:view #'about-page}})
 
 (defn show []
-  (let [view @(rf/subscribe [:active-view])]
+  (let [{:keys [view]} @(rf/subscribe [:active-view-model])]
     (js/console.log (str "active-view ==> " view))
-    [main/view (views view)]))
+    [main/view view]))
 
 ;; -------------------------
 ;; History
@@ -194,6 +195,7 @@
   (r/render [#'show] (.getElementById js/document "app")))
 
 (defn ^:export init []
+  (rf/dispatch-sync [:set-view-models view-models])
   (rf/dispatch-sync [:navigate (reitit/match-by-name router :home)])
   (hook-browser-navigation!)
   (start))
