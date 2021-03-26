@@ -13,7 +13,5 @@
   :stop  (.stop server))
 
 (defn -main []
-  #_(jetty/run-jetty #'handler/app-routes {:port  3000
-                                         :join? false})
   (mount/start))
 

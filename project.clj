@@ -34,6 +34,7 @@
                  [org.apache.ignite/ignite-spring-data "2.7.5"]
                  [org.clojure/java.jdbc "0.7.10"]
                  [org.slf4j/slf4j-log4j12 "1.7.29"]
+                 [prone "2019-07-08"]
                  [re-frame "0.10.9"]
                  [reagent "0.8.1"]
                  [ring "1.8.0"]
@@ -62,18 +63,14 @@
 
   :shadow-cljs
   {:nrepl  {:port 7002}
-   :builds {:app  {:target                                                                                                                                                                               :browser
-                   :output-dir                                                                                                                                                                           "resources/public/js/compiled"
-                   :asset-path                                                                                                                                                                           "/js/compiled"
-                   :modules                                                                                                                                                                              {:app {:entries [reason-alpha.core]}}
-                   :devtools                                                                                                                                                                             {:http-root   "resources/public"
-                                                                                                                                                                                                          :http-port   8700
-                                        ;:watch-dir "resources/public"
-                                                                                                                                                                                                          :before-load reason-alpha.core/stop
-                                                                                                                                                                                                          :after-load  reason-alpha.core/start
-                                                                                                                                                                                                          :preloads    [devtools.preload]} ; re-frisk.preload
-                   :dev                                                                                                                                                                                  {:compiler-options {:clojure-defines {re-frame.trace/trace-enabled?        true
-                                                                                                                                                                                                                                               day8.re-frame.tracing/trace-enabled? true}}}}
+   :builds {:app  {:target     :browser
+                   :output-dir "resources/public/js/compiled"
+                   :asset-path "/js/compiled"
+                   :modules    {:app {:entries [reason-alpha.core]}}
+                   :devtools   {:http-root "resources/public"
+                                :preloads  [devtools.preload]} ; re-frisk.preload
+                   :dev        {:compiler-options {:clojure-defines {re-frame.trace/trace-enabled?        true
+                                                                     day8.re-frame.tracing/trace-enabled? true}}}}
             :test {:target    :node-test
                    :output-to "target/test/tests.js"
                    :autorun   true}}}
@@ -87,25 +84,25 @@
 
   :profiles {:uberjar {:aot :all}
 
-             :dev                [:project/dev]
-             :production         [:project/prod]
-             :test               [:project/dev :project/test]
-             :project/dev        {:dependencies   [[binaryage/devtools "0.9.10"]
-                                                   [cider/piggieback "0.4.2"]
-                                                   [circleci/circleci.test "0.4.2"]
-                                                   [day8.re-frame/tracing "0.5.1"]
-                                                   [javax.servlet/servlet-api "2.5"]
-                                                   [prone "2019-07-08"]
-                                                   [re-frisk "0.5.4.1"]
-                                                   [ring/ring-devel "1.8.0"]
-                                                   [ring/ring-mock "0.4.0"]]
-                                  :plugins        [[jonase/eastwood "0.3.5"]]
-                                  :source-paths   ["env/dev/clj" "env/dev/cljs" "test/cljs"]
-                                  :resource-paths ["env/dev/resources"]
-                                  :repl-options   {:init-ns user}}
-             :project/prod       {:env {:production true}}
-             :project/test       {:jvm-opts       ["-Dconf=test-config.edn"]
-                                  :resource-paths ["env/test/resources"]}}
+             :dev          [:project/dev]
+             :production   [:project/prod]
+             :test         [:project/dev :project/test]
+             :project/dev  {:dependencies   [[binaryage/devtools "0.9.10"]
+                                             [cider/piggieback "0.4.2"]
+                                             [circleci/circleci.test "0.4.2"]
+                                             [day8.re-frame/tracing "0.5.1"]
+                                             [javax.servlet/servlet-api "2.5"]
+                                             [re-frisk "0.5.4.1"]
+                                             [ring/ring-devel "1.8.0"]
+                                             [ring/ring-mock "0.4.0"]]
+                            :plugins        [[jonase/eastwood "0.3.5"]]
+                            :source-paths   ["env/dev/clj" "env/dev/cljs" "test/cljs"]
+                            :resource-paths ["env/dev/resources"]
+                            :repl-options   {:init-ns user}}
+             :project/prod {:env          {:production true}
+                            :source-paths ["env/prod/clj" "env/prod/cljs"]}
+             :project/test {:jvm-opts       ["-Dconf=test-config.edn"]
+                            :resource-paths ["env/test/resources"]}}
 
   :aliases {"test"   ["run" "-m" "circleci.test/dir" :project/test-paths]
             "tests"  ["run" "-m" "circleci.test"]
