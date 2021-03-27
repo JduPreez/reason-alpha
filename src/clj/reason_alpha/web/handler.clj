@@ -1,6 +1,5 @@
 (ns reason-alpha.web.handler
-  (:require [clojure.spec.alpha :as s]
-            [reason-alpha.web.middleware :as middleware]
+  (:require [reason-alpha.web.middleware :as middleware]
             [reason-alpha.web.middleware.exception :as exception]
             [reason-alpha.web.middleware.formats :as formats]
             [reason-alpha.web.routes :as routes]

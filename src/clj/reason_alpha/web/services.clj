@@ -12,7 +12,6 @@
   (ok (any db [:trade-pattern/id = id])))
 
 (defn save-trade-pattern! [{trade-pattern :body-params}]
-  (clojure.pprint/pprint [:data trade-pattern])
   (ok {:result (trades-svc/save-trade-pattern! trade-pattern)}))
 
 (comment

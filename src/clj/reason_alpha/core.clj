@@ -3,14 +3,15 @@
             [reason-alpha.web.handler :as handler]
             [ring.adapter.jetty :as jetty]))
 
-(defonce server (jetty/run-jetty (handler/app) {:port  3000
-                                                :join? false}))
+(defonce server (delay
+                  (jetty/run-jetty (handler/app) {:port  3000
+                                                  :join? false})))
 
 (defstate app
-  :start (do
-           (.start server)
-           server)
-  :stop  (.stop server))
+   :start (do
+            (.start @server)
+            server)
+   :stop  (.stop @server))
 
 (defn -main []
   (mount/start))

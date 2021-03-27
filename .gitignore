@@ -17,4 +17,4 @@ package-lock.json
 /resources/public/js/compiled
 /.clj-kondo/*cache*
 sqlite.5.db
-
+.lsp/
