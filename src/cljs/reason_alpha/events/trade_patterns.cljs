@@ -9,7 +9,14 @@
  (fn [db _]
    (update-in db
               data/root
-              #(conj % (utils/new-entity :trade-pattern)))))
+              (fn [trd-patrns]
+                (let [x (if (some #(= "-" (:trade-pattern/name %)) trd-patrns)
+                          trd-patrns
+                          (conj trd-patrns {:trade-pattern/creation-id    (utils/new-uuid)
+                                            :trade-pattern/name           "-"
+                                            :trade-pattern/description    ""
+                                            :trade-pattern/ancestors-path '("-")}))]
+                  x)))))
 
 (rf/reg-event-fx
  :get-trade-patterns
@@ -19,7 +26,7 @@
                     (assoc-in [:loading :trade-patterns] true))}))
 
 (comment
-  {:method            :get
+  {:method          :get
    :uri             (endpoint "trade-patterns")
    :params          params
    :headers         (standard-headers db)

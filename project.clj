@@ -13,6 +13,8 @@
                  [com.google.javascript/closure-compiler-unshaded "v20190618" :scope "provided"]
                  [day8.re-frame/http-fx "0.1.6"]
                  [functionalbytes/mount-lite "2.1.1"]
+                 [juxt/crux-core "21.04-1.16.0-beta"]
+                 [juxt/crux-rocksdb "21.04-1.16.0-beta"]
                  [luminus-transit "0.1.2"]
                  [markdown-clj "1.10.0"]
                  [medley "1.3.0"]
@@ -63,14 +65,14 @@
 
   :shadow-cljs
   {:nrepl  {:port 7002}
-   :builds {:app  {:target     :browser
-                   :output-dir "resources/public/js/compiled"
-                   :asset-path "/js/compiled"
-                   :modules    {:app {:entries [reason-alpha.core]}}
-                   :devtools   {:http-root "resources/public"
-                                :preloads  [devtools.preload]} ; re-frisk.preload
-                   :dev        {:compiler-options {:clojure-defines {re-frame.trace/trace-enabled?        true
-                                                                     day8.re-frame.tracing/trace-enabled? true}}}}
+   :builds {:app  {:target                                                                                                                                                                                                                                                                     :browser
+                   :output-dir                                                                                                                                                                                                                                                                 "resources/public/js/compiled"
+                   :asset-path                                                                                                                                                                                                                                                                 "/js/compiled"
+                   :modules                                                                                                                                                                                                                                                                    {:app {:entries [reason-alpha.core]}}
+                   :devtools                                                                                                                                                                                                                                                                   {:http-root "resources/public"
+                                                                                                                                                                                                                                                                                                :preloads  [devtools.preload]} ; re-frisk.preload
+                   :dev                                                                                                                                                                                                                                                                        {:compiler-options {:clojure-defines {re-frame.trace/trace-enabled?        true
+                                                                                                                                                                                                                                                                                                                                     day8.re-frame.tracing/trace-enabled? true}}}}
             :test {:target    :node-test
                    :output-to "target/test/tests.js"
                    :autorun   true}}}
