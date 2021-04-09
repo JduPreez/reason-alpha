@@ -30,7 +30,7 @@ FIXME: listing of options this app accepts.
 
 ## License
 
-Copyright © 2019 Jacques du Preez
+Copyright © 2021 Jacques du Preez
 
 This program and the accompanying materials are made available under the
 terms of the Business Source License 1.1 which is available at
