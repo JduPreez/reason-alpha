@@ -41,11 +41,11 @@
          (let [field              (utils/keyword->str k)
                {:keys [lookup-key
                        *options]} select]
-           (-> {:headerName  header
-                :field       field
-                :valueGetter (partial get-value *options)
-                :flex        flex
-                :editable    (partial is-editable? select editable? field)}
+           (-> {:headerName   header
+                :field        field
+                :valueGetter  (partial get-value *options)
+                :flex         flex
+                :editable     (partial is-editable? select editable? field)}
                (assoc-some :minWidth min-width)
                (assoc-some :maxWidth max-width)
                (assoc-some :cellEditor
@@ -80,24 +80,33 @@
   )
 
 (defn- save [type event]
-  (cljs.pprint/pprint {::save type})
   (let [data (-> event
                  (js->clj)
                  (get "data")
                  (utils/kw-keys))]
     (rf/dispatch [:save type data])))
 
-(defn view [type data cols & [tree-path]]
-  (cljs.pprint/pprint {::view (utils/str-keys data)})
+(defn view [type data cols & [tree-path fn-row-selected]]
   [:div.ag-theme-balham-dark {:style {#_:width #_ "100%"
                                       :height  "100%"}}
    [:> ag-grd-react/AgGridReact
     (cond-> {:defaultColDef        {:resizable true}
+             :rowSelection         "single"
+             :rowDeselection       true
              :columnDefs           (columns cols)
              :rowData              (utils/str-keys data)
              :modules              ag-grd/AllModules
              :onFirstDataRendered  #(-> % .-api .sizeColumnsToFit)
-             :onCellEditingStopped (partial save type)}
+             :onCellEditingStopped (partial save type)
+             :onSelectionChanged   (if fn-row-selected
+                                     #(fn-row-selected (-> %
+                                                           .-api
+                                                           .getSelectedRows
+                                                           js->clj
+                                                           first
+                                                           utils/kw-keys))
+                                     (fn [_]
+                                       (js/console.log (str "Row selected for grid " type))))}
       tree-path (assoc :treeData true
                        :getDataPath #(goog.object/get
                                       %

@@ -1,6 +1,7 @@
 (ns reason-alpha.events.trade-patterns
   (:require [re-frame.core :as rf]
-            [reason-alpha.data.trade-patterns :as data]
+            [reason-alpha.data.trade-patterns :as tp-data]
+            [reason-alpha.data :as data]
             [reason-alpha.web.service-api :as svc-api]
             [reason-alpha.utils :as utils]))
 
@@ -8,14 +9,21 @@
  :trade-patterns/add
  (fn [db _]
    (update-in db
-              data/root
+              tp-data/root
               (fn [trd-patrns]
-                (let [x (if (some #(= "-" (:trade-pattern/name %)) trd-patrns)
-                          trd-patrns
-                          (conj trd-patrns {:trade-pattern/creation-id    (utils/new-uuid)
-                                            :trade-pattern/name           "-"
-                                            :trade-pattern/description    ""
-                                            :trade-pattern/ancestors-path '("-")}))]
+                (let [default-already-added?          (some #(= "-" (:trade-pattern/name %)) trd-patrns)
+                      {parent-id :trade-pattern/id
+                       tp-name   :trade-pattern/name} (get-in db data/selected)
+                      ancestors-path                  (keep identity [tp-name "-"])
+                      x                               (if default-already-added?
+                                                        trd-patrns
+                                                        (conj trd-patrns
+                                                              {:trade-pattern/creation-id    (utils/new-uuid)
+                                                               :trade-pattern/name           "-"
+                                                               :trade-pattern/description    ""
+                                                               :trade-pattern/ancestors-path ancestors-path
+                                                               :trade-pattern/parent-id      parent-id}))]
+                  (cljs.pprint/pprint {::add x})
                   x)))))
 
 (rf/reg-event-fx

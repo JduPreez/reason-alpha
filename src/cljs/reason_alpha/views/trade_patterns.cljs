@@ -28,5 +28,6 @@
                      :trade-pattern/description {:header    "Description"
                                                  :flex      2
                                                  :editable? true}}
-                    :trade-pattern/ancestors-path)))
+                    :trade-pattern/ancestors-path
+                    #(rf/dispatch [:select %]))))
 

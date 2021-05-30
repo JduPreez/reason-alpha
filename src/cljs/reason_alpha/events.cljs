@@ -1,5 +1,7 @@
 (ns reason-alpha.events
-  (:require [re-frame.core :as rf]
+  (:require [medley.core :refer [dissoc-in]]
+            [re-frame.core :as rf]
+            [reason-alpha.data :as data]
             [reason-alpha.utils :as utils]
             [reason-alpha.web.service-api :as svc-api]))
 
@@ -68,6 +70,13 @@
 (rf/reg-event-fx
  :add
  add)
+
+(rf/reg-event-db
+ :select
+ (fn [db [_ entity]]
+   (if (seq entity)
+     (assoc-in db data/selected entity)
+     (dissoc-in db data/selected))))
 
 (rf/reg-event-db
  :set-view-models
