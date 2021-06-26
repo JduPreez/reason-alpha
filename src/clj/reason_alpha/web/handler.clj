@@ -13,8 +13,9 @@
             [reitit.ring.middleware.parameters :as parameters]
             [ring.util.http-response :refer :all]))
 
-(def router (routes/app-router {:trade-pattern {:get svc/get-trade-patterns
-                                                :put svc/save-trade-pattern!}
+(def router (routes/app-router {:trade-pattern {:get  svc/get-trade-patterns
+                                                :post svc/save-trade-pattern!
+                                                :put  svc/save-trade-pattern!}
                                 :ping          {:get (constantly (ok {:message "pong"}))}}
                                {:coercion   spec-coercion/coercion
                                 :muuntaja   formats/instance

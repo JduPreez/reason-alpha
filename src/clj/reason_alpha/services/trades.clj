@@ -11,21 +11,26 @@
                                       :trade-pattern/ancestors-path)))
 
 (defn save-trade-pattern! [{:keys [trade-pattern/parent-id
-                                   trade-pattern/id]
+                                   trade-pattern/id
+                                   trade-pattern/creation-id]
                             :as   trade-pattern}]
-  (let [tp        (save! db (dissoc trade-pattern
-                                    :trade-pattern/ancestors-path))
-        parent-tp (choose db [[:trade-pattern/id := parent-id]])
-        tps       (data-structs/conj-ancestors-path (concat tp parent-tp)
-                                                    :trade-pattern/parent-id
-                                                    :trade-pattern/name
-                                                    :trade-pattern/id
-                                                    :trade-pattern/ancestors-path)]
-    (some (fn [{id' :trade-pattern/id :as tp'}]
-            (when (= id' id) tp')) tps)))
+  (let [tp                  (save! db (dissoc trade-pattern
+                                              :trade-pattern/ancestors-path))
+        parent-tp           (when parent-id
+                              (choose db [[:trade-pattern/id := parent-id]]))
+        tps                 (data-structs/conj-ancestors-path (concat tp parent-tp)
+                                                              :trade-pattern/parent-id
+                                                              :trade-pattern/name
+                                                              :trade-pattern/id
+                                                              :trade-pattern/ancestors-path)
+        with-ancestors-path (some (fn [{id'          :trade-pattern/id
+                                        creation-id' :trade-pattern/creation-id
+                                        :as          tp'}]
+                                    (when (or (= id' id)
+                                              (= creation-id' creation-id)) tp')) tps)]
+    with-ancestors-path))
 
 (comment
-
   (save-trade-pattern!
    {:trade-pattern/name           "Breakout--",
     :trade-pattern/ancestors-path ["Breakout"],
@@ -44,4 +49,5 @@
     :trade-pattern/user-id        #uuid "8ffd2541-0bbf-4a4b-adee-f3a2bd56d83f",
     :trade-pattern/description    ""})
   (choose db [:trade-pattern/*])
+  (choose db [:trade-pattern/id := #uuid "017a2a48-4694-dfcc-3e52-98e5ac8c74db"])
   )

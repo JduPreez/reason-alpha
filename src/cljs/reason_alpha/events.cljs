@@ -42,7 +42,8 @@
                                         :merged  merged-coll}})
      (-> db
          (assoc-in [:loading type] false)
-         (assoc-in [:data type] merged-coll)))))
+         (assoc-in [:data type] merged-coll)
+         (assoc :saved new-val)))))
 
 ;; TODO: Make sure save-remote uses a collection arg
 (rf/reg-event-fx
@@ -74,6 +75,7 @@
 (rf/reg-event-db
  :select
  (fn [db [_ entity]]
+   (cljs.pprint/pprint {::select entity})
    (if (seq entity)
      (assoc-in db data/selected entity)
      (dissoc-in db data/selected))))

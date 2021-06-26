@@ -64,58 +64,40 @@
                                                                 %)))}))))))))
        (seq cols)))
 
-(comment
-  (let [{:keys [lookup-key
-                values]} select
-        slookup-key      (utils/keyword->str lookup-key)]
-    (fn [params]
-      (let [clj-params (js->clj params)]
-        {:values        (->> values
-                             (map :value)
-                             (filter #(when (not= (get-in clj-params ["data" slookup-key]) %)
-                                        (cljs.pprint/pprint {::columns {:x (get-in clj-params ["data" slookup-key])
-                                                                        :y %}})
-                                        %)))
-         #_:formatValue #_ (partial format-value select)})))
-  )
-
-(defn- save [type event]
+(defn- save [fn-save event]
   (let [data (-> event
                  (js->clj)
                  (get "data")
                  (utils/kw-keys))]
-    (rf/dispatch [:save type data])))
+    (fn-save data)))
 
-(defn view [type data cols & [tree-path fn-row-selected]]
+(defn view [{:keys [fn-save fn-get-id]} data cols & [tree-path fn-row-selected]]
   [:div.ag-theme-balham-dark {:style {#_:width #_ "100%"
                                       :height  "100%"}}
    [:> ag-grd-react/AgGridReact
-    (cond-> {:defaultColDef        {:resizable true}
-             :rowSelection         "single"
-             :rowDeselection       true
-             :columnDefs           (columns cols)
-             :rowData              (utils/str-keys data)
-             :modules              ag-grd/AllModules
-             :onFirstDataRendered  #(-> % .-api .sizeColumnsToFit)
-             :onCellEditingStopped (partial save type)
-             :onSelectionChanged   (if fn-row-selected
-                                     #(fn-row-selected (-> %
-                                                           .-api
-                                                           .getSelectedRows
-                                                           js->clj
-                                                           first
-                                                           utils/kw-keys))
-                                     (fn [_]
-                                       (js/console.log (str "Row selected for grid " type))))}
+    (cond-> {:defaultColDef                 {:resizable true}
+             :rowSelection                  "single"
+             :rowDeselection                true
+             :immutableData                 true
+             :columnDefs                    (columns cols)
+             :rememberGroupStateWhenNewData true
+             :rowData                       (utils/str-keys data)
+             :modules                       ag-grd/AllModules
+             :onFirstDataRendered           #(-> % .-api .sizeColumnsToFit)
+             :onCellEditingStopped          (partial save fn-save)
+             :getRowNodeId                  #(fn-get-id (-> %
+                                                            js->clj
+                                                            utils/kw-keys))
+             :onSelectionChanged            (if fn-row-selected
+                                              #(fn-row-selected (-> %
+                                                                    .-api
+                                                                    .getSelectedRows
+                                                                    js->clj
+                                                                    first
+                                                                    utils/kw-keys))
+                                              (fn [_]
+                                                (js/console.log (str "Row selected for grid " type))))}
       tree-path (assoc :treeData true
                        :getDataPath #(goog.object/get
                                       %
                                       (utils/keyword->str tree-path))))]])
-
-(comment
-  (cond-> {:prop1 1}
-    :trade-pattern/ancestors-path (assoc :getPathData 2))
-
-  .-api .sizeColumnsToFit %
-  (columns {:trade-pattern/name        {:header "Name"}
-            :trade-pattern/description {:header "Description"}}))

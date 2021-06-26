@@ -176,6 +176,14 @@
                      :entity (assoc entity id id-val)
                      :id     db-id})))))))
 
+(comment
+  (rentity->save-cmds {:trade-pattern/name           "test fX!!!",
+                       :trade-pattern/creation-id    #uuid "01738610-a026-1f53-5d94-219803fa47e1",
+                       :trade-pattern/parent-id      #uuid "32429cdf-99d6-4893-ae3a-891f8c22aec6",
+                       :trade-pattern/description    ""
+                       :trade-pattern/ancestors-path ["Breakout", "-"]})
+  )
+
 (defn- save-impl!
   "Updates columns or inserts a new row in the specified table"
   [{type   :type
