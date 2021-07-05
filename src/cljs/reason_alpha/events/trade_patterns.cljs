@@ -35,6 +35,12 @@
                                                                                           parent-id)}))]
                   updated-trd-patrns)))))
 
+(rf/reg-event-db
+ :trade-patterns/delete
+ (fn [db _]
+   (cljs.pprint/pprint {:trade-patterns/delete (get-in db data/selected)})
+   db))
+
 (rf/reg-event-fx
  :get-trade-patterns
  (fn [{:keys [db]} [_ params]]

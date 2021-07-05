@@ -1,5 +1,0 @@
-- Fix unit tests `reason-alpha.data-structures-test`
-- TODO!!! Rename event `:get-trade-patterns` to `:trade-patterns/get`
-- TODO: Make sure only 
-- TODO: Align service-api.http-request & entity->command 
-- TODO: Continue slowly migrating to Crux

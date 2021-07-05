@@ -8,16 +8,16 @@
   ([method-handlers routes-data]
    (ring/router
     [["/api"
-      ["/trade-patterns" {:name       :trade-pattern/*
-                          ;:parameters {:path {:user-id uuid?}}
-                          :get        (or (get-in method-handlers [:trade-pattern :get])
-                                          default-handler)
-                          :post       (or (get-in method-handlers [:trade-pattern :post])
-                                          default-handler)}]
-      ["/trade-patterns/:id" {:name       :trade-pattern
-                              ;:parameters {:path {:id      uuid?}}
-                              :put        (or (get-in method-handlers [:trade-pattern :put])
-                                              default-handler)}]
+      ["/trade-patterns" {:name :trade-patterns/*
+                                        ;:parameters {:path {:user-id uuid?}}
+                          :get  (or (get-in method-handlers [:trade-pattern/* :get])
+                                    default-handler)
+                          :post (or (get-in method-handlers [:trade-pattern/* :post])
+                                    default-handler)}]
+      ["/trade-patterns/:id" {:name :trade-patterns
+                                        ;:parameters {:path {:id      uuid?}}
+                              :put  (or (get-in method-handlers [:trade-pattern :put])
+                                        default-handler)}]
       ["/ping" {:name :ping
                 :get  (or (get-in method-handlers [:ping :get])
                           default-handler)}]]]

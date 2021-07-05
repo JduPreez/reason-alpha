@@ -47,10 +47,24 @@
                 type-kw
                 params)))))
 
+(defn- endpoint
+  "Concat any params to api-url separated by /"
+  [& params]
+  (str/join "/" (concat [api-url] params)))
+
+(defn http-request [method resource db params]
+  {:method          method
+   :uri             (endpoint (name resource))
+   :params          params
+   :headers         (standard-headers db)
+   :format          (ajax/transit-request-format)
+   :response-format (ajax/transit-response-format)
+   :on-success      [:save-local resource]})
+
 (defn entity->command
   ([token [type entity]]
    (let [api-type (utils/entity-ns entity)
-         id-k     (utils/id-key entity) #_ (keyword (str type-nm "/id"))]
+         id-k     (utils/id-key entity)]
      (if (contains? entity id-k)
        {:http-xhrio {:method          :put
                      :params          entity
@@ -71,23 +85,53 @@
   ([type-entity]
    (entity->command nil type-entity)))
 
-(defn entities->commands
+(defn entity-action->http-request [entity-collection action data]
+  (let [entity      (when data
+                      (if (map? data)
+                        data
+                        (first data)))
+        id-k        (when entity
+                      (utils/id-key entity))
+        ent-id      (when (contains? entity id-k)
+                      (get entity id-k))
+        http-method (cond
+                      (and (= :save action)
+                           ent-id) :put
+
+                      (and (= :save action)
+                           (nil? ent-id)) :post
+
+                      (and (= :delete action)) :delete
+
+                      :else :get)
+        all-entities-route (keyword (str (name entity-collection)
+                                         "/*"))
+        uri                (cond
+                             (and (= http-method :get)
+                                  ent-id) (resource entity-collection {:id ent-id})
+
+                             (= http-method :put) (resource entity-collection {:id ent-id})
+
+                             (= http-method :post) (resource all-entities-route)
+
+                             (and (= http-method :delete)
+                                  ent-id) (resource entity-collection {:id ent-id})
+
+                             (and (= http-method :delete)
+                                  (nil? ent-id)) (resource entity-collection)
+
+                             :else (resource all-entities-route))]
+    {:http-xhrio {:method          http-method
+                  :params          data
+                  :headers         (standard-headers nil)
+                  :format          (ajax/transit-request-format)
+                  :response-format (ajax/transit-response-format)
+                  :on-success      [:save-local entity-collection]
+                  :uri             uri}}))
+
+#_(defn entities->commands
   ([entities token]
    (let [fn-ent->cmds (partial entity->command token)]
      (map fn-ent->cmds entities)))
   ([entities]
    (entities->commands entities nil)))
-
-(defn- endpoint
-  "Concat any params to api-url separated by /"
-  [& params]
-  (str/join "/" (concat [api-url] params)))
-
-(defn http-request [method resource db params]
-  {:method          method
-   :uri             (endpoint (name resource))
-   :params          params
-   :headers         (standard-headers db)
-   :format          (ajax/transit-request-format)
-   :response-format (ajax/transit-response-format)
-   :on-success      [:save-local resource]})

@@ -9,7 +9,7 @@
   (ok {:result (trades-svc/get-trade-patterns)})) ;; (choose db [:trade-pattern/*])
 
 (defn get-trade-pattern [{{:keys [id]} :path-params}]
-  (ok (any db [:trade-pattern/id = id])))
+  (ok {:result (any db [:trade-pattern/id = id])}))
 
 (defn save-trade-pattern! [{trade-pattern :body-params}]
   (ok {:result (trades-svc/save-trade-pattern! trade-pattern)}))

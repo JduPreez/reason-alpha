@@ -14,8 +14,7 @@
     (data-grid/view {:fn-save   #(rf/dispatch [:save :trade-patterns %])
                      :fn-get-id (fn [{:keys [trade-pattern/id
                                              trade-pattern/creation-id]
-                                      :as   data}]
-                                  (cljs.pprint/pprint (or id creation-id))
+                                      :as   _data}]
                                   (or id creation-id))}
                     @(rf/subscribe [:trade-patterns])
                     {:trade-pattern/name        {:header    "Trade Pattern"

@@ -36,10 +36,6 @@
                        (map? new-val)             [new-val]
                        :else                      new-val)
          merged-coll (utils/merge-by-id current new-coll)]
-     (cljs.pprint/pprint {::save-local {:type    type
-                                        :current current
-                                        :new     new
-                                        :merged  merged-coll}})
      (-> db
          (assoc-in [:loading type] false)
          (assoc-in [:data type] merged-coll)
@@ -49,7 +45,6 @@
 (rf/reg-event-fx
  :save-remote
  (fn [_ [_ type entity]]
-   (cljs.pprint/pprint {::save-remote entity})
    (let [command (svc-api/entity->command [type entity])]
      command)))
 
@@ -59,23 +54,32 @@
    {:dispatch-n [[:save-local type entity]
                  [:save-remote type entity]]}))
 
-(defn add
-  "Derives the correct add event-fx from the current active model, and
-  dispatches it."
-  [{:keys [db]} _]
-  (let [{:keys [model]} (get-in db [:active-view-model])]
+(defn action-event
+  "Derives the correct toolbar data event-fx from the current
+  active model, and dispatches it."
+  [{:keys [db]} [action]]
+  (cljs.pprint/pprint {::action-event action})
+  (let [{:keys [model]} (get-in db data/active-view-model)]
     (when model
       {:dispatch [(keyword (str (name model)
-                                "/add"))]})))
+                                "/"
+                                (name action)))]})))
 
 (rf/reg-event-fx
  :add
- add)
+ action-event)
+
+(rf/reg-event-fx
+ :delete
+ action-event)
+
+(rf/reg-event-fx
+ :cancel
+ action-event)
 
 (rf/reg-event-db
  :select
  (fn [db [_ entity]]
-   (cljs.pprint/pprint {::select entity})
    (if (seq entity)
      (assoc-in db data/selected entity)
      (dissoc-in db data/selected))))
@@ -84,4 +88,3 @@
  :set-view-models
  (fn [db [_ view-models]]
    (assoc db :view-models view-models)))
-

@@ -34,27 +34,24 @@
         [:i.dropdown-icon.mdi.mdi-logout-variant] "Sign out"]]]
      [:li.nav-item
       [:a.nav-link {:href "#"}
-       [:i.fas.fa-exchange-alt] [:span "TRADING"]]]
+       [:i.fas.fa-chart-line] [:span "TRADING"]]]
      [:li.nav-item
       [:a.nav-link {:href "#"}
-       [:i.fas.fa-exchange-alt] [:span "ANALYSIS"]]]
+       [:i.fas.fa-chart-pie] [:span "ANALYSIS"]]]
      [:li.nav-item
       [:a.nav-link {:href "#"}
-       [:i.fas.fa-exchange-alt] [:span "IMPORT"]]]
+       [:i.fas.fa-file-import] [:span "IMPORT"]]]
      [:li.nav-item
       [:a.nav-link {:href     "#"
                     :on-click #(rf/dispatch [:add])}
-       [:i.fas.fa-exchange-alt] [:span "ADD"]]]
+       [:i.fas.fa-plus-square] [:span "ADD"]]]
+     [:li.nav-item
+      [:a.nav-link {:href     "#"
+                    :on-click #(rf/dispatch [:delete])}
+       [:i.fas.fa-minus-square] [:span "DELETE"]]]
      [:li.nav-item
       [:a.nav-link {:href "#"}
-       [:i.fas.fa-exchange-alt] [:span "DELETE"]]]
-     #_[:li.nav-item
-        [:a.nav-link {:href     "#"
-                      :on-click #(rf/dispatch [:save])}
-       [:i.fas.fa-exchange-alt] [:span "SAVE"]]]
-     [:li.nav-item
-      [:a.nav-link {:href "#"}
-       [:i.fas.fa-exchange-alt] [:span "CANCEL"]]]]]
+       [:i.fas.fa-undo-alt] [:span "CANCEL"]]]]]
    [:div.container.h-5-perc>div.side-app.h-5-perc
     [:div.page-header
      [:h4.page-title "Portfolio Trades"]

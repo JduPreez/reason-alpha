@@ -1,3 +1,5 @@
 (ns reason-alpha.data)
 
-(def ^:constr selected [:selected])
+(def ^:const selected [:selected])
+
+(def ^:const active-view-model [:active-view-model])
