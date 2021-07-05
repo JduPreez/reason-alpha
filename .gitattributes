@@ -1,1 +1,4 @@
+* text=auto
+
 resources/public/* linguist-vendored
+/resources         export-ignore
