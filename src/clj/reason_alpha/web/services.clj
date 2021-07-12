@@ -1,7 +1,8 @@
 (ns reason-alpha.web.services
   (:require  [reason-alpha.data :as data :refer [choose any save! db]]
              [reason-alpha.services.trades :as trades-svc]
-             [ring.util.http-response :refer :all]))
+             [ring.util.http-response :refer :all]
+             [ring.middleware.anti-forgery :refer [*anti-forgery-token*]]))
 
 ; TODO: Improve error handling
 
@@ -13,6 +14,9 @@
 
 (defn save-trade-pattern! [{trade-pattern :body-params}]
   (ok {:result (trades-svc/save-trade-pattern! trade-pattern)}))
+
+(defn get-csrf-token [_]
+  (ok {:result *anti-forgery-token*}))
 
 (comment
   (choose db [:trade-pattern/*])

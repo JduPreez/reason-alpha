@@ -3,37 +3,22 @@
             [clojure.string :as str]
             [reason-alpha.utils :as utils]
             [reason-alpha.web.routes :as routes]
-            [reitit.core :as reitit]))
+            [reitit.core :as reitit]
+            [reason-alpha.data :as data]))
 
 (def base-uri "http://localhost:3000")
 
 (def api-url "http://localhost:3000/api")
 
-;; TODO: Tidy this function up
 (defn- standard-headers
   "Adds:
     * The user token and format for API authorization
     * CSRF token"
-  [token]
-  (let [headers [:x-csrf-token (when (exists? js/csrfToken)
-                                 js/csrfToken)]]
-    (if token
-      (conj headers :Authorization (str "Token " token))
-      headers)))
-
-#_(defn- default-handler [response]
-  (js/console.log (str response)))
-
-#_(defn- error-handler [{:keys [status status-text]}]
-  (js/console.log (str "something bad happened: " status " " status-text)))
-
-#_(defn- as-transit [opts]
-  (merge {:raw             false
-          :format          :transit
-          :response-format :transit
-          :reader          (transit/reader :json time/time-deserialization-handlers)
-          :writer          (transit/writer :json time/time-serialization-handlers)}
-         opts))
+  [db]
+  (let [csrf-token (get-in db data/api-info)
+        auth-token "TODO-;-)"]
+    [:Authorization (str "Token " auth-token)
+     :x-csrf-token csrf-token]))
 
 (def router (routes/app-router))
 
@@ -85,7 +70,7 @@
   ([type-entity]
    (entity->command nil type-entity)))
 
-(defn entity-action->http-request [entity-collection action data]
+(defn entity-action->http-request [db entity-collection action & [data]]
   (let [entity      (when data
                       (if (map? data)
                         data
@@ -104,26 +89,26 @@
                       (and (= :delete action)) :delete
 
                       :else :get)
-        all-entities-route (keyword (str (name entity-collection)
-                                         "/*"))
-        uri                (cond
-                             (and (= http-method :get)
-                                  ent-id) (resource entity-collection {:id ent-id})
+        single-entity-route (keyword (str (name entity-collection)
+                                          "/id"))
+        uri                 (cond
+                              (and (= http-method :get)
+                                   ent-id) (resource single-entity-route {:id ent-id})
 
-                             (= http-method :put) (resource entity-collection {:id ent-id})
+                              (= http-method :put) (resource single-entity-route {:id ent-id})
 
-                             (= http-method :post) (resource all-entities-route)
+                              (= http-method :post) (resource entity-collection)
 
-                             (and (= http-method :delete)
-                                  ent-id) (resource entity-collection {:id ent-id})
+                              (and (= http-method :delete)
+                                   ent-id) (resource single-entity-route {:id ent-id})
 
-                             (and (= http-method :delete)
-                                  (nil? ent-id)) (resource entity-collection)
+                              (and (= http-method :delete)
+                                   (nil? ent-id)) (resource entity-collection)
 
-                             :else (resource all-entities-route))]
+                              :else (resource entity-collection))]
     {:http-xhrio {:method          http-method
                   :params          data
-                  :headers         (standard-headers nil)
+                  :headers         (standard-headers db)
                   :format          (ajax/transit-request-format)
                   :response-format (ajax/transit-response-format)
                   :on-success      [:save-local entity-collection]

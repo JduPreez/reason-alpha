@@ -195,6 +195,7 @@
   (r/render [#'show] (.getElementById js/document "app")))
 
 (defn ^:export init []
+  (rf/dispatch-sync [:get-api-info])
   (rf/dispatch-sync [:set-view-models view-models])
   (rf/dispatch-sync [:navigate (reitit/match-by-name router :home)])
   (hook-browser-navigation!)

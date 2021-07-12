@@ -2,27 +2,86 @@
   (:require [cljs.test :as t :refer-macros [deftest is testing async run-tests]]
             [reason-alpha.web.service-api :as svc-api]))
 
-#_(deftest test-async-awesome
-  (testing "the API is awesome"
-    (async done
-           (svc-api/trade-patterns (fn [res]
-                                     (is (some? res))
-                                     (done))))))
-(deftest test-entities->commands
-  (testing "'entities->commands' should create a http-request for each rentity"
-    (let [cmds (svc-api/entities->commands [[:trade-pattern {:trade-pattern/id            1
-                                                             :trade-pattern/name          "Facebook"
-                                                             :trade-pattern/owner-user-id 5
-                                                             :user/user-name              "Frikkie"
-                                                             :user/email                  "j@j.com"}]
-                                            [:trade-pattern {:trade-pattern/name          "Facebook"
-                                                             :trade-pattern/owner-user-id 5
-                                                             :user/user-name              "Frikkie"
-                                                             :user/email                  "j@j.com"}]])]
-      (is (= (count cmds) 2))
-      (is (= (some (fn [_ {:keys [method]}] (= method :put)) cmds)))
-      (is (= (some (fn [_ {:keys [method]}] (= method :post)) cmds))))))
+(defn entity [& [with-id]]
+  {:trade-pattern/id          (when with-id #uuid "32429cdf-99d6-4893-ae3a-891f8c22aec6")
+   :trade-pattern/name        "Pullback"
+   :trade-pattern/description ""
+   :trade-pattern/parent-id   nil
+   :trade-pattern/user-id     #uuid "8ffd2541-0bbf-4a4b-adee-f3a2bd56d83f"})
+
+(deftest test-entity-action->http-request
+  (testing "`entity-action->http-request` should create a HTTP request for updating an entity"
+    (let [{:keys [trade-pattern/id]
+           :as   ent}              (entity :with-id)
+          uri-regex-pattern        (re-pattern
+                                    (str "^http://\\w*:?\\d*?/api/trade-patterns/" id "$"))
+          {{:keys [method
+                   uri]} :http-xhrio
+           :as           http-req} (svc-api/entity-action->http-request
+                                    {}
+                                    :trade-patterns
+                                    :save
+                                    ent)
+          [uri-regex-match]        (re-seq uri-regex-pattern uri)]
+      (is http-req)
+      (is (= method :put))
+      (is (= uri uri-regex-match))))
+
+  (testing "`entity-action->http-request` should create a HTTP request for creating an entity"
+    (let [ent                      (entity)
+          uri-regex-pattern        (re-pattern
+                                    "^http://\\w*:?\\d*?/api/trade-patterns$")
+          {{:keys [method
+                   uri]} :http-xhrio
+           :as           http-req} (svc-api/entity-action->http-request
+                                    {}
+                                    :trade-patterns
+                                    :save
+                                    ent)
+          [uri-regex-match]        (re-seq uri-regex-pattern uri)]
+      (is http-req)
+      (is (= method :post))
+      (is (= uri uri-regex-match))))
+
+  (testing "`entity-action->http-request` should create a HTTP request for deleting an entity"
+    (let [{:keys [trade-pattern/id]
+           :as   ent}              (entity :with-id)
+          uri-regex-pattern        (re-pattern
+                                    (str "^http://\\w*:?\\d*?/api/trade-patterns/" id "$"))
+          {{:keys [method
+                   uri]} :http-xhrio
+           :as           http-req} (svc-api/entity-action->http-request
+                                    {}
+                                    :trade-patterns
+                                    :delete
+                                    ent)
+          [uri-regex-match]        (re-seq uri-regex-pattern uri)]
+      (is http-req)
+      (is (= method :delete))
+      (is (= uri uri-regex-match))))
+
+  (testing "`entity-action->http-request` should create a HTTP request for fetching all entities"
+    (let [ent                      (entity)
+          uri-regex-pattern        (re-pattern
+                                    "^http://\\w*:?\\d*?/api/trade-patterns$")
+          {{:keys [method
+                   uri]} :http-xhrio
+           :as           http-req} (svc-api/entity-action->http-request
+                                    :trade-patterns
+                                    :get
+                                    ent)
+          [uri-regex-match]        (re-seq uri-regex-pattern uri)]
+      (is http-req)
+      (is (= method :get))
+      (is (= uri uri-regex-match)))))
 
 (comment
   (run-tests 'reason-alpha.web.service-api-test)
-)
+
+  (let [id                #uuid "32429cdf-99d6-4893-ae3a-891f8c22aec6"
+        uri-regex-pattern (re-pattern
+                           (str "^http://\\w*:?\\d*?/api/trade-patterns/" id "$"))]
+    (re-seq uri-regex-pattern "http://localhost:3000/api/trade-patterns/32429cdf-99d6-4893-ae3a-891f8c22aec6"))
+
+  (re-seq #"(?i)^http" "FOO BAR foo bar")
+  )

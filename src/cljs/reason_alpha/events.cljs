@@ -5,14 +5,10 @@
             [reason-alpha.utils :as utils]
             [reason-alpha.web.service-api :as svc-api]))
 
-#_(defn- standard-headers
-  "Adds:
-    * The user token and format for API authorization
-    * CSRF token"
-  [db]
-  (let [headers [:x-csrf-token js/csrfToken]]
-    (when-let [token (get-in db [:user :token])]
-      (conj headers :Authorization (str "Token " token)))))
+(rf/reg-event-fx
+ :get-api-info
+ (fn [{:keys [db]} _]
+   (svc-api/entity-action->http-request db :api :get)))
 
 (rf/reg-event-fx
  :navigate
