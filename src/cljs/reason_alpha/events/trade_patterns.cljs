@@ -44,7 +44,10 @@
 (rf/reg-event-fx
  :get-trade-patterns
  (fn [{:keys [db]} [_ params]]
-   (merge (svc-api/entity-action->http-request db :trade-patterns :get params)
+   (merge (svc-api/entity-action->http-request
+           {:entities-type :trade-patterns
+            :action        :get
+            :data          params})
           {:db (-> db
                    (assoc-in [:loading :trade-patterns] true))})))
 

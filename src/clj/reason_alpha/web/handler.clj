@@ -13,11 +13,12 @@
             [reitit.ring.middleware.parameters :as parameters]
             [ring.util.http-response :refer :all]))
 
-(def router (routes/app-router {:api               {:get svc/get-csrf-token}
+(def router (routes/app-router {:api               {:get svc/get-api-info}
                                 :trade-patterns    {:get  svc/get-trade-patterns
                                                     :post svc/save-trade-pattern!}
-                                :trade-patterns/id {:put svc/save-trade-pattern!
-                                                    :get svc/get-trade-pattern}
+                                :trade-patterns/id {:put    svc/save-trade-pattern!
+                                                    :get    svc/get-trade-pattern
+                                                    :delete svc/delete-trade-pattern!}
                                 :ping              {:get (constantly (ok {:message "pong"}))}}
                                {:coercion   spec-coercion/coercion
                                 :muuntaja   formats/instance

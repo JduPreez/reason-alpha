@@ -18,10 +18,9 @@
           {{:keys [method
                    uri]} :http-xhrio
            :as           http-req} (svc-api/entity-action->http-request
-                                    {}
-                                    :trade-patterns
-                                    :save
-                                    ent)
+                                    {:entities-type :trade-patterns
+                                     :action        :save
+                                     :data          ent})
           [uri-regex-match]        (re-seq uri-regex-pattern uri)]
       (is http-req)
       (is (= method :put))
@@ -34,10 +33,9 @@
           {{:keys [method
                    uri]} :http-xhrio
            :as           http-req} (svc-api/entity-action->http-request
-                                    {}
-                                    :trade-patterns
-                                    :save
-                                    ent)
+                                    {:entities-type :trade-patterns
+                                     :action        :save
+                                     :data          ent})
           [uri-regex-match]        (re-seq uri-regex-pattern uri)]
       (is http-req)
       (is (= method :post))
@@ -51,25 +49,22 @@
           {{:keys [method
                    uri]} :http-xhrio
            :as           http-req} (svc-api/entity-action->http-request
-                                    {}
-                                    :trade-patterns
-                                    :delete
-                                    ent)
+                                    {:entities-type :trade-patterns
+                                     :action        :delete
+                                     :data          ent})
           [uri-regex-match]        (re-seq uri-regex-pattern uri)]
       (is http-req)
       (is (= method :delete))
       (is (= uri uri-regex-match))))
 
   (testing "`entity-action->http-request` should create a HTTP request for fetching all entities"
-    (let [ent                      (entity)
-          uri-regex-pattern        (re-pattern
+    (let [uri-regex-pattern        (re-pattern
                                     "^http://\\w*:?\\d*?/api/trade-patterns$")
           {{:keys [method
                    uri]} :http-xhrio
            :as           http-req} (svc-api/entity-action->http-request
-                                    :trade-patterns
-                                    :get
-                                    ent)
+                                    {:entities-type :trade-patterns
+                                     :action        :get})
           [uri-regex-match]        (re-seq uri-regex-pattern uri)]
       (is http-req)
       (is (= method :get))

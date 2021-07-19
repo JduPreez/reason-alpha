@@ -1,5 +1,5 @@
 (ns reason-alpha.web.services
-  (:require  [reason-alpha.data :as data :refer [choose any save! db]]
+  (:require  [reason-alpha.data :as data :refer [choose any save! db remove!]]
              [reason-alpha.services.trades :as trades-svc]
              [ring.util.http-response :refer :all]))
 
@@ -14,7 +14,10 @@
 (defn save-trade-pattern! [{trade-pattern :body-params}]
   (ok {:result (trades-svc/save-trade-pattern! trade-pattern)}))
 
-(defn get-csrf-token [_]
+(defn delete-trade-pattern! [{{:keys [id]} :path-params}]
+  (ok {:result (remove! db [:trade-pattern/id = id])}))
+
+(defn get-api-info [_]
   (ok {:result "Welcome to the Reason Alpha API :-)"}))
 
 (comment

@@ -1,10 +1,8 @@
 (ns reason-alpha.web.service-api
   (:require [ajax.core :as ajax]
-            [clojure.string :as str]
             [reason-alpha.utils :as utils]
             [reason-alpha.web.routes :as routes]
-            [reitit.core :as reitit]
-            [reason-alpha.data :as data]))
+            [reitit.core :as reitit]))
 
 (def base-uri "http://localhost:3000")
 
@@ -29,12 +27,12 @@
                 type-kw
                 params)))))
 
-(defn- endpoint
+#_(defn- endpoint
   "Concat any params to api-url separated by /"
   [& params]
   (str/join "/" (concat [api-url] params)))
 
-(defn http-request [method resource db params]
+#_(defn http-request [method resource db params]
   {:method          method
    :uri             (endpoint (name resource))
    :params          params
@@ -43,7 +41,7 @@
    :response-format (ajax/transit-response-format)
    :on-success      [:save-local resource]})
 
-(defn entity->command
+#_(defn entity->command
   ([token [type entity]]
    (let [api-type (utils/entity-ns entity)
          id-k     (utils/id-key entity)]
@@ -67,7 +65,10 @@
   ([type-entity]
    (entity->command nil type-entity)))
 
-(defn entity-action->http-request [db entity-collection action & [data]]
+(defn entity-action->http-request
+  [{:keys [db entities-type action data on-success on-failure]
+    :or   {on-success [:save-local entities-type]
+           on-failure [:api-request-failure entities-type action]}}]
   (let [entity      (when data
                       (if (map? data)
                         data
@@ -86,7 +87,7 @@
                       (and (= :delete action)) :delete
 
                       :else :get)
-        single-entity-route (keyword (str (name entity-collection)
+        single-entity-route (keyword (str (name entities-type)
                                           "/id"))
         uri                 (cond
                               (and (= http-method :get)
@@ -94,22 +95,23 @@
 
                               (= http-method :put) (resource single-entity-route {:id ent-id})
 
-                              (= http-method :post) (resource entity-collection)
+                              (= http-method :post) (resource entities-type)
 
                               (and (= http-method :delete)
                                    ent-id) (resource single-entity-route {:id ent-id})
 
                               (and (= http-method :delete)
-                                   (nil? ent-id)) (resource entity-collection)
+                                   (nil? ent-id)) (resource entities-type)
 
-                              :else (resource entity-collection))]
-    {:http-xhrio {:method          http-method
-                  :params          data
-                  :headers         (standard-headers db)
-                  :format          (ajax/transit-request-format)
-                  :response-format (ajax/transit-response-format)
-                  :on-success      [:save-local entity-collection]
-                  :uri             uri}}))
+                              :else (resource entities-type))]
+    {:http-xhrio (cond-> {:method          http-method
+                          :headers         (standard-headers db)
+                          :format          (ajax/transit-request-format)
+                          :response-format (ajax/transit-response-format)
+                          :on-success      on-success
+                          :on-failure      on-failure
+                          :uri             uri}
+                   (= :save action) (assoc :params data))}))
 
 #_(defn entities->commands
   ([entities token]

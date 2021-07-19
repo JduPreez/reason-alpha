@@ -42,21 +42,26 @@
 (defn- combine-name [keywrd]
   (string/upper-case (name keywrd)))
 
-(defn- maybe-default-sql [query table-column with-where]
+(defn- maybe-default-sql [select-or-del query table-column with-where]
   (if (empty? query)
     ;; Add a column with the table name. This will be used when the
     ;; result-set is mapped back to a Clojure map, so that we know
-    ;; what namespace to prefix keyword attributes with 
-    (str "SELECT '"
-         (table-name table-column)
-         "' reason_alpha_table, * FROM "
-         (full-table-name table-column)
-         (when (true? with-where) " WHERE"))
+    ;; what namespace to prefix keyword attributes with
+    (case select-or-del
+      :select (str "SELECT '"
+                   (table-name table-column)
+                   "' reason_alpha_table, * FROM "
+                   (full-table-name table-column)
+                   (when (true? with-where) " WHERE"))
+      :delete (str "DELETE "
+                   "FROM "
+                   (full-table-name table-column)
+                   (when (true? with-where) " WHERE")))
     (first query)))
 
-(defn- to-query
+(defn- to-sql
   "Only supports simple equality comparison conditions & non-nested combinators (AND/OR)"
-  [spec]
+  [select-or-del spec]
   (reduce (fn [query condition]
             (let [is-vec         (vector? condition)
                   is-cond        (and is-vec
@@ -67,7 +72,10 @@
                     (let [[table-column comparison value] condition
                           col                             (column-name table-column)
                           comp                            (name comparison)
-                          sql                             (str (maybe-default-sql query table-column true)
+                          sql                             (str (maybe-default-sql select-or-del
+                                                                                  query
+                                                                                  table-column
+                                                                                  true)
                                                                " " col " " comp " ?")]
                       (if query-is-empty
                         (conj [] sql value)
@@ -78,7 +86,10 @@
                     (let [[combine table-column comparison value] condition
                           col                                     (column-name table-column)
                           comp                                    (name comparison)
-                          sql                                     (str (maybe-default-sql query table-column true)
+                          sql                                     (str (maybe-default-sql select-or-del
+                                                                                          query
+                                                                                          table-column
+                                                                                          true)
                                                                        " " (combine-name combine) " " col " " comp " ?")]
                       (if query-is-empty
                         (conj [] sql value)
@@ -87,7 +98,7 @@
 
                     (and is-cond (= children 1))
                     (let [[table-column] condition]
-                      (maybe-default-sql query table-column false))
+                      (maybe-default-sql select-or-del query table-column false))
 
                     :else query)))
           []
@@ -98,11 +109,13 @@
 
 (comment
 
-  (to-query [[:security/name := "Facebook"]
-             [:or :security/owner-user-id := 4]
-             #_[:and :security/name :<> "Playtech"]])
+  (to-sql :delete
+          [[:security/name := "Facebook"]
+           [:or :security/owner-user-id := 4]
+           #_[:and :security/name :<> "Playtech"]])
 
-  (to-query [[:security/*]])
+  (to-sql :delete
+          [[:security/*]])
 
 )
 
@@ -206,6 +219,7 @@
   (connect [_])
   (choose [_ query-spec])
   (any [this query-spec])
+  (remove! [_ query-spec])
   (save! ; todo: Do this in a transaction
     [this rentity]
     [_ rentity save-impl!-fn]
@@ -215,23 +229,29 @@
   (add-all!
     [this entities]
     [_ entities add-all-impl!-fn]
-    "Inserts multiple entities of the same type.")
-  #_(remove! [_ rentity]))
+    "Inserts multiple entities of the same type."))
 
 (def db (let [row->ent     row->entity
               db-conf      db-config
-              to-qry       to-query
+              to-sql'      to-sql
               sav-impl!    save-impl!
               add-al-impl! add-all-impl!]
           (reify DataBase
             (connect [_] (jdbc/get-connection db-conf))
 
             (choose [_ query-spec]
-              (->> (jdbc/query db-conf (to-qry query-spec))
+              (->> (jdbc/query db-conf (to-sql' :select query-spec))
                    (map row->ent)))
 
             (any [this query-spec]
               (first (choose this query-spec)))
+
+            (remove! [this query-spec]
+              (let [[remove-count] (jdbc/execute! db-conf
+                                                  (to-sql' :delete query-spec))]
+                {:was-removed? (and remove-count
+                                    (> remove-count 0))
+                 :num-removed  remove-count}))
 
             (save! [this rentity]
               (save! this rentity sav-impl!))
