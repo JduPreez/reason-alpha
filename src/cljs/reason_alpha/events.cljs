@@ -6,11 +6,6 @@
             [reason-alpha.web.service-api :as svc-api]))
 
 (rf/reg-event-fx
- :get-api-info
- (fn [{:keys [db]} _]
-   (svc-api/entity-action->http-request db :api :get)))
-
-(rf/reg-event-fx
  :navigate
  (fn [{:keys [db]} [_ {{:keys [name]} :data}]]
    (let [db-out (assoc db
@@ -28,20 +23,22 @@
          new-val     (or result new)
          new-coll    (cond
                        (and (coll? new-val)
-                            (not (map? new-val))) new-val
-                       (map? new-val)             [new-val]
-                       :else                      new-val)
-         merged-coll (utils/merge-by-id current new-coll)]
+                            (not (map? new-val))
+                            (map? (first new-val))) new-val
+                       (map? new-val)               [new-val])
+         merged-coll (when new-coll
+                       (utils/merge-by-id current new-coll))]
      (-> db
          (assoc-in [:loading type] false)
-         (assoc-in [:data type] merged-coll)
+         (assoc-in [:data type] (or merged-coll new-val))
          (assoc :saved new-val)))))
 
 ;; TODO: Make sure save-remote uses a collection arg
 (rf/reg-event-fx
  :save-remote
- (fn [_ [_ type entity]]
-   (let [command (svc-api/entity->command [type entity])]
+ (fn [{:keys [db]} [_ type entity]]
+   (let [command (svc-api/entity-action->http-request db type :save entity) #_ (svc-api/entity->command [type entity])]
+     (cljs.pprint/pprint {::save-remate command})
      command)))
 
 (rf/reg-event-fx

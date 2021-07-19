@@ -4,7 +4,8 @@
    [reason-alpha.env :refer [defaults]]
    [reason-alpha.web.middleware.formats :as formats]
    [ring-ttl-session.core :refer [ttl-memory-store]]
-   [ring.middleware.defaults :refer [site-defaults wrap-defaults]]
+   [ring.middleware.anti-forgery :refer [wrap-anti-forgery]]
+   [ring.middleware.defaults :refer [site-defaults api-defaults wrap-defaults]]
    [ring.middleware.flash :refer [wrap-flash]]
    [ring.middleware.session :refer [wrap-session]]
    [ring.middleware.session.cookie :refer (cookie-store)]))
@@ -12,9 +13,11 @@
 (defn wrap-cors [handler]
   (fn [request]
     (let [response (handler request)]
+      #_(clojure.pprint/pprint {::wrap-cors {:req request
+                                             :res response}})
       (-> response
           (assoc-in [:headers "Access-Control-Allow-Origin"] "http://localhost:8700")
-          (assoc-in [:headers "Access-Control-Allow-Headers"] "x-requested-with, content-type, x-csrf-token, Authorization")
+          (assoc-in [:headers "Access-Control-Allow-Headers"] "X-Requested-With,Content-Type,x-csrf-token,Authorization,Origin")
           (assoc-in [:headers "Access-Control-Allow-Methods"] "*")))))
 
 (defn wrap-formats [handler]
@@ -28,10 +31,7 @@
   (-> ((:middleware defaults) handler)
       wrap-flash
       wrap-cors
-      (wrap-session {:cookie-attrs {:max-age 3600}
-                     :store        (cookie-store {:key "ahY9poQuaghahc7I"})})
+      (wrap-session {:cookie-attrs {:same-site :none}})
       (wrap-defaults
-       (-> site-defaults
-           (assoc-in [:security :anti-forgery] true)
-           (dissoc :session)
-           #_(assoc-in  [:session :store] (ttl-memory-store (* 60 30)))))))
+       (-> api-defaults
+           (dissoc :session)))))

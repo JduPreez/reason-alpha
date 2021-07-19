@@ -12,13 +12,10 @@
 
 (defn- standard-headers
   "Adds:
-    * The user token and format for API authorization
-    * CSRF token"
-  [db]
-  (let [csrf-token (get-in db data/api-info)
-        auth-token "TODO-;-)"]
-    [:Authorization (str "Token " auth-token)
-     :x-csrf-token csrf-token]))
+    * The user token and format for API authorization"
+  [_db]
+  (let [auth-token "TODO_;-)"]
+    [:Authorization (str "Token " auth-token)]))
 
 (def router (routes/app-router))
 
