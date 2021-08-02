@@ -6,11 +6,17 @@ FIXME: description
 
 Download from http://example.com/FIXME.
 
-## Usage
+## Conventions
 
-FIXME: explanation
+https://guide.clojure.style
 
-    $ java -jar reason-alpha-0.1.0-standalone.jar [args]
+### Private vars & functions
+Are prefixed with a dash "-".
+    
+    (def ^:private -some-var)
+    
+    (defn- -do-something [...]
+        ...)
 
 ## Options
 

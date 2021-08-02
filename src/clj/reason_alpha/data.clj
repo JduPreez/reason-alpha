@@ -2,7 +2,9 @@
   (:import [com.github.f4b6a3.uuid UuidCreator])
   (:require [clojure.java.jdbc :as jdbc]
             [clojure.string :as string]
-            [clojure.zip :as zip])
+            [clojure.zip :as zip]
+            [malli.core :as malli]
+            [reason-alpha.data.model :as model])
   (:gen-class))
 
 (def db-schema "REASON-ALPHA")
@@ -11,7 +13,7 @@
                 :connection-uri "jdbc:ignite:thin://127.0.0.1"
                 :db-schema      "REASON-ALPHA"})
 
-(defn sql-name [str] 
+(defn sql-name [str]
   (string/replace str #"-" "_"))
 
 (defn- attribute-kv [table [column val]]
@@ -215,11 +217,22 @@
   (jdbc/insert-multi! db-config table rows)
   rows)
 
+(def ^:private -delete!
+  (malli/-instrument
+   {:schema model/=>delete!}
+   (fn [query-spec]
+     (let [[del-count] (jdbc/execute! db-config
+                                      (to-sql :delete query-spec))]
+       {:was-deleted? (and del-count
+                           (> del-count 0))
+        :num-deleted  del-count}))))
+
 (defprotocol DataBase
   (connect [_])
-  (choose [_ query-spec])
+  (disconnect [_])
+  (select [_ query-spec])
   (any [this query-spec])
-  (remove! [_ query-spec])
+  (delete! [_ query-spec])
   (save! ; todo: Do this in a transaction
     [this rentity]
     [_ rentity save-impl!-fn]
@@ -235,23 +248,22 @@
               db-conf      db-config
               to-sql'      to-sql
               sav-impl!    save-impl!
-              add-al-impl! add-all-impl!]
+              add-al-impl! add-all-impl!
+              delete!-impl -delete!]
           (reify DataBase
             (connect [_] (jdbc/get-connection db-conf))
 
-            (choose [_ query-spec]
+            (disconnect [_] "Not supported")
+
+            (select [_ query-spec]
               (->> (jdbc/query db-conf (to-sql' :select query-spec))
                    (map row->ent)))
 
             (any [this query-spec]
-              (first (choose this query-spec)))
+              (first (select this query-spec)))
 
-            (remove! [this query-spec]
-              (let [[remove-count] (jdbc/execute! db-conf
-                                                  (to-sql' :delete query-spec))]
-                {:was-removed? (and remove-count
-                                    (> remove-count 0))
-                 :num-removed  remove-count}))
+            (delete! [this query-spec]
+              (delete!-impl query-spec))
 
             (save! [this rentity]
               (save! this rentity sav-impl!))
@@ -267,9 +279,7 @@
             (add-all! [_ entities add-all-impl!-fn]
               (->> entities
                    entities->add-all-cmd
-                   add-all-impl!-fn))
-
-            #_(remove! [_ rentity]))))
+                   add-all-impl!-fn)))))
 
 (comment
   (entities->add-all-cmd [{:trade-pattern/id          #uuid "32429cdf-99d6-4893-ae3a-891f8c22aec6"
@@ -295,5 +305,5 @@
                        #uuid "32429cdf-99d6-4893-ae3a-891f8c22aec6",
                        :trade-pattern/user-id     #uuid "8ffd2541-0bbf-4a4b-adee-f3a2bd56d83f",
                        :trade-pattern/description "another test"})
-  (to-query [[:trade-pattern/parent-id := "123"]])
+  (to-sql :select [[:trade-pattern/parent-id := "123"]])
   )

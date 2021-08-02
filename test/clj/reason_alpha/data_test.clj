@@ -4,17 +4,25 @@
             [reason-alpha.data :as data :refer [db save!]]))
 
 (deftest test-data
-  (testing "`data/to-query` converts 1 condition specification '='"
-    (is (= (#'data/to-query [[:security/name := "Hugo Boss"]])
+  (testing "`data/to-sql` converts 1 condition specification '='"
+    (is (= (#'data/to-sql :select
+                          [[:security/name := "Hugo Boss"]])
            ["SELECT 'security' reason_alpha_table, * FROM \"REASON-ALPHA\".security WHERE \"REASON-ALPHA\".security.name = ?"
             "Hugo Boss"])))
 
-  (testing "`data/to-query` converts 2 condition specification 'OR'"
-    (is (= (#'data/to-query [[:security/name := "Facebook"]
-                             [:or :security/owner-user-id := 4]])
+  (testing "`data/to-sql` converts 2 condition specification 'OR'"
+    (is (= (#'data/to-sql :select
+                          [[:security/name := "Facebook"]
+                           [:or :security/owner-user-id := 4]])
            ["SELECT 'security' reason_alpha_table, * FROM \"REASON-ALPHA\".security WHERE \"REASON-ALPHA\".security.name = ? OR \"REASON-ALPHA\".security.owner_user_id = ?"
             "Facebook"
             4])))
+
+  (testing "`data/to-sql` converts `:delete` to `DELETE` SQL"
+    (is (= (#'data/to-sql :delete
+                          [[:security/name := "Facebook"]])
+           ["DELETE FROM \"REASON-ALPHA\".security WHERE \"REASON-ALPHA\".security.name = ?"
+            "Facebook"])))
 
   (testing "`data/row->entity` should map from table to entity schema"
     (is (= (#'data/row->entity {:id                 2

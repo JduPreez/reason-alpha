@@ -1,5 +1,6 @@
 (ns reason-alpha.events
-  (:require [medley.core :refer [dissoc-in]]
+  (:require [day8.re-frame.tracing :refer-macros [fn-traced]]
+            [medley.core :refer [dissoc-in]]
             [re-frame.core :as rf]
             [reason-alpha.data :as data]
             [reason-alpha.utils :as utils]
@@ -19,7 +20,7 @@
 (rf/reg-event-db
  :save-local
  (fn [db [_ type {:keys [result] :as new}]]
-   (let [current     (get-in db [:data type])
+   (let [current     (get-in db (data/entity-data type))
          new-val     (or result new)
          new-coll    (cond
                        (and (coll? new-val)
@@ -67,9 +68,22 @@
                         :error-response error-response}})))
 
 (rf/reg-event-fx
- :delete-success
- (fn [_ [_ result]]
-   (cljs.pprint/pprint {::delete-success result})))
+ :delete-local
+ (fn-traced [{:keys [db]} [_ entities-type {:keys [result] :as deleted}]]
+   (let [data-path      (data/entity-data entities-type)
+         deleted        (or result deleted)
+         del-col        (if (coll? deleted)
+                          deleted
+                          [deleted])
+         id-k           (utils/id-key (first del-col))
+         entities       (get-in db data-path)
+         remaining-ents (remove
+                         (fn [e]
+                           (let [id-v (get e id-k)]
+                             (some #(let [del-id-v (get % id-k)]
+                                      (= del-id-v id-v)) deleted)))
+                         entities)]
+     {:db db #_(assoc-in db data-path remaining-ents)})))
 
 (rf/reg-event-fx
  :delete
@@ -80,10 +94,7 @@
                           {:entities-type model
                            :action        :delete
                            :data          entity
-                           :on-success    [:delete-success]})]
-     (cljs.pprint/pprint {::delete {:hr http-req
-                                    :t  type
-                                    :e  entity}})
+                           :on-success    [:delete-local model]})]
      http-req)))
 
 (rf/reg-event-fx

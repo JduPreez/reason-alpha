@@ -8,6 +8,7 @@
             [goog.history.EventType :as HistoryEventType]
             [re-frame.core :as rf]
             [reagent.core :as r]
+            [reagent.dom :as r.dom]
             [reason-alpha.events]
             [reason-alpha.events.trade-patterns]
             [reason-alpha.subs]
@@ -192,7 +193,7 @@
 
 (defn start []
   (rf/clear-subscription-cache!)
-  (r/render [#'show] (.getElementById js/document "app")))
+  (r.dom/render [#'show] (.getElementById js/document "app")))
 
 (defn ^:export init []
   (rf/dispatch-sync [:set-view-models view-models])

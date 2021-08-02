@@ -1,5 +1,5 @@
 (ns reason-alpha.web.services
-  (:require  [reason-alpha.data :as data :refer [choose any save! db remove!]]
+  (:require  [reason-alpha.data :as data :refer [select any save! db delete!]]
              [reason-alpha.services.trades :as trades-svc]
              [ring.util.http-response :refer :all]))
 
@@ -8,20 +8,25 @@
 (defn get-trade-patterns [_] #_[{{{user-id :user-id} :path} :parameters}]  
   (ok {:result (trades-svc/get-trade-patterns)})) ;; (choose db [:trade-pattern/*])
 
-(defn get-trade-pattern [{{:keys [id]} :path-params}]
-  (ok {:result (any db [:trade-pattern/id = id])}))
+(defn get-trade-pattern [{{{:keys [id]} :path} :parameters}]
+  (ok {:result (any db [:trade-pattern/id := id])}))
 
 (defn save-trade-pattern! [{trade-pattern :body-params}]
   (ok {:result (trades-svc/save-trade-pattern! trade-pattern)}))
 
-(defn delete-trade-pattern! [{{:keys [id]} :path-params}]
-  (ok {:result (remove! db [:trade-pattern/id = id])}))
+(defn delete-trade-pattern! [{{{:keys [id]} :path} :parameters}]
+  ;; TODO: Delete all child patterns of the parent
+  (ok {:result (delete! db [:trade-pattern/id := id])}))
 
 (defn get-api-info [_]
   (ok {:result "Welcome to the Reason Alpha API :-)"}))
 
 (comment
-  (choose db [:trade-pattern/*])
+  (delete! db [:trade-pattern/id := #uuid "017ade64-1bfa-1586-119b-87df8dbec35d"])
+
+  (trades-svc/get-trade-patterns)
+
+  (select db [:trade-pattern/*])
   (save! db {:trade-pattern/name        "Buy Support or Short Resistance",
              :trade-pattern/creation-id nil,
              :trade-pattern/id          #uuid "01738610-a026-1f53-5d94-219803fa47e1",
