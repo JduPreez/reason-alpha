@@ -1,0 +1,20 @@
+{"trade-pattern"    [:map
+                     [:trade-pattern/creation-id :uuid]
+                     [:trade-pattern/id {:optional true} :uuid]
+                     [:trade-pattern/name [:string {:min 1}]]
+                     [:trade-pattern/description {:optional true} [:string {:min 1}]]
+                     [:trade-pattern/ancestors-path {:optional true} [:sequential :string]]]
+ "service-provider" [:map
+                     [:service-provider/creation-id :uuid]
+                     [:service-provider/id {:optional true} :uuid]
+                     [:service-provider/name [:string {:min 1}]]
+                     [:service-provider/services {:optional true}
+                      [:sequential [:enum :broker :share-price-data]]]]
+ "fin-security"     [:map
+                     [:fin-security/creation-id :uuid]
+                     [:fin-security/id {:optional true} :uuid]
+                     [:fin-security/name [:string {:min 1}]]
+                     [:fin-security/symbols {:optional true}
+                      [:sequential [:map
+                                    [:fin-security/symbol [:string {:min 1}]
+                                     :service-provider/id :uuid]]]]]}
