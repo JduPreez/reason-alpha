@@ -1,5 +1,5 @@
 (ns reason-alpha.services.trades
-  (:require [reason-alpha.data :refer [select save! db]]
+  (:require [reason-alpha.data :refer [select save! db delete!]]
             [reason-alpha.data-structures :as data-structs]))
 
 (defn get-trade-patterns []
@@ -30,7 +30,29 @@
                                               (= creation-id' creation-id)) tp')) tps)]
     with-ancestors-path))
 
+(defn delete-trade-pattern! [id]
+  (let [children   (select db [:trade-pattern/parent-id := id])
+        del-result (delete! db [[:trade-pattern/parent-id := id]
+                                [:or :trade-pattern/id := id]])]
+    (-> children
+        (as-> x (map #(select-keys % [:trade-pattern/id]) x))
+        (conj {:trade-pattern/id id})
+        (as-> x (assoc del-result :deleted-items x)))))
+
 (comment
+  (let [id         #uuid "32429cdf-99d6-4893-ae3a-891f8c22aec6"
+        children   '(#:trade-pattern{:name        "Buy Support or Short Resistance",
+                                     :creation-id nil,
+                                     :id          #uuid "3c2d368f-aae5-4d13-a5bd-c5b340f09016",
+                                     :parent-id   #uuid "32429cdf-99d6-4893-ae3a-891f8c22aec6",
+                                     :user-id     #uuid "8ffd2541-0bbf-4a4b-adee-f3a2bd56d83f",
+                                     :description ""})
+        del-result {}]
+    )
+
+  (let [id #uuid "32429cdf-99d6-4893-ae3a-891f8c22aec6"]
+    (delete-trade-pattern! {:trade-pattern/id id}))
+
   (save-trade-pattern!
    {:trade-pattern/name           "Breakout--",
     :trade-pattern/ancestors-path ["Breakout"],

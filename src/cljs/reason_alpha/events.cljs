@@ -69,21 +69,23 @@
 
 (rf/reg-event-fx
  :delete-local
- (fn-traced [{:keys [db]} [_ entities-type {:keys [result] :as deleted}]]
-   (let [data-path      (data/entity-data entities-type)
-         deleted        (or result deleted)
-         del-col        (if (coll? deleted)
-                          deleted
-                          [deleted])
-         id-k           (utils/id-key (first del-col))
-         entities       (get-in db data-path)
-         remaining-ents (remove
-                         (fn [e]
-                           (let [id-v (get e id-k)]
-                             (some #(let [del-id-v (get % id-k)]
-                                      (= del-id-v id-v)) deleted)))
-                         entities)]
-     {:db db #_(assoc-in db data-path remaining-ents)})))
+ (fn-traced
+  [{:keys [db]} [_ entities-type {{:keys [deleted-items]} :result
+                                  :as                     deleted}]]
+  (let [data-path      (data/entity-data entities-type)
+        deleted        (or deleted-items deleted)
+        del-col        (if (coll? deleted)
+                         deleted
+                         [deleted])
+        id-k           (utils/id-key (first del-col))
+        entities       (get-in db data-path)
+        remaining-ents (remove
+                        (fn [e]
+                          (let [id-v (get e id-k)]
+                            (some #(let [del-id-v (get % id-k)]
+                                     (= del-id-v id-v)) deleted)))
+                        entities)]
+    {:db (assoc-in db data-path remaining-ents)})))
 
 (rf/reg-event-fx
  :delete

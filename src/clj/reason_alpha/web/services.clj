@@ -15,8 +15,7 @@
   (ok {:result (trades-svc/save-trade-pattern! trade-pattern)}))
 
 (defn delete-trade-pattern! [{{{:keys [id]} :path} :parameters}]
-  ;; TODO: Delete all child patterns of the parent
-  (ok {:result (delete! db [:trade-pattern/id := id])}))
+  (ok {:result (trades-svc/delete-trade-pattern! id)})) ;; (delete! db [:trade-pattern/id := id])
 
 (defn get-api-info [_]
   (ok {:result "Welcome to the Reason Alpha API :-)"}))

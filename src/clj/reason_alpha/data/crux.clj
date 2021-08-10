@@ -42,5 +42,3 @@
 
             (add-all! [_ entities add-all-impl!-fn]
               nil))))
-
-

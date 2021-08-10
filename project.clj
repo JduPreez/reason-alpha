@@ -28,6 +28,7 @@
                  [org.clojure/clojure "1.10.3"]
                  [org.clojure/clojurescript "1.10.879" :scope "provided"]
                  [org.clojure/core.async "0.4.500"]
+                 [org.clojure/core.cache "1.0.217"]
                  [org.clojure/google-closure-library "0.0-20201211-3e6c510d" :scope "provided"]
                  [org.clojure/tools.cli "1.0.206"]
                  [org.clojure/tools.logging "1.1.0"]
