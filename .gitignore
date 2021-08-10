@@ -18,3 +18,4 @@ package-lock.json
 /.clj-kondo/*cache*
 sqlite.5.db
 .lsp/
+.calva/
