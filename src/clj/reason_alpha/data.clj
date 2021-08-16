@@ -1,4 +1,5 @@
 (ns reason-alpha.data
+  
   (:import [com.github.f4b6a3.uuid UuidCreator])
   (:require [clojure.java.jdbc :as jdbc]
             [clojure.string :as string]
