@@ -1,5 +1,6 @@
 (ns reason-alpha.core
-  (:require [mount.lite :refer (defstate) :as mount]
+  (:require [malli.instrument :as malli.instr]
+            [mount.lite :refer (defstate) :as mount]
             [reason-alpha.web.handler :as handler]
             [ring.adapter.jetty :as jetty]))
 
@@ -14,5 +15,7 @@
    :stop  (.stop @server))
 
 (defn -main []
-  (mount/start))
+  (mount/start)
+  (malli.instr/instrument!))
+
 

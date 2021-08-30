@@ -19,3 +19,4 @@ package-lock.json
 sqlite.5.db
 .lsp/
 .calva/
+/data

@@ -1,5 +1,5 @@
 (ns reason-alpha.web.services
-  (:require  [reason-alpha.data :as data :refer [select any save! db delete!]]
+  (:require  [reason-alpha.data :as data :refer [any save! db delete!]]
              [reason-alpha.services.trades :as trades-svc]
              [ring.util.http-response :refer :all]))
 

@@ -1,5 +1,4 @@
 (ns reason-alpha.data
-  
   (:import [com.github.f4b6a3.uuid UuidCreator])
   (:require [clojure.java.jdbc :as jdbc]
             [clojure.string :as string]
@@ -231,7 +230,7 @@
 (defprotocol DataBase
   (connect [_])
   (disconnect [_])
-  (select [_ query-spec])
+  (query [_ query-spec])
   (any [this query-spec])
   (delete! [_ query-spec])
   (save! ; todo: Do this in a transaction
@@ -256,12 +255,12 @@
 
             (disconnect [_] "Not supported")
 
-            (select [_ query-spec]
+            (query [_ query-spec]
               (->> (jdbc/query db-conf (to-sql' :select query-spec))
                    (map row->ent)))
 
             (any [this query-spec]
-              (first (select this query-spec)))
+              (first (query this query-spec)))
 
             (delete! [this query-spec]
               (delete!-impl query-spec))
@@ -277,10 +276,10 @@
             (add-all! [this entities]
               (add-all! this entities add-al-impl!))
 
-            (add-all! [_ entities add-all-impl!-fn]
+            (add-all! [_ entities fn-add-all-impl!]
               (->> entities
                    entities->add-all-cmd
-                   add-all-impl!-fn)))))
+                   fn-add-all-impl!)))))
 
 (comment
   (entities->add-all-cmd [{:trade-pattern/id          #uuid "32429cdf-99d6-4893-ae3a-891f8c22aec6"

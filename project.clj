@@ -12,12 +12,14 @@
                  [com.cognitect/transit-clj "0.8.319"]
                  [com.github.f4b6a3/uuid-creator "1.4.2"]
                  [com.google.javascript/closure-compiler-unshaded "v20210505" :scope "provided"]
+                 [com.outpace/config "0.13.5"]
                  [day8.re-frame/http-fx "0.2.3"]
                  [functionalbytes/mount-lite "2.1.1"]
                  [juxt/crux-core "21.06-1.17.1-beta"]
                  [juxt/crux-rocksdb "21.06-1.17.1-beta"]
                  [luminus-transit "0.1.2"]
                  [markdown-clj "1.10.0"]
+                 [me.raynes/fs "1.4.6"]
                  [medley "1.3.0"]
                  [metosin/malli "0.6.0-SNAPSHOT"]
                  [metosin/muuntaja "0.6.4"]
@@ -57,7 +59,7 @@
 
   :plugins [[migratus-lein "0.7.2"]]
 
-  :source-paths ["src/clj" "src/cljs" "src/cljc"]
+  :source-paths ["src/cljc" "src/clj" "src/cljs"]
   :test-paths ["test/clj"]
   :resource-paths ["resources" "target/cljsbuild"]
   :target-path "target/%s"

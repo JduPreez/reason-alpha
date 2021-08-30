@@ -1,7 +1,8 @@
 (ns reason-alpha.model
   (:require [clojure.core.cache :as cache]
             [malli.core :as m]
-            [reason-alpha.utils :as utils]))
+            [reason-alpha.utils :as utils]
+            [traversy.lens :as tl]))
 
 (def ^:private model-cache
   (atom
@@ -20,6 +21,19 @@
   (m/validate
    [:schema (details) (name entity-type)]
    entity))
+
+(defn entity-type [entity-map]
+  (-> entity-map
+      (tl/view-single
+       (tl/*>
+        tl/all-keys
+        (tl/conditionally #(= (name %) "creation-id"))))
+      namespace))
+
+(defn entity-id-key [entity-map]
+  (let [ent-type (entity-type entity-map)]
+    (keyword (str ent-type "/id"))))
+
 
 (comment
 
