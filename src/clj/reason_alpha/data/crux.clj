@@ -21,7 +21,7 @@
             [me.raynes.fs :as fs]
             [mount.lite :refer (defstate) :as mount]
             [outpace.config :refer [defconfig]]
-            [reason-alpha.data :refer [DataBase save!]]
+            [reason-alpha.data :refer [DataBase save! add-all!]]
             [reason-alpha.model :as model])
   (:gen-class))
 
@@ -67,8 +67,23 @@
     (crux/submit-tx @crux-node (crux-puts ents-with-ids))
     ents-with-ids))
 
+(defn delete-impl! [{:keys [spec] :as crux-del-command}]
+  (cond
+    spec
+    , (crux/submit-tx @crux-node
+                      [[:crux.tx/fn ::delete crux-del-command]])
+
+    crux-del-command
+    , (crux/submit-tx @crux-node
+                      crux-del-command)
+
+    :else {:was-deleted? false}))
+
+
+
 (def db (let [add-al-impl! save-impl!
-              sav-impl!    save-impl!]
+              sav-impl!    save-impl!
+              del-impl?    delete-impl!]
           (reify DataBase
             (connect [_]
               (mount/start #'crux-node)
@@ -77,15 +92,14 @@
             (disconnect [_] (mount/stop #'crux-node))
 
             (query [_ {:keys [spec args]}]
-              (-> crux/q
-                  (partial (crux/db @crux-node) spec)
-                  (apply args)
-                  (as-> es (mapcat identity es))))
+              (apply crux/q (crux/db @crux-node) spec args))
 
             (any [this query-spec]
               (first (.query this query-spec)))
 
-            (delete! [this query-spec]
+            (delete! [this delete-command]
+              (delete-impl! delete-command)
+              ;; TODO: Fix this!!!
               {:was-deleted? nil
                :num-deleted  nil})
 
@@ -96,18 +110,46 @@
               (first (fn-save-impl! [entity])))
 
             (add-all! [this entities]
-              (.add-all! this entities add-al-impl!))
+              (add-all! this entities add-al-impl!))
 
             (add-all! [_ entities fn-add-all-impl!]
               (fn-add-all-impl! entities)))))
 
 (comment
+
+  (require '[reason-alpha.data :refer [add-all! query save!]])
+
+  (crux/submit-tx @crux-node
+                  [[:crux.tx/put
+                    {:crux.db/id ::delete
+                     :crux.db/fn '(fn [ctx {:keys [spec args] :as crux-del-command}]
+                                    (->> args
+                                         (apply crux.api/q (crux.api/db ctx) spec)
+                                         (map #(let [doc (first %)
+                                                     id  (if (map? doc)
+                                                           (-> % first vals first)
+                                                           doc)]
+                                                 [:crux.tx/delete id]))
+                                         vec))}]])
+
+
+
+  (delete-impl! {:spec '{:find  [?tp]
+                         :where [[?tp :trade-pattern/id ?id]]}}
+                #_{:spec '{:find  [(pull tp [:trade-pattern/id])]
+                           :where [[tp :trade-pattern/id]
+                                   #_[tp :trade-pattern/name "Breakout"]]}})
+  (query db
+         {:spec '{:find  [(pull tp [*])]
+                  :where [[tp :trade-pattern/id]
+                          #_[tp :trade-pattern/name "Breakout"]]}})
+
   (drop-db! "dev")
 
   (concat {:a 1 :title "ddd"} {:b 2 :title "qwerrt"})
 
 
-  (require '[reason-alpha.data :refer [add-all! query save!]])
+  
 
   (let [entities [{:fin-security/id          #uuid "017b4ed0-c816-b7bc-dc85-2c4f5d5dd7f0"
                    :fin-security/creation-id #uuid "017b4ed4-393f-27d4-24ab-a62973c4098c"
@@ -145,26 +187,23 @@
                           [tp :trade-pattern/user-id uid]
                           [tp :trade-pattern/parent-id pid]]}})
 
-  (query db
-         {:spec '{:find  [(pull tp [*])]
-                  :where [[tp :trade-pattern/id]
-                          [tp :trade-pattern/name "Breakout"]]}})
+  
 
   (query db {:spec '{:find  [(pull tp [*])]
                      :where [[tp :trade-pattern/id id]]
                      :in    [id]}
              :args [#uuid "32429cdf-99d6-4893-ae3a-891f8c22aec6"]})
 
-  (query db {:spec '{:find  [nm id cid]
-                     :keys  [trade-pattern/name trade-pattern/id trade-pattern/creation-id]
-                     :where [[tp :trade-pattern/name nm]
-                             [tp :trade-pattern/id id]
-                             [tp :trade-pattern/creation-id cid]]}})
+  (query-impl! {:spec     '{:find   [name creation-id]
+                            :where  [[tp :trade-pattern/name name]
+                                     [tp :trade-pattern/creation-id creation-id]]
+                            #_#_:in [name]}
+                #_#_:args ["Breakout"]})
 
   (crux/q (crux/db @crux-node)
           '{:find  [tp name creation-id]
             :where [[tp :trade-pattern/name name]
-                    [tp :fin-security/creation-id creation-id]]
+                    [tp :trade-pattern/creation-id creation-id]]
             :in    [ticker]}
           "Breakout")
 
