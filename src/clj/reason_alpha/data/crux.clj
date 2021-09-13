@@ -31,18 +31,51 @@
 (defn drop-db! [db]
   (fs/delete-dir (str data-dir "/" db)))
 
+(defn- put-delete-fn!
+  [{node                  :node
+    only-when-not-exists? :only-when-not-exists?
+    :or                   {only-when-not-exists? true}}]
+  (let [already-exists? (-> (crux/db node)
+                            (crux/q  '{:find  [(count fun)]
+                                       :where [[del-tx-fn :crux.db/fn fun]
+                                               [del-tx-fn :crux.db/id ::delete]]})
+                            first
+                            first
+                            (= 0))]
+    (when (or (and only-when-not-exists?
+                   (false? already-exists?))
+              (false? only-when-not-exists?))
+        (crux/submit-tx node
+                        [[:crux.tx/put
+                          {:crux.db/id ::delete
+                           :crux.db/fn
+                           , '(fn [ctx {:keys [spec args]
+                                        :as   crux-del-command}]
+                                (->> args
+                                     (apply crux.api/q
+                                            (crux.api/db ctx)
+                                            spec)
+                                     (map #(let [doc (first %)
+                                                 id  (if (map? doc)
+                                                       (-> % first vals first)
+                                                       doc)]
+                                             [:crux.tx/delete id]))
+                                     vec))}]]))))
+
 (defn start-crux! []
   (clojure.pprint/pprint ::start-crux!)
-  (letfn [(kv-store [dir]
-            {:kv-store {:crux/module 'crux.rocksdb/->kv-store
-                        :db-dir      (-> data-dir
-                                         (str "/" db-name "/" dir)
-                                         io/file)
-                        :sync?       true}})]
-    (crux/start-node
-     {:crux/tx-log         (kv-store "tx-log")
-      :crux/document-store (kv-store "doc-store")
-      :crux/index-store    (kv-store "index-store")})))
+  (let [fn-kv-store (fn [dir]
+                      {:kv-store {:crux/module 'crux.rocksdb/->kv-store
+                                  :db-dir      (-> data-dir
+                                                   (str "/" db-name "/" dir)
+                                                   io/file)
+                                  :sync?       true}})
+        node        (crux/start-node
+                     {:crux/tx-log         (fn-kv-store "tx-log")
+                      :crux/document-store (fn-kv-store "doc-store")
+                      :crux/index-store    (fn-kv-store "index-store")})]
+    (put-delete-fn! {:node node})
+    node))
 
 (defstate crux-node
   :start (start-crux!)
@@ -68,22 +101,25 @@
     ents-with-ids))
 
 (defn delete-impl! [{:keys [spec] :as crux-del-command}]
-  (cond
-    spec
-    , (crux/submit-tx @crux-node
-                      [[:crux.tx/fn ::delete crux-del-command]])
+  (let [{:keys [crux.tx/tx-id]
+         :as   tx-details} (cond
+                             spec
+                             , (crux/submit-tx @crux-node
+                                               [[:crux.tx/fn
+                                                 ::delete
+                                                 crux-del-command]])
 
-    crux-del-command
-    , (crux/submit-tx @crux-node
-                      crux-del-command)
+                             crux-del-command
+                             , (crux/submit-tx @crux-node
+                                               crux-del-command)
 
-    :else {:was-deleted? false}))
-
-
+                             :else {:was-deleted? false})]
+    {:tx-details   tx-details
+     :was-deleted? (not (nil? tx-id))}))
 
 (def db (let [add-al-impl! save-impl!
               sav-impl!    save-impl!
-              del-impl?    delete-impl!]
+              del-impl!    delete-impl!]
           (reify DataBase
             (connect [_]
               (mount/start #'crux-node)
@@ -92,16 +128,18 @@
             (disconnect [_] (mount/stop #'crux-node))
 
             (query [_ {:keys [spec args]}]
-              (apply crux/q (crux/db @crux-node) spec args))
+              (->> (apply crux/q (crux/db @crux-node) spec args)
+                   (map (fn [[entity :as all]]
+                          (if (map? entity)
+                            entity
+                            all)))))
 
             (any [this query-spec]
               (first (.query this query-spec)))
 
+            ;; Delete command's spec should only return :crux.db/id
             (delete! [this delete-command]
-              (delete-impl! delete-command)
-              ;; TODO: Fix this!!!
-              {:was-deleted? nil
-               :num-deleted  nil})
+              (del-impl! delete-command))
 
             (save! [this entity]
               (save! this entity sav-impl!))
@@ -117,28 +155,23 @@
 
 (comment
 
-  (require '[reason-alpha.data :refer [add-all! query save!]])
+  (require '[reason-alpha.data :refer [add-all! query save! connect delete!]])
 
-  (crux/submit-tx @crux-node
-                  [[:crux.tx/put
-                    {:crux.db/id ::delete
-                     :crux.db/fn '(fn [ctx {:keys [spec args] :as crux-del-command}]
-                                    (->> args
-                                         (apply crux.api/q (crux.api/db ctx) spec)
-                                         (map #(let [doc (first %)
-                                                     id  (if (map? doc)
-                                                           (-> % first vals first)
-                                                           doc)]
-                                                 [:crux.tx/delete id]))
-                                         vec))}]])
+  (connect db)
 
+  (put-delete-fn! {:node                  (connect db)
+                   :only-when-not-exists? false})
 
+  (delete! db {:spec '{:find  [?tp]
+                       :where [[?tp :trade-pattern/id ?id]]}}
+           #_{:spec '{:find  [(pull tp [:trade-pattern/id])]
+                      :where [[tp :trade-pattern/id]
+                              #_[tp :trade-pattern/name "Breakout"]]}})
 
-  (delete-impl! {:spec '{:find  [?tp]
-                         :where [[?tp :trade-pattern/id ?id]]}}
-                #_{:spec '{:find  [(pull tp [:trade-pattern/id])]
-                           :where [[tp :trade-pattern/id]
-                                   #_[tp :trade-pattern/name "Breakout"]]}})
+  (query db
+         {:spec '{:find  [?tp]
+                  :where [[?tp :trade-pattern/id ?id]]}})
+
   (query db
          {:spec '{:find  [(pull tp [*])]
                   :where [[tp :trade-pattern/id]
@@ -169,8 +202,10 @@
              :trade-pattern/name        "Breakout",
              :trade-pattern/description "dirt",
              :trade-pattern/user-id     #uuid "8ffd2541-0bbf-4a4b-adee-f3a2bd56d83f",
-             :crux.db/id                #uuid "017b979d-f1a6-d8fe-ba75-b2f0679665e2",
-             :trade-pattern/id          #uuid "017b979d-f1a6-d8fe-ba75-b2f0679665e2"})
+             :crux.db/id                #uuid "563ee957-2090-44a0-95ef-db6d57ce0407",
+             :trade-pattern/id          #uuid "563ee957-2090-44a0-95ef-db6d57ce0407"})
+
+  (java.util.UUID/randomUUID)
 
   (query db
          {:spec '{:find  [id cid nm d pid uid]
@@ -200,12 +235,15 @@
                             #_#_:in [name]}
                 #_#_:args ["Breakout"]})
 
-  (crux/q (crux/db @crux-node)
-          '{:find  [tp name creation-id]
-            :where [[tp :trade-pattern/name name]
-                    [tp :trade-pattern/creation-id creation-id]]
-            :in    [ticker]}
-          "Breakout")
+  (-> @crux-node
+      crux/db
+      (crux/q  '{:find  [(count fun)]
+                 :where [[del-tx-fn :crux.db/fn fun]
+                         [del-tx-fn :crux.db/id ::delete]]})
+      first
+      first
+      (> 0))
+  
 
   (let [query-spec '{:find  [fin-sec amount]
                      :where [[fin-sec :fin-security/ticker ticker]
