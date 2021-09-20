@@ -44,7 +44,7 @@
            (-> {:headerName   header
                 :field        field
                 :valueGetter  (partial get-value *options)
-                :flex         flex
+                ;;:flex         flex
                 :editable     (partial is-editable? select editable? field)}
                (assoc-some :minWidth min-width)
                (assoc-some :maxWidth max-width)
@@ -72,19 +72,23 @@
     (fn-save data)))
 
 (defn view [{:keys [fn-save fn-get-id]} data cols & [tree-path fn-row-selected]]
+  (cljs.pprint/pprint {::view (columns cols)})
   [:div.ag-theme-balham-dark {:style {#_:width #_ "100%"
                                       :height  "100%"}}
    [:> ag-grd-react/AgGridReact
     (cond-> {:defaultColDef                 {:resizable true}
              :rowSelection                  "single"
              :rowDeselection                true
+             :editType                      "fullRow"
+             ;;:stopEditingWhenGridLosesFocus true
              :immutableData                 true
              :columnDefs                    (columns cols)
              :rememberGroupStateWhenNewData true
              :rowData                       (utils/str-keys data)
              :modules                       ag-grd/AllModules
              :onFirstDataRendered           #(-> % .-api .sizeColumnsToFit)
-             :onCellEditingStopped          (partial save fn-save)
+             ;;:onCellValueChanged          (partial save fn-save)
+             :onRowValueChanged             (partial save fn-save)
              :getRowNodeId                  #(fn-get-id (-> %
                                                             js->clj
                                                             utils/kw-keys))

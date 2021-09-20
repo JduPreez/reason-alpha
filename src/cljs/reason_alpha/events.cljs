@@ -19,7 +19,7 @@
 
 (rf/reg-event-db
  :save-local
- (fn [db [_ type {:keys [result] :as new}]]
+ (fn-traced [db [_ type {:keys [result] :as new}]]
    (let [current     (get-in db (data/entity-data type))
          new-val     (or result new)
          new-coll    (cond
@@ -36,7 +36,7 @@
 
 (rf/reg-event-fx
  :save-remote
- (fn [_ [_ type entity]]
+ (fn-traced [_ [_ type entity]]
    (let [command (svc-api/entity-action->http-request
                   {:entities-type type
                    :action        :save
@@ -85,7 +85,8 @@
                             (some #(let [del-id-v (get % id-k)]
                                      (= del-id-v id-v)) deleted)))
                         entities)]
-    {:db (assoc-in db data-path remaining-ents)})))
+    {:db       (assoc-in db data-path remaining-ents)
+     :dispatch [:select nil]})))
 
 (rf/reg-event-fx
  :delete

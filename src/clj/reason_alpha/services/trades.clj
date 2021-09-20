@@ -1,5 +1,5 @@
 (ns reason-alpha.services.trades
-  (:require [reason-alpha.data :refer [query save! delete!]]
+  (:require [reason-alpha.data :refer [query save! delete! any]]
             [reason-alpha.data.crux :as data.crux]
             [reason-alpha.data-structures :as data-structs]))
 
@@ -17,26 +17,33 @@
                                    trade-pattern/id
                                    trade-pattern/creation-id]
                             :as   trade-pattern}]
-  (let [tp                  (save! data.crux/db (dissoc trade-pattern
-                                                        :trade-pattern/ancestors-path))
-        parent-tp           (when parent-id
-                              (query data.crux/db {:spec '{:find  [(pull tp [*])]
-                                                           :where [[tp :trade-pattern/id id]]
-                                                           :in    [id]}
-                                                   :args [parent-id]}))
-        _                   (clojure.pprint/pprint {::save-trade-pattern! {:TP  tp
-                                                                           :PTP parent-tp}})
-        tps                 (data-structs/conj-ancestors-path [tp parent-tp]
-                                                              :trade-pattern/parent-id
-                                                              :trade-pattern/name
-                                                              :trade-pattern/id
-                                                              :trade-pattern/ancestors-path)
-        with-ancestors-path (some (fn [{id'          :trade-pattern/id
-                                        creation-id' :trade-pattern/creation-id
-                                        :as          tp'}]
-                                    (when (or (= id' id)
-                                              (= creation-id' creation-id)) tp')) tps)]
-    with-ancestors-path))
+  (let [tp                      (save! data.crux/db (dissoc trade-pattern
+                                                            :trade-pattern/ancestors-path))
+        parent-tp               (when parent-id
+                                  (any data.crux/db {:spec '{:find  [(pull tp [*])]
+                                                             :where [[tp :trade-pattern/id id]]
+                                                             :in    [id]}
+                                                     :args [parent-id]}))
+        children-tp             (query data.crux/db {:spec '{:find  [(pull tp [*])]
+                                                             :where [[tp :trade-pattern/parent-id id]]
+                                                             :in    [id]}
+                                                     :args [id]})
+        tps                     (data-structs/conj-ancestors-path (cond-> [tp]
+                                                                    parent-tp         (conj parent-tp)
+                                                                    (seq children-tp) (into children-tp))
+                                                                  :trade-pattern/parent-id
+                                                                  :trade-pattern/name
+                                                                  :trade-pattern/id
+                                                                  :trade-pattern/ancestors-path)
+        ;; Commented out, because we have to send back the parent & children, in case parent is renamed
+        #_#_with-ancestors-path (some (fn [{id'          :trade-pattern/id
+                                            creation-id' :trade-pattern/creation-id
+                                            :as          tp'}]
+                                        (when (or (= id' id)
+                                                  (= creation-id' creation-id)) tp'))
+                                      tps)]
+    tps
+    #_with-ancestors-path))
 
 (defn delete-trade-pattern! [trade-pattern-id]
   (let [children   (query data.crux/db {:spec '{:find  [(pull tp [*])]
@@ -54,6 +61,12 @@
         (as-> di (assoc del-result :deleted-items di)))))
 
 (comment
+  (let [id #uuid "017c0265-93a2-8d53-d2e1-ba1efc8512e0"]
+    (query data.crux/db {:spec '{:find  [(pull tp [*])]
+                                 :where [[tp :trade-pattern/parent-id id]]
+                                 :in    [id]}
+                         :args [id]}))
+
   (let [id #uuid "32429cdf-99d6-4893-ae3a-891f8c22aec6"]
     #_(query data.crux/db {:spec '{:find  [(pull tp [*])]
                                    :where [[tp :trade-pattern/parent-id tp-id]]
