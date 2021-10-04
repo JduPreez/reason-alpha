@@ -1,8 +1,5 @@
 (ns reason-alpha.views.trade-patterns
-  (:require ["@ag-grid-community/react" :as ag-grd-react]
-            ["@ag-grid-enterprise/all-modules" :as ag-grd]
-            [re-frame.core :as rf]
-            [reason-alpha.views.data-grid :as data-grid]))
+  (:require [re-frame.core :as rf]))
 
 (def model :trade-patterns)
 
@@ -11,11 +8,12 @@
 ;;         https://www.ag-grid.com/javascript-grid-data-update/?framework=javascript#example-updating-with-transaction
 (defn view []
   (fn []
-    (data-grid/view {:fn-save   #(rf/dispatch [:save :trade-patterns %])
-                     :fn-get-id (fn [{:keys [trade-pattern/id
-                                             trade-pattern/creation-id]
-                                      :as   _data}]
-                                  (or id creation-id))}
+    [:div "trade patterns"]
+    #_(data-grid/view {:fn-save #(rf/dispatch [:save :trade-patterns %])
+                       :fn-get-id (fn [{:keys [trade-pattern/id
+                                               trade-pattern/creation-id]
+                                        :as   _data}]
+                                    (or id creation-id))}
                     @(rf/subscribe [:trade-patterns])
                     {:trade-pattern/name        {:header    "Trade Pattern"
                                                  :flex      1
@@ -27,6 +25,7 @@
                                                  :min-width 200
                                                  :max-width 250
                                                  :select    {:lookup-key :trade-pattern/id
+                                                             :*ref-data  (rf/subscribe [:trade-patterns/ref-data])
                                                              :*options   (rf/subscribe [:trade-pattern-options])}
                                                  :editable? true}
                      :trade-pattern/description {:header    "Description"

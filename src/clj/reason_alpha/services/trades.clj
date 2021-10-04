@@ -4,19 +4,22 @@
             [reason-alpha.data-structures :as data-structs]))
 
 (defn get-trade-patterns []
-  (let [trade-patrns (query data.crux/db
-                            {:spec '{:find  [(pull tp [*])]
-                                     :where [[tp :trade-pattern/id]]}})]
-    (data-structs/conj-ancestors-path trade-patrns
-                                      :trade-pattern/parent-id
-                                      :trade-pattern/name
-                                      :trade-pattern/id
-                                      :trade-pattern/ancestors-path)))
+  (let [trade-patrns        (query data.crux/db
+                                   {:spec '{:find  [(pull tp [*])]
+                                            :where [[tp :trade-pattern/id]]}})
+        with-ancestors-path (data-structs/conj-ancestors-path trade-patrns
+                                                              :trade-pattern/parent-id
+                                                              :trade-pattern/name
+                                                              :trade-pattern/id
+                                                              :trade-pattern/ancestors-path)]
+    (clojure.pprint/pprint {::get-trade-patterns with-ancestors-path})
+    with-ancestors-path))
 
 (defn save-trade-pattern! [{:keys [trade-pattern/parent-id
                                    trade-pattern/id
                                    trade-pattern/creation-id]
                             :as   trade-pattern}]
+  (clojure.pprint/pprint {::save-trade-pattern! trade-pattern})
   (let [tp                      (save! data.crux/db (dissoc trade-pattern
                                                             :trade-pattern/ancestors-path))
         parent-tp               (when parent-id
