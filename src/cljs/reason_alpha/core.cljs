@@ -9,25 +9,18 @@
             [reason-alpha.events]
             [reason-alpha.events.trade-patterns]
             [reason-alpha.subs]
+            [reason-alpha.views :as views]
             [reason-alpha.views.main :as main]
             [reason-alpha.views.trade-patterns :as trade-patterns]
             [reason-alpha.views.trades :as trades]
             [reitit.core :as reitit])
   (:import goog.History))
 
-;; -------------------------
-;; Routes
-(def router
-  (reitit/router
-   [["/" :home]
-    ["/about" :about]
-    ["/trade-patterns" :trade-patterns]]))
-
 (defn get-header-menu-items [menu-items params]
   (let [col    (.-column params)
         col-id (.-colId col)]
     (if-let [[name route] (get menu-items col-id)]
-      (clj->js [{"name"    name
+      (clj->js [{"name"  name
                  :action #(rf/dispatch-sync [:navigate (reitit/match-by-name router route)])}])
       (.-defaultItems col))))
 
@@ -43,8 +36,9 @@
   [:section.section>div.container>div.content
    [:img {:src "/assets/images/warning_clojure.png"}]])
 
+;; TODO: Move this to `reason-alpha.views`
 (def view-models
-  {:home           {:view #'trades/view}
+  {:trades         {:view #'trades/view}
    :trade-patterns {:view  #'trade-patterns/view
                     :model :trade-patterns}
    :about          {:view #'about-page}})
@@ -64,7 +58,7 @@
      (fn [event]
        (let [uri (or (not-empty (string/replace (.-token event) #"^.*#" "")) "/")]
          (rf/dispatch
-          [:navigate (reitit/match-by-path router uri)]))))
+          [:navigate (reitit/match-by-path views/router uri)]))))
     (.setEnabled true)))
 
 (defn stop []
@@ -78,6 +72,6 @@
 
 (defn ^:export init []
   (rf/dispatch-sync [:set-view-models view-models])
-  (rf/dispatch-sync [:navigate (reitit/match-by-name router :home)])
+  (rf/dispatch-sync (views/navigate :trades) #_[:navigate (reitit/match-by-name router :home)])
   (hook-browser-navigation!)
   (start))

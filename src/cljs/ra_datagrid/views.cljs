@@ -73,9 +73,9 @@
 (defn save-cell-button
   [id pk]
   [:td.commands {:key "SAVECELLBUTTON" :className "save"}
-   [:button.btn.btn-xs.bgm-teal.waves-effect.waves-circle.waves-float
+   [:button.btn.btn-icon.btn-primary.btn-success
     {:on-click #(rf/dispatch [:datagrid/save-edited-record id pk])}
-    [:i.zmdi.zmdi-check]]])
+    [:i.fe.fe-check]]])
 
 (defn delete-cell-button
   [id record]
@@ -104,9 +104,9 @@
   "Starts editing the row"
   [id pk record]
   [:span {:key "EDITING" :className "edit"}
-    [:button.btn.btn-xs.btn-info.waves-effect.waves-circle.waves-float
+    [:button.btn.btn-icon.btn-primary
      {:on-click #(rf/dispatch [:datagrid/start-edit id pk (clean-formatted-keys record)])}
-     [:i.zmdi.zmdi-edit]]])
+     [:i.fe.fe-edit-3]]])
 
 (defmulti table-header-filter (fn [id field]
                                 (:type field)))
@@ -144,24 +144,32 @@
                   (assoc :style {:width width}))
         sorting (rf/subscribe [:datagrid/sorting id])
         options (rf/subscribe [:datagrid/options id])]
-    (fn [id {:keys [title align width can-sort actions] :as field}]
+    (fn [id {:keys [title align width can-sort menu edit]
+             :as   field}]
       (let [sort-by-key      (:key @sorting)
             sort-direction   (:direction @sorting)
             can-sort-global? (:can-sort @options)
             header-filters?  (:header-filters @options)]
         [:th atts
-         
          [:div.btn-toolbar {:role "toolbar"}
           [:div.btn-group.mr-2 {:role "group"}
-           [:a.btn.btn-link {:type "button"
+           [:a.btn.btn-link {:type  "button"
                              :style {:padding-left 0}} title]
-           [:a.btn.btn-link {:type "button"} [:i.fas.fa-arrows-alt-v]]
-           [:div.dropdown
-            [:a.btn.btn-link {:data-toggle   "dropdown"
-                              :aria-expanded "false"
-                              :type          "button"} [:i.fas.fa-ellipsis-h.rotate-90]]
-            [:div.dropdown-menu.dropdown-menu-right
-             [:a.dropdown-item {:href "#"} "Edit"]]]]]
+           (when (and can-sort-global?
+                      (not= false can-sort))
+             [:a.btn.btn-link {:type "button"} [:i.fas.fa-arrows-alt-v]])
+           (when menu
+             [:div.dropdown
+              [:a.btn.btn-link {:data-toggle   "dropdown"
+                                :aria-expanded "false"
+                                :type          "button"} [:i.fas.fa-ellipsis-h.rotate-90]]
+              [:div.dropdown-menu.dropdown-menu-right
+               (for [{:keys [title event]} menu]
+                 [:button.dropdown-item {:type     "button"
+                                         :on-click #(rf/dispatch event)}
+                  title])
+               #_[:a.dropdown-item {:href "#"} "Edit"]]])]]
+
          #_(if (and can-sort-global?
                   (not= false can-sort))
            [:a.column-header-anchor

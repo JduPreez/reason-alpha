@@ -108,7 +108,7 @@
    (s/optional-key :hide-header-filter)           s/Bool
    (s/optional-key :type)                         s/Any
    (s/optional-key :can-sort)                     s/Any
-   (s/optional-key :custom-filter-fn) s/Any ;; if you want custom filter logic, implement this callback, which looks like (fn [formatted-value-of-record query record])
+   (s/optional-key :custom-filter-fn)             s/Any ;; if you want custom filter logic, implement this callback, which looks like (fn [formatted-value-of-record query record])
    (s/optional-key :sort-value-fn)                s/Any ; uses this as the sort-by argument, should be a fn like: (fn [val rec] ...)
    (s/optional-key :formatter)                    (s/make-fn-schema ; should be a function
                                                    s/Str ; should return a string
@@ -120,4 +120,4 @@
    ;;for a future feature for exporting the current grid as it's displaying now, we want to allow this.
    ;;we'll base it on SheetJS cljsjs package: https://github.com/cljsjs/packages/tree/master/xlsx
    (s/optional-key :excel-formatter)              s/Any
-   })
+   (s/optional-key :menu)                         s/Any})

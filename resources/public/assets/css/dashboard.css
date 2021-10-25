@@ -2101,13 +2101,13 @@ a.btn.disabled, fieldset:disabled a.btn {
 	box-shadow: 0 0 0 2px rgba(52, 58, 64, 0.1);
 }
 .btn-outline-primary {
-	color: #7b41d8 ;
+	color: #c6a2ff;
 	background-color: transparent;
 	background-image: none;
 	border-color: #7b41d8  !important;
 }
 .btn-outline-primary:hover {
-	color: #fff;
+	color: #ffffff;
 	background-color: #7b41d8 ;
 	border-color: #7b41d8 ;
 }
@@ -13155,6 +13155,7 @@ a.icon {
 	font-size: 0.8125rem;
 	min-width: 2.375rem;
 }
+.dark-theme.btn 
 .btn i {
 	font-size: 1rem;
 }

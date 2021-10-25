@@ -1,14 +1,28 @@
 (ns reason-alpha.views.trade-patterns
-  (:require [re-frame.core :as rf]))
+  (:require [reason-alpha.views.datagrid :as datagrid]))
 
 (def model :trade-patterns)
 
-;; TODO 2: Hookup to toolbar menu's Add button event & add a new row to
-;;         the data grid similar to
-;;         https://www.ag-grid.com/javascript-grid-data-update/?framework=javascript#example-updating-with-transaction
+(def fields
+  [{:title    "Trade Pattern"
+    :name     :trade-pattern/name
+    :can-sort true}
+   {:title    "Description"
+    :name     :trade-pattern/description
+    :can-sort true}])
+
+(def options
+  {:grid-id           :trade-patterns
+   :title             "Trade Patterns"
+   :data-subscription [:trade-patterns]
+   :id-field          :trade-pattern/id
+   :can-sort          true
+   :can-edit          true
+   :update-dispatch   [:save :trade-patterns]})
+
 (defn view []
   (fn []
-    [:div "trade patterns"]
+    [datagrid/view fields options]
     #_(data-grid/view {:fn-save #(rf/dispatch [:save :trade-patterns %])
                        :fn-get-id (fn [{:keys [trade-pattern/id
                                                trade-pattern/creation-id]

@@ -1,11 +1,14 @@
 (ns reason-alpha.views.trades
-  (:require [reason-alpha.views.datagrid :as datagrid]))
+  (:require [reason-alpha.views :as views]
+            [reason-alpha.views.datagrid :as datagrid]))
 
 (def fields
   [#_{:title "Open Date"
       :name  :open-date}
    {:title "Trade Pattern"
-    :name  :trade-pattern}
+    :name  :trade-pattern
+    :menu  [{:title "Edit"
+             :event (views/navigate :trade-patterns)}]}
    {:title    "Security"
     :name     :security
     :can-sort true}
@@ -65,8 +68,9 @@
       :name  :conversion-rate-home-currency}])
 
 (def options
-  {:data-subscription [:trades]
-   :grid-id           :trades
+  {:grid-id           :trades
+   :title             "Trades"
+   :data-subscription [:trades]
    :id-field          :trade/id
    :can-sort          true})
 

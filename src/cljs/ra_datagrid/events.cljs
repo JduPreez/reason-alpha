@@ -125,7 +125,6 @@
 (rf/reg-event-db
  :datagrid/update-edited-record
  (fn [db [_ id pk k v]]
-   (debug "Updating grid" id ", pk:" pk ", k:" k ",v:" v)
    (assoc-in db [:datagrid/data  id :edit-rows pk k] v)))
 
 ;;rec-with-only-grid-fields (if is-update?
@@ -143,17 +142,18 @@
      {:db       db
       :dispatch [:datagrid/save-new-record id]}
      ;;else
-     (let [fields          (get-in db [:datagrid/data  id :fields])
-           id-field        (get-in db [:datagrid/data  id :options :id-field])
-           defaults        (get-in db [:datagrid/data  id :options :default-values])
-           update-dispatch (get-in db [:datagrid/data  id :options :update-dispatch])
+     (let [fields          (get-in db [:datagrid/data id :fields])
+           id-field        (get-in db [:datagrid/data id :options :id-field])
+           defaults        (get-in db [:datagrid/data id :options :default-values])
+           update-dispatch (get-in db [:datagrid/data id :options :update-dispatch])
            keys-from-grid  (map :name fields)
-           r               (as-> (get-in db [:datagrid/data  id :edit-rows pk]) r'
+           r               (get-in db [:datagrid/data id :edit-rows pk])
+           #_#_r           (as-> (get-in db [:datagrid/data id :edit-rows pk]) r'
                              (select-keys r' keys-from-grid)
                              (assoc r' id-field pk)
                              (merge defaults r'))
            update-dispatch (conj update-dispatch r)]
-       {:db       (update-in db [:datagrid/data  id :edit-rows] dissoc pk)
+       {:db       (update-in db [:datagrid/data id :edit-rows] dissoc pk)
         :dispatch update-dispatch}))))
 
 

@@ -54,10 +54,14 @@
        [:i.fas.fa-undo-alt] [:span "CANCEL"]]]]]
    [:div.container>div.hor-content
     [:div.row {:style {:margin-top "10px"}}
-     [:div.card
+     [child-view]
+     #_[:div.card
       [:div.card-header.bg-gradient-indigo.br-tr-3.br-tl-3
-       [:h2.card-title "Portfolio Trades"]]
+       [:div.btn-list
+        [:button.btn.btn-primary {:type "button"} "Trades"]
+        [:button.btn.btn-outline-primary "Trade Patterns"]]
+       #_[:h2.card-title "Portfolio Trades"]]
       ;;[:div.card-status.bg-yellow.br-tr-3.br-tl-3]
-      [:div.card-body {:style {:padding-top    0
-                               :padding-bottom 0}}
+        [:div.card-body {:style {:padding-top    0
+                                 :padding-bottom 0}}
        [child-view]]]]]])
