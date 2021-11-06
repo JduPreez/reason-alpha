@@ -18,7 +18,7 @@
    :id-field          :trade-pattern/id
    :can-sort          true
    :can-edit          true
-   :update-dispatch   [:save :trade-patterns]})
+   :group-by          :trade-pattern/parent-id})
 
 (defn view []
   (fn []

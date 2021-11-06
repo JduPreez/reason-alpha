@@ -86,7 +86,7 @@
    (s/optional-key :update-dispatch)             s/Any
    (s/optional-key :delete-dispatch)             s/Any
    (s/optional-key :additional-css-class-names)  s/Str ; additional css-class-names to be applied to the <table> tag.
-   })
+   (s/optional-key :group-by)                    s/Any})
 
 (def GridField
   "A schema for grid field configuration"

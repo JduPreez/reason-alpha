@@ -13,6 +13,7 @@
    ;;:can-sort                   true
    ;;:can-edit                   true
    ;;:can-reorder                true
+   :can-create                 true
    ;;:checkbox-select            true
    ;;:loading-subscription       [:my-loading]
    ;;:sort-dispatch              [:sort]

@@ -4,16 +4,51 @@
             [reason-alpha.data-structures :as data-structs]))
 
 (defn get-trade-patterns []
-  (let [trade-patrns        (query data.crux/db
-                                   {:spec '{:find  [(pull tp [*])]
-                                            :where [[tp :trade-pattern/id]]}})
-        with-ancestors-path (data-structs/conj-ancestors-path trade-patrns
-                                                              :trade-pattern/parent-id
-                                                              :trade-pattern/name
-                                                              :trade-pattern/id
-                                                              :trade-pattern/ancestors-path)]
-    (clojure.pprint/pprint {::get-trade-patterns with-ancestors-path})
-    with-ancestors-path))
+  (let [trade-patrns (query data.crux/db
+                            {:spec '{:find  [(pull tp [*])]
+                                     :where [[tp :trade-pattern/id]]}})
+
+        #_#_trade-patrns        (->> trade-patrns
+                                     (filter #(nil? (:trade-pattern/parent-id %)))
+                                     (map #(assoc % :trade-pattern/sub-patterns
+                                                  (filter
+                                                   (fn [{:keys [trade-pattern/parent-id]}]
+                                                     (= parent-id (:trade-pattern/id %)))
+                                                   trade-patrns))))
+        #_#_with-ancestors-path (data-structs/conj-ancestors-path trade-patrns
+                                                                  :trade-pattern/parent-id
+                                                                  :trade-pattern/name
+                                                                  :trade-pattern/id
+                                                                  :trade-pattern/ancestors-path)]
+    (clojure.pprint/pprint {::get-trade-patterns
+                            (map #(if-let [pid (:trade-pattern/parent-id %)]
+                                    (assoc % :trade-pattern/parent-id (java.util.UUID/fromString pid))
+                                    %)
+                                 trade-patrns)})
+    ;; TODO: Remove map
+    (map #(if-let [pid (:trade-pattern/parent-id %)]
+            (assoc % :trade-pattern/parent-id (java.util.UUID/fromString pid))
+            %)
+         trade-patrns)))
+
+(comment
+  (let [trade-patrns '({:trade-pattern/name        "Two",
+                        :trade-pattern/creation-id
+                        #uuid "d1df1ec5-c534-4632-b75f-4127ceee5060",
+                        :trade-pattern/id          #uuid "017c27c9-f904-6f8b-81b3-98ff8d59833d",
+                        :trade-pattern/parent-id   #uuid "017c27c9-8426-f638-c2d6-cbb8ea6509ee",
+                        :trade-pattern/description "Two is under One",
+                        :crux.db/id                #uuid "017c27c9-f904-6f8b-81b3-98ff8d59833d"}
+                       {:trade-pattern/name        "One",
+                        :trade-pattern/creation-id
+                        #uuid "7d5822bf-1800-4c5f-ae33-b1793b0558b6",
+                        :trade-pattern/id          #uuid "017c27c9-8426-f638-c2d6-cbb8ea6509ee",
+                        :trade-pattern/parent-id   nil,
+                        :trade-pattern/description "1111111111111111",
+                        :crux.db/id                #uuid "017c27c9-8426-f638-c2d6-cbb8ea6509ee"})]
+    )
+  
+  )
 
 (defn save-trade-pattern! [{:keys [trade-pattern/parent-id
                                    trade-pattern/id

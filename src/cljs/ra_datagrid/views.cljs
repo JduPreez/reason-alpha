@@ -344,11 +344,11 @@
 
 
 (defmulti table-cell
-  (fn [_ {t :type} _]
+  (fn [_ {t :type} _ _]
     (or t :string)))
 
 (defmethod table-cell :custom
-  [id field record]
+  [id field record first?]
   (let [is-clickable? (not (nil? (:on-click field)))
         fieldname     (:name field)
         fmt-fieldname (-> field :name name (str "-formatted") keyword)
@@ -361,9 +361,9 @@
       [(:custom-element-renderer field) record]]]))
 
 (defmethod table-cell :default
-  [id field record]
+  [id field record indent?]
   (let [options (rf/subscribe [:datagrid/options id])]
-    (fn [id field record]
+    (fn [id field record first?]
       (let [is-clickable?   (not (nil? (:on-click field)))
             formatter       (:formatter field)
             fieldname       (:name field)
@@ -381,8 +381,9 @@
                                                      @options)))}
                                formatted-value]
                               formatted-value)]
-        [:td {:key       fieldname
-              :className align}
+        [:td (cond-> {:key       fieldname
+                      :className align}
+               indent? (assoc :style {:padding-left "30px"}))
          formatted-value]))))
 
 (defn command-td
@@ -431,10 +432,12 @@
   (let [options (rf/subscribe [:datagrid/options id])
         fields  (rf/subscribe [:datagrid/fields id])]
     (fn [id record]
-      (let [pk (get record (:id-field @options))
-            k  (if (or (= "" pk) (nil? pk))
-                 "editing"
-                 pk)
+      (let [{:keys [group-by
+                    id-field]} @options
+            pk                 (get record id-field)
+            k                  (if (or (= "" pk) (nil? pk))
+                                 "editing"
+                                 pk)
 
             classNames (if (:row-formatter @options)
                          ((:row-formatter @options) record)
@@ -451,10 +454,16 @@
                    (assoc atts :on-click #((:on-record-click @options) record @fields @options))
                    atts)
 
+            first-f (->> @fields first :name)
+
             cells (cond->> (doall
-                            (map (fn [f]
-                                   ^{:key (:name f)}
-                                   [table-cell id f record]) @fields))
+                            (map (fn [{:keys [name] :as f}]
+                                   (let [indent? (and group-by
+                                                      (= name first-f)
+                                                      (get record group-by))]
+                                     (cljs.pprint/pprint {::non-edit-row [first-f name (= name first-f)]})
+                                     ^{:key name}
+                                     [table-cell id f record indent?])) @fields))
                     (:checkbox-select @options)
                     (concat [^{:key "checkbox__"}
                              [cell-select-checkbox id record]]))]
@@ -491,11 +500,8 @@
                              [table-row id r])
                            @visible-records))
             max-rows (:show-max-num-rows @options)]
+        ;;(cljs.pprint/pprint {::table-data @visible-records})
         [:tbody {:key "body"}
-
-         #_[:tr
-          [:td {:colSpan 8}
-           [debug-panel @all]]]
          (cond-> rows
            @creating? (conj ^{:key -9}
                             [edit-row id nil])

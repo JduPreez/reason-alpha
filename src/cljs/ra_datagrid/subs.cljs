@@ -15,7 +15,7 @@
       (nil? v)    v
       (number? v) v
       (string? v) (clojure.string/lower-case v)
-      :otherwise (str v))))
+      :else       (str v))))
 
 
 (defn sort-records
@@ -29,10 +29,16 @@
           field   (first (filter #(= (:name %) k) fields))
           sort-fn (if (:sort-value-fn field)
                     #((:sort-value-fn field) (or (str (get % k)) (str (get % fmt-key))) %)
-                    (partial sensible-sort fmt-key))]
+                    (partial sensible-sort fmt-key))
+          do-sort #(->> %
+                        (sort-by sort-fn)
+                        dir-fn)]
       (->> records
-           (sort-by sort-fn)
-           dir-fn))))
+           do-sort
+           (map #(if (contains? % :datagrid/children)
+                   (assoc % :datagrid/children
+                          (do-sort (:datagrid/children %)))
+                    %))))))
 
 (rf/reg-sub
  :datagrid/all
@@ -165,6 +171,37 @@
  (fn [[fields records]]
    (map (partial apply-formatters fields) records)))
 
+#_(defn group-records [records group-by-path]
+  (->> [{:id "a" :path ["Three"]}
+        {:id "b" :path ["Three" "Four" "Five"]}
+        {:id "c" :path ["One" "Two"]}
+        {:id "d" :path ["One"]}
+        {:id "e" :path ["Three" "Four"]}]
+       (map #(vec [(apply str (:path %)) %]))
+       (sort-by (fn [[path _]] path))
+       (map (fn [[_ v]] v)))
+  (let [rs (->> records)]))
+
+(defn group-records [records parent-group-key child-group-key]
+  (->> records
+       (filter #(nil? (get % child-group-key)))
+       (map #(assoc % :datagrid/children
+                    (filter
+                     (fn [r]
+                       (= (get % parent-group-key) (get r child-group-key)))
+                     records)))))
+
+(comment
+  (letfn (group-by [])
+    (let [records [{:id "a" :path ["Three"]}
+                   {:id "b" :path ["Three" "Four" "Five"]}
+                   {:id "c" :path ["One" "Two"]}
+                   {:id "d" :path ["One"]}
+                   {:id "e" :path ["Three" "Four"]}]])
+    )
+
+  )
+
 (rf/reg-sub
  :datagrid/sorted-records
  (fn [[_ id data-sub] _]
@@ -174,15 +211,19 @@
     (rf/subscribe [:datagrid/sorting id])
     (rf/subscribe [:datagrid/fields id])
     (rf/subscribe [:datagrid/header-filter-values id])])
- (fn [[options formatted-records expanded? sorting fields filters] _]
-   (let [rs (if (and (:key sorting)
+ (fn [[{:keys [group-by id-field]
+        :as   options} formatted-records expanded? sorting fields filters] _]
+   (let [rs (group-records formatted-records id-field group-by)
+         rs (if (and (:key sorting)
                      (:direction sorting))
-              (sort-records formatted-records fields (:key sorting) (:direction sorting))
-              formatted-records)
+              (sort-records rs fields (:key sorting) (:direction sorting))
+              rs)
+         ;; Flatten records again
+         rs (mapcat #(into [%] (:datagrid/children %)) rs)
          rs (if (:header-filters options)
               (filter-by-header-filters rs filters fields)
               rs)
-         n (:show-max-num-rows options)]
+         n  (:show-max-num-rows options)]
      (if (and n (not expanded?))
        (take n rs)
        rs))))
