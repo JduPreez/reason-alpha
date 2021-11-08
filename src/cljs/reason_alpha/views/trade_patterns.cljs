@@ -1,5 +1,6 @@
 (ns reason-alpha.views.trade-patterns
-  (:require [reason-alpha.views.datagrid :as datagrid]))
+  (:require [reason-alpha.views.datagrid :as datagrid]
+            [re-frame.core :as rf]))
 
 (def model :trade-patterns)
 
@@ -12,13 +13,15 @@
     :can-sort true}])
 
 (def options
-  {:grid-id           :trade-patterns
-   :title             "Trade Patterns"
-   :data-subscription [:trade-patterns]
-   :id-field          :trade-pattern/id
-   :can-sort          true
-   :can-edit          true
-   :group-by          :trade-pattern/parent-id})
+  {:grid-id             :trade-patterns
+   :title               "Trade Patterns"
+   :data-subscription   [:trade-patterns]
+   :id-field            :trade-pattern/id
+   :can-sort            true
+   :can-edit            true
+   :group-by            :trade-pattern/parent-id
+   :checkbox-select     true
+   :on-selection-change #(rf/dispatch [:select %1])})
 
 (defn view []
   (fn []

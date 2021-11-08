@@ -461,7 +461,6 @@
                                    (let [indent? (and group-by
                                                       (= name first-f)
                                                       (get record group-by))]
-                                     (cljs.pprint/pprint {::non-edit-row [first-f name (= name first-f)]})
                                      ^{:key name}
                                      [table-cell id f record indent?])) @fields))
                     (:checkbox-select @options)

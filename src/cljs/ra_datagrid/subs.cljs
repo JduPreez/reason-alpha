@@ -171,17 +171,6 @@
  (fn [[fields records]]
    (map (partial apply-formatters fields) records)))
 
-#_(defn group-records [records group-by-path]
-  (->> [{:id "a" :path ["Three"]}
-        {:id "b" :path ["Three" "Four" "Five"]}
-        {:id "c" :path ["One" "Two"]}
-        {:id "d" :path ["One"]}
-        {:id "e" :path ["Three" "Four"]}]
-       (map #(vec [(apply str (:path %)) %]))
-       (sort-by (fn [[path _]] path))
-       (map (fn [[_ v]] v)))
-  (let [rs (->> records)]))
-
 (defn group-records [records parent-group-key child-group-key]
   (->> records
        (filter #(nil? (get % child-group-key)))
@@ -190,17 +179,6 @@
                      (fn [r]
                        (= (get % parent-group-key) (get r child-group-key)))
                      records)))))
-
-(comment
-  (letfn (group-by [])
-    (let [records [{:id "a" :path ["Three"]}
-                   {:id "b" :path ["Three" "Four" "Five"]}
-                   {:id "c" :path ["One" "Two"]}
-                   {:id "d" :path ["One"]}
-                   {:id "e" :path ["Three" "Four"]}]])
-    )
-
-  )
 
 (rf/reg-sub
  :datagrid/sorted-records

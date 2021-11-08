@@ -5,7 +5,8 @@
             [reason-alpha.web.service-api :as svc-api]
             [reason-alpha.utils :as utils]))
 
-(rf/reg-event-db
+;; TODO: Old, remove once new version works
+#_(rf/reg-event-db
  :trade-patterns/add
  (fn [db _]
    (update-in db
@@ -34,6 +35,31 @@
                                                           :trade-pattern/parent-id      (when top-level-parent?
                                                                                           parent-id)}))]
                   updated-trd-patrns)))))
+
+
+
+(rf/reg-event-db
+ :trade-patterns/add
+ (fn [db _]
+   (update-in db
+              tp-data/root
+              (fn [trd-patrns]
+                (let [selected-ids   (get-in db data/selected)
+                      selected-ents  (filter #(and (some #{(get % :trade-pattern/id)} selected-ids)
+                                                   (not (:trade-pattern/parent-id %)))
+                                             trd-patrns)
+                      new-trd-patrns (if (seq selected-ents)
+                                       (mapv (fn [tp]
+                                               {:trade-pattern/id          (utils/new-uuid)
+                                                :trade-pattern/parent-id   (:trade-pattern/id tp)
+                                                :trade-pattern/name        ""
+                                                :trade-pattern/description ""})
+                                             selected-ents)
+                                       [{:trade-pattern/id          (utils/new-uuid)
+                                         :trade-pattern/name        ""
+                                         :trade-pattern/description ""}])]
+                  (cljs.pprint/pprint {:trade-patterns/add new-trd-patrns})
+                  (into trd-patrns new-trd-patrns))))))
 
 (rf/reg-event-db
  :trade-patterns/delete

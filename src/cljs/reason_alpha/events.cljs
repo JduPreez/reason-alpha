@@ -110,10 +110,8 @@
 
 (rf/reg-event-db
  :select
- (fn [db [_ entity]]
-   (if (seq entity)
-     (assoc-in db data/selected entity)
-     (dissoc-in db data/selected))))
+ (fn [db [_ selected-ids]]
+   (assoc-in db data/selected selected-ids)))
 
 (rf/reg-event-db
  :set-view-models
