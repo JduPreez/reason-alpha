@@ -10,7 +10,30 @@
     :can-sort true}
    {:title    "Description"
     :name     :trade-pattern/description
-    :can-sort true}])
+    :can-sort true}
+   {:title                        "Parent"
+    :name                         :trade-pattern/parent-id
+    :type                         :custom
+    :custom-element-renderer      (fn [{:keys [trade-pattern/parent-id] :as _record}]
+                                    (let [{:keys [trade-pattern/name]} @(rf/subscribe
+                                                                         [:trade-pattern parent-id])]
+                                      name))
+    :custom-element-edit-renderer (fn [_field {:keys [trade-pattern/id trade-pattern/parent-id]
+                                               :as   _record} fn-dispatch _val]
+                                    (let [*tps             (rf/subscribe [:trade-patterns])
+                                          eligible-parents (->> @*tps
+                                                                (remove #(or (= (:trade-pattern/id %) id)
+                                                                             (:trade-pattern/parent-id %)))
+                                                                (sort-by :trade-pattern/name))]
+                                      [:select.form-control (cond-> {:on-change #(fn-dispatch
+                                                                                  (-> % .-target .-value ))}
+                                                              parent-id (assoc :value parent-id))
+                                       ^{:key "default-option"}
+                                       [:option]
+                                       (for [{ep-id   :trade-pattern/id
+                                              ep-name :trade-pattern/name} eligible-parents]
+                                         ^{:key (str "option-" id "-" ep-id)}
+                                         [:option {:value ep-id} ep-name])]))}])
 
 (def options
   {:grid-id             :trade-patterns
@@ -21,7 +44,8 @@
    :can-edit            true
    :group-by            :trade-pattern/parent-id
    :checkbox-select     true
-   :on-selection-change #(rf/dispatch [:select %1])})
+   :on-selection-change #(rf/dispatch [:select %1])
+   :create-dispatch     [:trade-patterns/create]})
 
 (defn view []
   (fn []

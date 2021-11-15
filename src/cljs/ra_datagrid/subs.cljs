@@ -189,7 +189,7 @@
     (rf/subscribe [:datagrid/sorting id])
     (rf/subscribe [:datagrid/fields id])
     (rf/subscribe [:datagrid/header-filter-values id])])
- (fn [[{:keys [group-by id-field]
+ (fn [[{:keys [group-by id-field show-max-num-rows]
         :as   options} formatted-records expanded? sorting fields filters] _]
    (let [rs (group-records formatted-records id-field group-by)
          rs (if (and (:key sorting)
@@ -197,13 +197,13 @@
               (sort-records rs fields (:key sorting) (:direction sorting))
               rs)
          ;; Flatten records again
-         rs (mapcat #(into [%] (:datagrid/children %)) rs)
+         rs (->> (mapcat #(into [%] (:datagrid/children %)) rs)
+                 (map #(dissoc % :datagrid/children)))
          rs (if (:header-filters options)
               (filter-by-header-filters rs filters fields)
-              rs)
-         n  (:show-max-num-rows options)]
-     (if (and n (not expanded?))
-       (take n rs)
+              rs)]
+     (if (and show-max-num-rows (not expanded?))
+       (take show-max-num-rows rs)
        rs))))
 
 (rf/reg-sub

@@ -13,6 +13,14 @@
             (get-in db data.trade-patterns/root))))
 
 (rf/reg-sub
+ :trade-pattern
+ (fn [_ [_ _id]]
+   (rf/subscribe [:trade-patterns]))
+ (fn [trade-patterns [_ id]]
+   (some #(when (= id (:trade-pattern/id %)) %)
+         trade-patterns)))
+
+#_(rf/reg-sub
  :trade-pattern-options
  :<- [:trade-patterns]
  (fn [trade-patterns]
@@ -97,7 +105,6 @@
 (rf/reg-sub
  :trades
  (fn [_ _]
-   (cljs.pprint/pprint {:trades @trades-data})
    @trades-data))
 
 (comment

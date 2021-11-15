@@ -161,8 +161,9 @@
  :datagrid/save-new-record
  (fn [{db :db} [_ id]]
    (let [edited-record (get-in db [:datagrid/data  id :edit-rows nil])
-         dispatch      (-> (get-in db [:datagrid/data  id :options :create-dispatch])
+         dispatch      (-> (get-in db [:datagrid/data id :options :create-dispatch])
                            (conj edited-record))]
+     (cljs.pprint/pprint {:datagrid/save-new-record edited-record})
      {:db       (-> db
                     (update-in [:datagrid/data  id :edit-rows] dissoc nil)
                     (assoc-in  [:datagrid/data  id :creating?] false))

@@ -108,6 +108,10 @@
  :cancel
  action-event)
 
+(rf/reg-event-fx
+ :create
+ action-event)
+
 (rf/reg-event-db
  :select
  (fn [db [_ selected-ids]]

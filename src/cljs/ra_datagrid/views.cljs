@@ -66,9 +66,9 @@
 (defn create-button
   [id]
   (fn [id]
-    [:button.btn.btn-xs.btn-primary.waves-effect.waves-circle.waves-float
+    [:button.btn.btn-icon.btn-primary
      {:on-click #(rf/dispatch [:datagrid/create-new-record id])}
-     [:i.zmdi.zmdi-plus]]))
+     [:i.fas.fa-plus-square]]))
 
 (defn save-cell-button
   [id pk]
@@ -309,6 +309,11 @@
            ((:formatter field) v @r)
            v)]))))
 
+(defmethod edit-cell :empty-edit
+  [_  {:keys [name]} _]
+  (fn [_ {:keys [name]} _]
+    [:td {:key       name
+          :className "editing"}]))
 
 (defmethod edit-cell :default
   [id field pk]
@@ -333,13 +338,19 @@
 (defn edit-row
   "shows a row with inline editing elements"
   [id pk]
-  (let [fields (rf/subscribe [:datagrid/fields id])]
+  (let [options (rf/subscribe [:datagrid/options id])
+        fields  (rf/subscribe [:datagrid/fields id])]
     (fn [id pk]
-      (let [cells       (doall
-                         (map (fn [f]
-                                ^{:key (:name f)}
-                                [edit-cell id f pk]) @fields))
-            save-button ^{:key (or pk -1)} [save-cell-button id pk]]
+      (let [{:keys [checkbox-select]} @options
+            save-button               ^{:key (or pk -1)} [save-cell-button id pk]
+            cells                     (cond->> (doall
+                                                (map (fn [f]
+                                                       ^{:key (:name f)}
+                                                       [edit-cell id f pk]) @fields))
+                                        checkbox-select
+                                        (concat [^{:key "checkbox__"}
+                                                 [edit-cell id {:name (str "checkbox-" id)
+                                                                :type :empty-edit}]]))]
         [:tr.editing {:key pk} (concat cells [save-button])]))))
 
 
@@ -357,7 +368,8 @@
                        (get record fieldname))
         align         (if (nil? (:align field)) :text-left (:align field))]
     [:td {:key (:name field) :className align}
-     [:span {:on-click #((:custom-element-click field) record)}
+     [:span (cond-> {}
+              is-clickable? (assoc :on-click #((:custom-element-click field) record)))
       [(:custom-element-renderer field) record]]]))
 
 (defmethod table-cell :default
@@ -433,7 +445,8 @@
         fields  (rf/subscribe [:datagrid/fields id])]
     (fn [id record]
       (let [{:keys [group-by
-                    id-field]} @options
+                    id-field
+                    checkbox-select]} @options
             pk                 (get record id-field)
             k                  (if (or (= "" pk) (nil? pk))
                                  "editing"
@@ -447,7 +460,7 @@
                          (str classNames " " "expandable")
                          classNames)
             atts       (cond-> {:key k :className classNames}
-                         ;;(:show-max-num-rows @options) (assoc :on-click (:expand-handler @options)))
+                        ;;(:show-max-num-rows @options) (assoc :on-click (:expand-handler @options)))
                          false (assoc :on-click (:expand-handler @options)))
 
             atts (if (:on-record-click @options)
@@ -463,7 +476,7 @@
                                                       (get record group-by))]
                                      ^{:key name}
                                      [table-cell id f record indent?])) @fields))
-                    (:checkbox-select @options)
+                    checkbox-select
                     (concat [^{:key "checkbox__"}
                              [cell-select-checkbox id record]]))]
         [:tr atts

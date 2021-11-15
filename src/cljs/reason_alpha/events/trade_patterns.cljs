@@ -61,6 +61,14 @@
                   (cljs.pprint/pprint {:trade-patterns/add new-trd-patrns})
                   (into trd-patrns new-trd-patrns))))))
 
+(rf/reg-event-fx
+ :trade-patterns/create
+ (fn [_ [_ new-trade-pattern]]
+   {:dispatch [:save :trade-patterns
+               (assoc new-trade-pattern
+                      :trade-pattern/creation-id
+                      (utils/new-uuid))]}))
+
 (rf/reg-event-db
  :trade-patterns/delete
  (fn [db _]
