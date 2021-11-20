@@ -20,18 +20,21 @@
                                                                   :trade-pattern/name
                                                                   :trade-pattern/id
                                                                   :trade-pattern/ancestors-path)]
-    (clojure.pprint/pprint {::get-trade-patterns
-                            (map #(if-let [pid (:trade-pattern/parent-id %)]
-                                    (assoc % :trade-pattern/parent-id (java.util.UUID/fromString pid))
-                                    %)
-                                 trade-patrns)})
+    #_(clojure.pprint/pprint {::get-trade-patterns
+                              (map #(if-let [pid (:trade-pattern/parent-id %)]
+                                      (assoc % :trade-pattern/parent-id (java.util.UUID/fromString pid))
+                                      %)
+                                   trade-patrns)})
     ;; TODO: Remove map
-    (map #(if-let [pid (:trade-pattern/parent-id %)]
+    #_(map #(if-let [pid (:trade-pattern/parent-id %)]
             (assoc % :trade-pattern/parent-id (java.util.UUID/fromString pid))
             %)
-         trade-patrns)))
+           trade-patrns)
+    trade-patrns))
 
 (comment
+  (get-trade-patterns)
+
   (let [trade-patrns '({:trade-pattern/name        "Two",
                         :trade-pattern/creation-id
                         #uuid "d1df1ec5-c534-4632-b75f-4127ceee5060",

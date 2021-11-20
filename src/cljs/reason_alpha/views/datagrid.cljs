@@ -11,7 +11,7 @@
    ;;:header-filters             true
    ;;:progressive-loading        true
    ;;:can-sort                   true
-   ;;:can-edit                   true
+   :can-edit                   true
    ;;:can-reorder                true
    :can-create                 true
    ;;:checkbox-select            true

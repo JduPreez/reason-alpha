@@ -19,7 +19,6 @@
                  :delete-are-you-sure-message "De gegevens kunnen niet meer worden teruggehaald."
                  :debug                       false}
                 options)]
-    ;;  (debug merged)
     merged))
 
 
@@ -190,12 +189,10 @@
  :datagrid/reorder
  (fn [{db :db} [_ id direction record]]
    (assert (get-in db [:datagrid/data id :options :reorder-dispatch]) "There is no :reorder-dispatch set in the options!")
-   (debug "reorder " id "," direction "," record)
    (let [disp (-> db
                   (get-in [:datagrid/data id :options :reorder-dispatch])
                   (concat [direction record])
                   vec)]
-     (debug disp)
      {:db       db
       :dispatch disp})))
 

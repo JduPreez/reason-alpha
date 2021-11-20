@@ -12,6 +12,7 @@
                  [com.cognitect/transit-clj "0.8.319"]
                  [com.github.f4b6a3/uuid-creator "1.4.2"]
                  [com.google.javascript/closure-compiler-unshaded "v20210505" :scope "provided"]
+                 [com.lucasbradstreet/cljs-uuid-utils "1.0.2"]
                  [com.outpace/config "0.13.5"]
                  [day8.re-frame/http-fx "0.2.3"]
                  [functionalbytes/mount-lite "2.1.1"]

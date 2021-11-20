@@ -375,7 +375,7 @@
 (defmethod table-cell :default
   [id field record indent?]
   (let [options (rf/subscribe [:datagrid/options id])]
-    (fn [id field record first?]
+    (fn [id field record indent?]
       (let [is-clickable?   (not (nil? (:on-click field)))
             formatter       (:formatter field)
             fieldname       (:name field)
@@ -447,10 +447,10 @@
       (let [{:keys [group-by
                     id-field
                     checkbox-select]} @options
-            pk                 (get record id-field)
-            k                  (if (or (= "" pk) (nil? pk))
-                                 "editing"
-                                 pk)
+            pk                        (get record id-field)
+            k                         (if (or (= "" pk) (nil? pk))
+                                        "editing"
+                                        pk)
 
             classNames (if (:row-formatter @options)
                          ((:row-formatter @options) record)
@@ -460,7 +460,7 @@
                          (str classNames " " "expandable")
                          classNames)
             atts       (cond-> {:key k :className classNames}
-                        ;;(:show-max-num-rows @options) (assoc :on-click (:expand-handler @options)))
+                         ;;(:show-max-num-rows @options) (assoc :on-click (:expand-handler @options)))
                          false (assoc :on-click (:expand-handler @options)))
 
             atts (if (:on-record-click @options)
@@ -474,6 +474,8 @@
                                    (let [indent? (and group-by
                                                       (= name first-f)
                                                       (get record group-by))]
+                                     #_(cljs.pprint/pprint {::x indent?
+                                                            ::y record})
                                      ^{:key name}
                                      [table-cell id f record indent?])) @fields))
                     checkbox-select

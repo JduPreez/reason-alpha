@@ -19,16 +19,17 @@
 
 (rf/reg-event-db
  :save-local
- (fn-traced [db [_ type {:keys [result] :as new}]]
-   (let [current     (get-in db (data/entity-data type))
-         new-val     (or result new)
-         new-coll    (cond
-                       (and (coll? new-val)
-                            (not (map? new-val))
-                            (map? (first new-val))) new-val
-                       (map? new-val)               [new-val])
-         merged-coll (when new-coll
-                       (utils/merge-by-id current new-coll))]
+ (fn-traced
+  [db [_ type {:keys [result] :as new}]]
+  (let [current     (get-in db (data/entity-data type))
+        new-val     (or result new)
+        new-coll    (cond
+                      (and (coll? new-val)
+                           (not (map? new-val))
+                           (map? (first new-val))) new-val
+                      (map? new-val)               [new-val])
+        merged-coll (when new-coll
+                      (utils/merge-by-id current new-coll))]
      (-> db
          (assoc-in [:loading type] false)
          (assoc-in [:data type] (or merged-coll new-val))

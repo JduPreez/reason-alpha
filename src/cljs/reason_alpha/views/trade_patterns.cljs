@@ -1,6 +1,9 @@
 (ns reason-alpha.views.trade-patterns
-  (:require [reason-alpha.views.datagrid :as datagrid]
-            [re-frame.core :as rf]))
+  (:require [cljs-uuid-utils.core :as uuid]
+            [clojure.string :as s]
+            [re-frame.core :as rf]
+            [reason-alpha.views.datagrid :as datagrid]
+            [goog.string :as gstring]))
 
 (def model :trade-patterns)
 
@@ -23,13 +26,23 @@
                                     (let [*tps             (rf/subscribe [:trade-patterns])
                                           eligible-parents (->> @*tps
                                                                 (remove #(or (= (:trade-pattern/id %) id)
-                                                                             (:trade-pattern/parent-id %)))
+                                                                             (:trade-pattern/parent-id %)
+                                                                             (some (fn [tp]
+                                                                                     (= (:trade-pattern/parent-id tp) id))
+                                                                                   @*tps)))
                                                                 (sort-by :trade-pattern/name))]
-                                      [:select.form-control (cond-> {:on-change #(fn-dispatch
-                                                                                  (-> % .-target .-value ))}
-                                                              parent-id (assoc :value parent-id))
-                                       ^{:key "default-option"}
-                                       [:option]
+                                      [:select.form-control {:value     (or parent-id "")
+                                                             :on-change #(let [v (-> % .-target .-value)
+                                                                               v (if (and (string? v)
+                                                                                          (s/blank? v))
+                                                                                   nil
+                                                                                   v)
+                                                                               v (if (uuid/valid-uuid? v)
+                                                                                   (uuid/make-uuid-from v)
+                                                                                   v)]
+                                                                           (fn-dispatch v))}
+                                       ^{:key (str "option-" id "-default-option")}
+                                       [:option {:value ""} ""]
                                        (for [{ep-id   :trade-pattern/id
                                               ep-name :trade-pattern/name} eligible-parents]
                                          ^{:key (str "option-" id "-" ep-id)}
@@ -45,33 +58,10 @@
    :group-by            :trade-pattern/parent-id
    :checkbox-select     true
    :on-selection-change #(rf/dispatch [:select %1])
-   :create-dispatch     [:trade-patterns/create]})
+   :create-dispatch     [:trade-patterns/create]
+   :update-dispatch     [:save :trade-patterns]})
 
 (defn view []
   (fn []
-    [datagrid/view fields options]
-    #_(data-grid/view {:fn-save #(rf/dispatch [:save :trade-patterns %])
-                       :fn-get-id (fn [{:keys [trade-pattern/id
-                                               trade-pattern/creation-id]
-                                        :as   _data}]
-                                    (or id creation-id))}
-                    @(rf/subscribe [:trade-patterns])
-                    {:trade-pattern/name        {:header    "Trade Pattern"
-                                                 :flex      1
-                                                 :min-width 200
-                                                 :max-width 230
-                                                 :editable? true}
-                     :trade-pattern/parent-id   {:header    "Parent"
-                                                 :flex      1
-                                                 :min-width 200
-                                                 :max-width 250
-                                                 :select    {:lookup-key :trade-pattern/id
-                                                             :*ref-data  (rf/subscribe [:trade-patterns/ref-data])
-                                                             :*options   (rf/subscribe [:trade-pattern-options])}
-                                                 :editable? true}
-                     :trade-pattern/description {:header    "Description"
-                                                 :flex      2
-                                                 :editable? true}}
-                    :trade-pattern/ancestors-path
-                    #(rf/dispatch [:select %]))))
+    [datagrid/view fields options]))
 
