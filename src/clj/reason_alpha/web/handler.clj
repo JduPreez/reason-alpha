@@ -14,11 +14,11 @@
             [ring.util.http-response :refer :all]))
 
 (def router (routes/app-router {:api               {:get svc/get-api-info}
-                                :trade-patterns    {:get  svc/get-trade-patterns
-                                                    :post svc/save-trade-pattern!}
-                                :trade-patterns/id {:put    svc/save-trade-pattern!
-                                                    :get    svc/get-trade-pattern
-                                                    :delete svc/delete-trade-pattern!}
+                                :trade-patterns    {:get    svc/get-trade-patterns
+                                                    :post   svc/save-trade-pattern!
+                                                    :delete svc/delete-trade-patterns!}
+                                :trade-patterns/id {:put svc/save-trade-pattern!
+                                                    :get svc/get-trade-pattern}
                                 :ping              {:get (constantly (ok {:message "pong"}))}}
                                {:coercion   spec-coercion/coercion
                                 :muuntaja   formats/instance
@@ -45,6 +45,6 @@
   (coercion/coerce! 
    (r/match-by-path  router "/api/users/8ffd2541-0bbf-4a4b-adee-f3a2bd56d83f/trade-patterns"))
 
-   (r/match-by-path router "/api/trade-patterns/01733e8b-8817-38e8-af69-bbc8e5444829")
+   (r/match-by-path router "/api/trade-patterns")
   
   (remove-ns 'reason-alpha.web.handler))

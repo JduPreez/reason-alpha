@@ -1,9 +1,8 @@
 (ns reason-alpha.views.trade-patterns
-  (:require [cljs-uuid-utils.core :as uuid]
-            [clojure.string :as s]
+  (:require [clojure.string :as str]
             [re-frame.core :as rf]
-            [reason-alpha.views.datagrid :as datagrid]
-            [goog.string :as gstring]))
+            [reason-alpha.utils :as utils]
+            [reason-alpha.views.datagrid :as datagrid]))
 
 (def model :trade-patterns)
 
@@ -32,14 +31,14 @@
                                                                                    @*tps)))
                                                                 (sort-by :trade-pattern/name))]
                                       [:select.form-control {:value     (or parent-id "")
-                                                             :on-change #(let [v (-> % .-target .-value)
-                                                                               v (if (and (string? v)
-                                                                                          (s/blank? v))
-                                                                                   nil
-                                                                                   v)
-                                                                               v (if (uuid/valid-uuid? v)
-                                                                                   (uuid/make-uuid-from v)
-                                                                                   v)]
+                                                             :on-change #(let [v (as-> % v
+                                                                                   (.-target v)
+                                                                                   (.-value v)
+                                                                                   (if (and (string? v)
+                                                                                            (str/blank? v))
+                                                                                     nil
+                                                                                     %)
+                                                                                   (utils/maybe->uuid v))]
                                                                            (fn-dispatch v))}
                                        ^{:key (str "option-" id "-default-option")}
                                        [:option {:value ""} ""]
@@ -47,6 +46,14 @@
                                               ep-name :trade-pattern/name} eligible-parents]
                                          ^{:key (str "option-" id "-" ep-id)}
                                          [:option {:value ep-id} ep-name])]))}])
+
+(comment
+  (as-> {:data 12345} x
+    (if (= (:data x) 12345)
+       true
+       false))
+  
+  )
 
 (def options
   {:grid-id             :trade-patterns

@@ -2,7 +2,16 @@
   #?(:clj (:require [clojure.edn :as edn]
                     [clojure.java.io :as io]
                     [clojure.string :as str])
-     :cljs (:require [clojure.string :as str])))
+     :cljs (:require [clojure.string :as str]
+                     [cljs-uuid-utils.core :as uuid])))
+
+(defn maybe->uuid [v]
+  #?(:clj (try
+            (java.util.UUID/fromString v)
+            (catch Exception _e v))
+     :cljs (if (uuid/valid-uuid? v)
+              (uuid/make-uuid-from v)
+              v)))
 
 (defn not-blank? [txt]
   (and (string? txt)

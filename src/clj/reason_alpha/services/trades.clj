@@ -86,16 +86,17 @@
     tps
     #_with-ancestors-path))
 
-(defn delete-trade-pattern! [trade-pattern-id]
-  (let [children   (query data.crux/db {:spec '{:find  [(pull tp [*])]
-                                                :where [[tp :trade-pattern/parent-id id]]
-                                                :in    [id]}
-                                        :args [trade-pattern-id]})
-        del-result (delete! data.crux/db {:spec '{:find  [tp]
-                                                  :where [(or [tp :trade-pattern/id id]
-                                                              [tp :trade-pattern/parent-id id])]
+(defn delete-trade-patterns! [trade-pattern-id]
+  (clojure.pprint/pprint {::delete-trade-patterns! trade-pattern-id})
+  #_(let [children   (query data.crux/db {:spec '{:find  [(pull tp [*])]
+                                                  :where [[tp :trade-pattern/parent-id id]]
                                                   :in    [id]}
-                                          :args [trade-pattern-id]})]
+                                          :args [trade-pattern-id]})
+          del-result (delete! data.crux/db {:spec '{:find  [tp]
+                                                    :where [(or [tp :trade-pattern/id id]
+                                                                [tp :trade-pattern/parent-id id])]
+                                                    :in    [id]}
+                                            :args [trade-pattern-id]})]
     (-> children
         (as-> cdn (map #(select-keys % [:trade-pattern/id]) cdn))
         (conj {:trade-pattern/id trade-pattern-id})

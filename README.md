@@ -18,19 +18,18 @@ Are prefixed with a dash "-".
     (defn- -do-something [...]
         ...)
 
-## Options
+## Concepts
 
-FIXME: listing of options this app accepts.
+### Entities
 
-## Examples
+* An entity is a type of thing.
 
-...
+* In the UI when working with the data collection of a type of entity, the plural name is used.
 
-### Bugs
+* In the rest API the plural name of the type of entity is used.
 
-...
+* When working with a single entity, all its keys are namespaced with the singular type of the entity.
 
-### Any Other Sections
 
 ## License
 

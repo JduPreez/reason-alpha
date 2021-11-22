@@ -1,6 +1,5 @@
 (ns reason-alpha.events
   (:require [day8.re-frame.tracing :refer-macros [fn-traced]]
-            [medley.core :refer [dissoc-in]]
             [re-frame.core :as rf]
             [reason-alpha.data :as data]
             [reason-alpha.utils :as utils]
@@ -70,36 +69,11 @@
 
 (rf/reg-event-fx
  :delete-local
- (fn-traced
-  [{:keys [db]} [_ entities-type {{:keys [deleted-items]} :result
-                                  :as                     deleted}]]
-  (let [data-path      (data/entity-data entities-type)
-        deleted        (or deleted-items deleted)
-        del-col        (if (coll? deleted)
-                         deleted
-                         [deleted])
-        id-k           (utils/id-key (first del-col))
-        entities       (get-in db data-path)
-        remaining-ents (remove
-                        (fn [e]
-                          (let [id-v (get e id-k)]
-                            (some #(let [del-id-v (get % id-k)]
-                                     (= del-id-v id-v)) deleted)))
-                        entities)]
-    {:db       (assoc-in db data-path remaining-ents)
-     :dispatch [:select nil]})))
+ data/delete-local)
 
 (rf/reg-event-fx
  :delete
- (fn [{:keys [db]} _]
-   (let [entity          (get-in db data/selected)
-         {:keys [model]} (get-in db data/active-view-model)
-         http-req        (svc-api/entity-action->http-request
-                          {:entities-type model
-                           :action        :delete
-                           :data          entity
-                           :on-success    [:delete-local model]})]
-     http-req)))
+ action-event)
 
 (rf/reg-event-fx
  :add
@@ -116,7 +90,9 @@
 (rf/reg-event-db
  :select
  (fn [db [_ selected-ids]]
-   (assoc-in db data/selected selected-ids)))
+   (let [{:keys [model]} (get-in db data/active-view-model)
+         ids             (map #(utils/maybe->uuid %) selected-ids)]
+     (assoc-in db (conj data/selected model) ids))))
 
 (rf/reg-event-db
  :set-view-models

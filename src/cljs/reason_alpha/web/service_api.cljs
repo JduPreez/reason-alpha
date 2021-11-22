@@ -37,7 +37,8 @@
                         (first data)))
         id-k        (when entity
                       (utils/id-key entity))
-        ent-id      (when (contains? entity id-k)
+        ent-id      (when (and entity
+                               (contains? entity id-k))
                       (get entity id-k))
         http-method (cond
                       (and (= :save action)
@@ -59,10 +60,10 @@
 
                               (= http-method :post) (resource entities-type)
 
-                              (and (= http-method :delete)
+                              (and (= http-method :delete) ;; Deleting a single entity
                                    ent-id) (resource single-entity-route {:id ent-id})
 
-                              (and (= http-method :delete)
+                              (and (= http-method :delete) ;; Deleting multiple entities
                                    (nil? ent-id)) (resource entities-type)
 
                               :else (resource entities-type))]
@@ -73,4 +74,9 @@
                           :on-success      on-success
                           :on-failure      on-failure
                           :uri             uri}
-                   (= :save action) (assoc :params data))}))
+                   (= :save action)
+                   , (assoc :params data)
+
+                   (and (= :delete action)
+                        (nil? ent-id))
+                   , (assoc :params {:delete-these data}))}))
