@@ -14,8 +14,8 @@
 (defn save-trade-pattern! [{trade-pattern :body-params}]
   (ok {:result (trades-svc/save-trade-pattern! trade-pattern)}))
 
-(defn delete-trade-patterns! [{{{:keys [id]} :path} :parameters}]
-  (ok {:result (trades-svc/delete-trade-patterns! id)}))
+(defn delete-trade-patterns! [{{:keys [trade-patterns]} :body-params}]
+  (ok {:result (trades-svc/delete-trade-patterns! trade-patterns)}))
 
 (defn get-api-info [_]
   (ok {:result "Welcome to the Reason Alpha API :-)"}))

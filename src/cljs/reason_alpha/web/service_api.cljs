@@ -79,4 +79,4 @@
 
                    (and (= :delete action)
                         (nil? ent-id))
-                   , (assoc :params {:delete-these data}))}))
+                   , (assoc :params data))}))
