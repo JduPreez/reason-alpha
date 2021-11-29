@@ -168,6 +168,8 @@
                       :where [[tp :trade-pattern/id]
                               #_[tp :trade-pattern/name "Breakout"]]}})
 
+  
+
   (query db
          {:spec '{:find  [?tp]
                   :where [[?tp :trade-pattern/id ?id]]}})
@@ -235,15 +237,16 @@
                             #_#_:in [name]}
                 #_#_:args ["Breakout"]})
 
-  (-> @crux-node
-      crux/db
-      (crux/q  '{:find  [(count fun)]
-                 :where [[del-tx-fn :crux.db/fn fun]
-                         [del-tx-fn :crux.db/id ::delete]]})
-      first
-      first
-      (> 0))
   
+
+  (let [ids '(#uuid "32429cdf-99d6-4893-ae3a-891f8c22aec6"
+              #uuid "017d3e1a-348d-d3f3-1bf8-03388d9db527")]
+    (-> @crux-node
+        crux/db
+        (crux/q  '{:find  [tp]
+                   :where [[tp :trade-pattern/id id]]
+                   :in    [[id ...]]}
+                 ids)))
 
   (let [query-spec '{:find  [fin-sec amount]
                      :where [[fin-sec :fin-security/ticker ticker]

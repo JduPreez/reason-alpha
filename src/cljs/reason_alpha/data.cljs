@@ -31,7 +31,9 @@
      :dispatch [:select nil]}))
 
 (defn delete [entities-type db]
-  (let [ids      (get-in db selected entities-type)
+  (let [ids      (->> entities-type
+                      (conj selected)
+                      (get-in db))
         http-req (svc-api/entity-action->http-request
                   {:entities-type entities-type
                    :action        :delete

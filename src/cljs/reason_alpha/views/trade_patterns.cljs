@@ -37,7 +37,7 @@
                                                                                    (if (and (string? v)
                                                                                             (str/blank? v))
                                                                                      nil
-                                                                                     %)
+                                                                                     v)
                                                                                    (utils/maybe->uuid v))]
                                                                            (fn-dispatch v))}
                                        ^{:key (str "option-" id "-default-option")}
@@ -59,10 +59,11 @@
   {:grid-id             :trade-patterns
    :title               "Trade Patterns"
    :data-subscription   [:trade-patterns]
-   :id-field            :trade-pattern/id
+   :id-field            :trade-pattern/creation-id
    :can-sort            true
    :can-edit            true
-   :group-by            :trade-pattern/parent-id
+   :group-by            {:group-key  :trade-pattern/id
+                         :member-key :trade-pattern/parent-id} ;;:trade-pattern/parent-id
    :checkbox-select     true
    :on-selection-change #(rf/dispatch [:select %1])
    :create-dispatch     [:trade-patterns/create]

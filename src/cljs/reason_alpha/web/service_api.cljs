@@ -31,10 +31,10 @@
   [{:keys [db entities-type action data on-success on-failure]
     :or   {on-success [:save-local entities-type]
            on-failure [:api-request-failure entities-type action]}}]
-  (let [entity      (when data
-                      (if (map? data)
-                        data
-                        (first data)))
+  (let [entity      (cond
+                      (map? data)               data
+                      (and (coll? data)
+                           (map? (first data))) (first data))
         id-k        (when entity
                       (utils/id-key entity))
         ent-id      (when (and entity

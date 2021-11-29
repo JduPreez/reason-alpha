@@ -165,6 +165,7 @@
                                 :type          "button"} [:i.fas.fa-ellipsis-h.rotate-90]]
               [:div.dropdown-menu.dropdown-menu-right
                (for [{:keys [title event]} menu]
+                 ^{:key title}
                  [:button.dropdown-item {:type     "button"
                                          :on-click #(rf/dispatch event)}
                   title])
@@ -444,13 +445,13 @@
   (let [options (rf/subscribe [:datagrid/options id])
         fields  (rf/subscribe [:datagrid/fields id])]
     (fn [id record]
-      (let [{:keys [group-by
-                    id-field
-                    checkbox-select]} @options
-            pk                        (get record id-field)
-            k                         (if (or (= "" pk) (nil? pk))
-                                        "editing"
-                                        pk)
+      (let [{{:keys [member-key]} :group-by
+             :keys                [id-field
+                                   checkbox-select]} @options
+            pk                                       (get record id-field)
+            k                                        (if (or (= "" pk) (nil? pk))
+                                                       "editing"
+                                                       pk)
 
             classNames (if (:row-formatter @options)
                          ((:row-formatter @options) record)
@@ -471,11 +472,9 @@
 
             cells (cond->> (doall
                             (map (fn [{:keys [name] :as f}]
-                                   (let [indent? (and group-by
+                                   (let [indent? (and member-key
                                                       (= name first-f)
-                                                      (get record group-by))]
-                                     #_(cljs.pprint/pprint {::x indent?
-                                                            ::y record})
+                                                      (get record member-key))]
                                      ^{:key name}
                                      [table-cell id f record indent?])) @fields))
                     checkbox-select
@@ -514,7 +513,6 @@
                              [table-row id r])
                            @visible-records))
             max-rows (:show-max-num-rows @options)]
-        ;;(cljs.pprint/pprint {::table-data @visible-records})
         [:tbody {:key "body"}
          (cond-> rows
            @creating? (conj ^{:key -9}

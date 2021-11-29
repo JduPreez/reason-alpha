@@ -48,8 +48,6 @@
                                          trade-pattern/name]}]
                               [(str id) name]))
                        (into {}))]
-     (cljs.pprint/pprint {:trade-patterns/ref-data {:RD  ref-data
-                                                    :TPS trade-patterns}})
      ref-data)))
 
 ;; Trades
@@ -67,45 +65,46 @@
                   "PTEC"})
 
 (defn get-trades [quantity]
-  (for [day (range quantity)]
-    {:trade/id                             day
-     :open-date                            (t/minus (t/now) (t/days day))
-     :trade-pattern                        "Breakout - Entering Preceding Base"
-     :security                             "ZZZ" #_(securities day)
-     :long-short                           (if (odd? day) "L" "S")
-     :trading-time-frame                   "Day"
-     :quantity                             (utils/rand-between 100 100000)
-     :open                                 (utils/rand-between 1 300)
-     :close                                (utils/rand-between 1 300)
-     :currency                             "USD"
-     :cost                                 (utils/rand-between 5 20)
-     :interest-per-day                     (utils/rand-between 1 10)
-     :interest-total                       (utils/rand-between 1 10)
-     :total-cost                           (utils/rand-between 10 30)
-     :profit-target                        (utils/rand-between 1 300)
-     :profit-target-total                  (utils/rand-between 1 1000)
-     :profit-target-percent                (utils/rand-between 1 100)
-     :profit-target-total-incl-costs       (utils/rand-between 1 1000)
-     :profit-target-percent-incl-costs     (utils/rand-between 1 100)
-     :close-date                           (t/now)
-     :profit-loss                          (utils/rand-between -1000 1000)
-     :profit-loss-incl-costs               (utils/rand-between -1000 1000)
-     :profit-loss-home-currency            (utils/rand-between -1000 1000)
-     :profit-loss-incl-costs-home-currency (utils/rand-between -1000 1000)
-     :profit-loss-percent-risk             (utils/rand-between -100 100)
-     :stop                                 (utils/rand-between 1 300)
-     :stop-loss-total                      (utils/rand-between -300 300)
-     :loss-percent                         (utils/rand-between -100 1)
-     :first-deviation                      (rand 100)
-     :first-deviation-stop                 (rand 100)
-     :conversion-rate-home-currency        (rand 100)}))
+  (doall
+   (for [day (range quantity)]
+     {:trade/id                             (utils/new-uuid)
+      :open-date                            (t/minus (t/now) (t/days day))
+      :trade-pattern                        "Breakout - Entering Preceding Base"
+      :security                             (str "ZZZ-" day) #_ (securities day)
+      :long-short                           (if (odd? day) "L" "S")
+      :trading-time-frame                   "Day"
+      :quantity                             (utils/rand-between 100 100000)
+      :open                                 (utils/rand-between 1 300)
+      :close                                (utils/rand-between 1 300)
+      :currency                             "USD"
+      :cost                                 (utils/rand-between 5 20)
+      :interest-per-day                     (utils/rand-between 1 10)
+      :interest-total                       (utils/rand-between 1 10)
+      :total-cost                           (utils/rand-between 10 30)
+      :profit-target                        (utils/rand-between 1 300)
+      :profit-target-total                  (utils/rand-between 1 1000)
+      :profit-target-percent                (utils/rand-between 1 100)
+      :profit-target-total-incl-costs       (utils/rand-between 1 1000)
+      :profit-target-percent-incl-costs     (utils/rand-between 1 100)
+      :close-date                           (t/now)
+      :profit-loss                          (utils/rand-between -1000 1000)
+      :profit-loss-incl-costs               (utils/rand-between -1000 1000)
+      :profit-loss-home-currency            (utils/rand-between -1000 1000)
+      :profit-loss-incl-costs-home-currency (utils/rand-between -1000 1000)
+      :profit-loss-percent-risk             (utils/rand-between -100 100)
+      :stop                                 (utils/rand-between 1 300)
+      :stop-loss-total                      (utils/rand-between -300 300)
+      :loss-percent                         (utils/rand-between -100 1)
+      :first-deviation                      (rand 100)
+      :first-deviation-stop                 (rand 100)
+      :conversion-rate-home-currency        (rand 100)})))
 
-(def trades-data (delay (get-trades 3)))
+(defonce trades-data (get-trades 3))
 
 (rf/reg-sub
  :trades
  (fn [_ _]
-   @trades-data))
+   trades-data))
 
 (comment
   (into {} [["test1" 1]

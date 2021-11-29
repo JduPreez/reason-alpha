@@ -171,14 +171,17 @@
  (fn [[fields records]]
    (map (partial apply-formatters fields) records)))
 
-(defn group-records [records parent-group-key child-group-key]
-  (->> records
-       (filter #(nil? (get % child-group-key)))
-       (map #(assoc % :datagrid/children
-                    (filter
-                     (fn [r]
-                       (= (get % parent-group-key) (get r child-group-key)))
-                     records)))))
+(defn group-records [records group-key member-key]
+  (if group-key
+    (->> records
+         (filter #(nil? (get % member-key)))
+         (map #(assoc % :datagrid/children
+                      (filter
+                       (fn [r]
+                         (= (get % group-key) (get r member-key)))
+                       records))))
+    ;; else
+    records))
 
 (rf/reg-sub
  :datagrid/sorted-records
@@ -189,9 +192,10 @@
     (rf/subscribe [:datagrid/sorting id])
     (rf/subscribe [:datagrid/fields id])
     (rf/subscribe [:datagrid/header-filter-values id])])
- (fn [[{:keys [group-by id-field show-max-num-rows]
-        :as   options} formatted-records expanded? sorting fields filters] _]
-   (let [rs (group-records formatted-records id-field group-by)
+ (fn [[{{:keys [group-key member-key]} :group-by
+        :keys                          [show-max-num-rows]
+        :as                            options} formatted-records expanded? sorting fields filters] _]
+   (let [rs (group-records formatted-records group-key member-key)
          rs (if (and (:key sorting)
                      (:direction sorting))
               (sort-records rs fields (:key sorting) (:direction sorting))

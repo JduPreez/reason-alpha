@@ -31,7 +31,7 @@
   (subs (str k) 1))
 
 (defn str-keys [items]
-  (map #(into {} (for [[k v] %] 
+  (map #(into {} (for [[k v] %]
                    [(keyword->str k) v])) items))
 
 (defn kw-keys [item]
