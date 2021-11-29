@@ -33,35 +33,45 @@
 
 (defn- columns [cols]
   (map (fn [[k {:keys [header
-                       flex
+                       ;;flex
                        min-width
                        max-width
                        editable?
                        select]}]]
-         (let [field              (utils/keyword->str k)
+         (let [field               (utils/keyword->str k)
                {:keys [lookup-key
-                       *options]} select]
-           (-> {:headerName   header
-                :field        field
-                :valueGetter  (partial get-value *options)
-                :flex         flex
-                :editable     (partial is-editable? select editable? field)}
+                       *options
+                       *ref-data]} select]
+           (-> {:headerName  header
+                :field       field
+                :valueGetter (partial get-value *options)
+                ;;:flex         flex
+                :editable    (partial is-editable? select editable? field)}
                (assoc-some :minWidth min-width)
                (assoc-some :maxWidth max-width)
                (assoc-some :cellEditor
-                           (when select
-                             "agRichSelectCellEditor"))
+                           , (when select "select"))
+               (assoc-some :refData
+                           , (when select @*ref-data))
+               (assoc-some :filter
+                           , (when select "agSetColumnFilter"))
                (assoc-some :cellEditorParams
-                           (when  select
-                             (fn [params]
-                               (let [clj-params  (js->clj params)
-                                     slookup-key (utils/keyword->str lookup-key)]
-                                 (clj->js
-                                  {:formatValue (partial format-value *options)
-                                   :values      (->> @*options
-                                                     (map :value)
-                                                     (filter #(when (not= (get-in clj-params ["data" slookup-key]) %)
-                                                                %)))}))))))))
+                           , (when  select
+                               #_(clj->js {:values (keys @*ref-data)})
+                               (fn [params]
+                                 (let [clj-params  (js->clj params)
+                                       slookup-key (utils/keyword->str lookup-key)]
+                                   (clj->js
+                                    {:values (->> @*ref-data
+                                                  keys
+                                                  #_(filter #(when (not= (get-in clj-params ["data" slookup-key]) %)
+                                                               %)))})
+                                     #_(clj->js
+                                        {:formatValue (partial format-value *options)
+                                         :values      (->> @*options
+                                                           (map :value)
+                                                           (filter #(when (not= (get-in clj-params ["data" slookup-key]) %)
+                                                                      %)))}))))))))
        (seq cols)))
 
 (defn- save [fn-save event]
@@ -75,16 +85,20 @@
   [:div.ag-theme-balham-dark {:style {#_:width #_ "100%"
                                       :height  "100%"}}
    [:> ag-grd-react/AgGridReact
-    (cond-> {:defaultColDef                 {:resizable true}
+    (cond-> {:defaultColDef                 {:resizable true
+                                             :filter    true}
              :rowSelection                  "single"
              :rowDeselection                true
+             :editType                      "fullRow"
+             ;;:stopEditingWhenGridLosesFocus true
              :immutableData                 true
              :columnDefs                    (columns cols)
              :rememberGroupStateWhenNewData true
              :rowData                       (utils/str-keys data)
              :modules                       ag-grd/AllModules
              :onFirstDataRendered           #(-> % .-api .sizeColumnsToFit)
-             :onCellEditingStopped          (partial save fn-save)
+             ;;:onCellValueChanged          (partial save fn-save)
+             :onRowValueChanged             (partial save fn-save)
              :getRowNodeId                  #(fn-get-id (-> %
                                                             js->clj
                                                             utils/kw-keys))

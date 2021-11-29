@@ -1,19 +1,23 @@
 (ns user
   (:require [mount.lite :as mount]
-            [reason-alpha.core :as core]
-            [reason-alpha.dev-data :as dev-data]))
+            [reason-alpha.dev-data :as dev-data]
+            [reason-alpha.core :as reason-alpha]))
 
 (defn start
-  ([migrate-db?]
-   (dev-data/load-entity-test-data migrate-db?)
-   (core/-main))
+  ([load-test-data?]
+   (when load-test-data?
+     (dev-data/load-entity-test-data))
+   (reason-alpha/-main)
+   (mount/start))
   ([]
-   (core/-main)))
+   (mount/start)))
 
 (defn stop []
   (mount/stop))
 
 (comment
+  (dev-data/load-entity-test-data)
+
   (start true)
 
   (start)

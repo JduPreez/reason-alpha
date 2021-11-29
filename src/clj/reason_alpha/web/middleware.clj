@@ -8,13 +8,12 @@
    [ring.middleware.defaults :refer [site-defaults api-defaults wrap-defaults]]
    [ring.middleware.flash :refer [wrap-flash]]
    [ring.middleware.session :refer [wrap-session]]
-   [ring.middleware.session.cookie :refer (cookie-store)]))
+   [ring.middleware.session.cookie :refer (cookie-store)]
+   [ring.util.request :as req-util]))
 
 (defn wrap-cors [handler]
   (fn [request]
     (let [response (handler request)]
-      #_(clojure.pprint/pprint {::wrap-cors {:req request
-                                             :res response}})
       (-> response
           (assoc-in [:headers "Access-Control-Allow-Origin"] "http://localhost:8700")
           (assoc-in [:headers "Access-Control-Allow-Headers"] "X-Requested-With,Content-Type,x-csrf-token,Authorization,Origin")

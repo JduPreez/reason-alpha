@@ -1,8 +1,12 @@
-(ns reason-alpha.data.management
+(ns reason-alpha.data.ignite
   (:require [clojure.string :as string]
             [clojure.java.jdbc :as jdbc]
             [migratus.core :as migratus]
             [reason-alpha.data :as data :refer [db connect]]))
+
+;; TODO:
+;; Move Ignite specific stuff from `reason-alpha.data` to here
+;; and make it a generic ns.
 
 (defn config []
   {:store                :database
@@ -36,13 +40,4 @@
                                                                 [[:id :bigint :primary :key]
                                                                  [:applied :timestamp]
                                                                  [:description :varchar]])]))
-  (migratus/migrate (config)))
-
-(comment
-  (migrate)
-  
-  (metadata [:table :view])
-  
-  (exists? :table "SCHEMA_MIGRATIONS")
-  
   (migratus/migrate (config)))

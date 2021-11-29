@@ -52,14 +52,16 @@
      [:li.nav-item
       [:a.nav-link {:href "#"}
        [:i.fas.fa-undo-alt] [:span "CANCEL"]]]]]
-   [:div.container.h-5-perc>div.side-app.h-5-perc
-    [:div.page-header
-     [:h4.page-title "Portfolio Trades"]
-     [:ol.breadcrumb>li.breadcrumb-item.active {:aria-current "page"}
-      [:a {:href "#"} "Portfolio Trades"]]]
-    [:div.row.h-4-perc>div.col-md-12.col-lg-12.h-5-perc
-     [:div.card.h-5-perc
-      [:div.card-status.bg-yellow.br-tr-3.br-tl-3]
-      [:div.card-body.h-5-perc
+   [:div.container>div.hor-content
+    [:div.row {:style {:margin-top "10px"}}
+     [child-view]
+     #_[:div.card
+      [:div.card-header.bg-gradient-indigo.br-tr-3.br-tl-3
+       [:div.btn-list
+        [:button.btn.btn-primary {:type "button"} "Trades"]
+        [:button.btn.btn-outline-primary "Trade Patterns"]]
+       #_[:h2.card-title "Portfolio Trades"]]
+      ;;[:div.card-status.bg-yellow.br-tr-3.br-tl-3]
+        [:div.card-body {:style {:padding-top    0
+                                 :padding-bottom 0}}
        [child-view]]]]]])
- 

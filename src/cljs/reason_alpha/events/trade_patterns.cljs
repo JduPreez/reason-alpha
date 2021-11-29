@@ -11,35 +11,35 @@
    (update-in db
               tp-data/root
               (fn [trd-patrns]
-                (let [default-already-added?     (some #(= "-" (:trade-pattern/name %)) trd-patrns)
-                      {parent-id
-                       :trade-pattern/id
-                       parent-name
-                       :trade-pattern/name
-                       parents-parent-id
-                       :trade-pattern/parent-id} (get-in db data/selected)
-                      ;; At this stage only 1 level deep tree is supported, so make sure
-                      ;; the selected row isn't a child row already.
-                      top-level-parent?          (nil? parents-parent-id)
-                      ancestors-path             (keep identity [(when top-level-parent?
-                                                                   parent-name)
-                                                                 "-"])
-                      updated-trd-patrns         (if default-already-added?
-                                                   trd-patrns
-                                                   (conj trd-patrns
-                                                         {:trade-pattern/creation-id    (utils/new-uuid)
-                                                          :trade-pattern/name           "-"
-                                                          :trade-pattern/description    ""
-                                                          :trade-pattern/ancestors-path ancestors-path
-                                                          :trade-pattern/parent-id      (when top-level-parent?
-                                                                                          parent-id)}))]
-                  updated-trd-patrns)))))
+                (let [selected-ids   (get-in db data/selected)
+                      selected-ents  (filter #(and (some #{(get % :trade-pattern/id)} selected-ids)
+                                                   (not (:trade-pattern/parent-id %)))
+                                             trd-patrns)
+                      new-trd-patrns (if (seq selected-ents)
+                                       (mapv (fn [tp]
+                                               {:trade-pattern/id          (utils/new-uuid)
+                                                :trade-pattern/parent-id   (:trade-pattern/id tp)
+                                                :trade-pattern/name        ""
+                                                :trade-pattern/description ""})
+                                             selected-ents)
+                                       [{:trade-pattern/id          (utils/new-uuid)
+                                         :trade-pattern/name        ""
+                                         :trade-pattern/description ""}])]
+                  (cljs.pprint/pprint {:trade-patterns/add new-trd-patrns})
+                  (into trd-patrns new-trd-patrns))))))
 
-(rf/reg-event-db
+(rf/reg-event-fx
+ :trade-patterns/create
+ (fn [_ [_ new-trade-pattern]]
+   {:dispatch [:save :trade-patterns
+               (assoc new-trade-pattern
+                      :trade-pattern/creation-id
+                      (utils/new-uuid))]}))
+
+(rf/reg-event-fx
  :trade-patterns/delete
- (fn [db _]
-   (cljs.pprint/pprint {:trade-patterns/delete (get-in db data/selected)})
-   db))
+ (fn [{:keys [db]} _]
+   (data/delete :trade-patterns db)))
 
 (rf/reg-event-fx
  :get-trade-patterns

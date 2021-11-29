@@ -1,5 +1,5 @@
 (ns reason-alpha.web.services
-  (:require  [reason-alpha.data :as data :refer [select any save! db delete!]]
+  (:require  [reason-alpha.data :as data :refer [any save! db delete!]]
              [reason-alpha.services.trades :as trades-svc]
              [ring.util.http-response :refer :all]))
 
@@ -14,8 +14,8 @@
 (defn save-trade-pattern! [{trade-pattern :body-params}]
   (ok {:result (trades-svc/save-trade-pattern! trade-pattern)}))
 
-(defn delete-trade-pattern! [{{{:keys [id]} :path} :parameters}]
-  (ok {:result (trades-svc/delete-trade-pattern! id)})) ;; (delete! db [:trade-pattern/id := id])
+(defn delete-trade-patterns! [{trade-patterns :body-params}]
+  (ok {:result (trades-svc/delete-trade-patterns! trade-patterns)}))
 
 (defn get-api-info [_]
   (ok {:result "Welcome to the Reason Alpha API :-)"}))

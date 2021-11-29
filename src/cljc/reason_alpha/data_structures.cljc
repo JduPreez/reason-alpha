@@ -21,34 +21,37 @@
                             {(keyword (str (id-key itm))) itm})
                           items)
                      (apply merge))]
-    (map (fn [item]
+    (mapv (fn [item]
            (assoc item
                   (or ancestors-path-key :ancestors-path)
                   (get-ancestors-path item indexed find-parent path-val)))
          items)))
 
 (comment
-  (let [x '(#:trade-pattern{:description    "",
-                            :creation-id    nil,
-                            :name           "Breakout",
-                            :user-id        #uuid "8ffd2541-0bbf-4a4b-adee-f3a2bd56d83f",
-                            :ancestors-path (),
-                            :id             #uuid "0174bb78-bc4d-8faa-731f-73a1b2ac2c0f",
-                            :parent-id      nil}
-            #:trade-pattern{:description    "",
-                            :creation-id    nil,
-                            :name           "Pullback",
-                            :user-id        #uuid "8ffd2541-0bbf-4a4b-adee-f3a2bd56d83f",
-                            :ancestors-path (),
-                            :id             #uuid "32429cdf-99d6-4893-ae3a-891f8c22aec6",
-                            :parent-id      nil}
-            #:trade-pattern{:description    "",
-                            :creation-id    nil,
-                            :name           "Buy Support or Short Resistance",
-                            :user-id        #uuid "8ffd2541-0bbf-4a4b-adee-f3a2bd56d83f",
-                            :ancestors-path (),
-                            :id             #uuid "3c2d368f-aae5-4d13-a5bd-c5b340f09016",
-                            :parent-id      #uuid "32429cdf-99d6-4893-ae3a-891f8c22aec6"})]
+  (let [x '({:crux.db/id                   #uuid "0174bb78-bc4d-8faa-731f-73a1b2ac2c0f"
+             :trade-pattern/description    "",
+             :trade-pattern/creation-id    nil,
+             :trade-pattern/name           "Breakout",
+             :trade-pattern/user-id        #uuid "8ffd2541-0bbf-4a4b-adee-f3a2bd56d83f",
+             :trade-pattern/ancestors-path (),
+             :trade-pattern/id             #uuid "0174bb78-bc4d-8faa-731f-73a1b2ac2c0f",
+             :trade-pattern/parent-id      nil}
+            {:trade-pattern/description    "",
+             :trade-pattern/creation-id    nil,
+             :trade-pattern/name           "Pullback",
+             :trade-pattern/user-id        #uuid "8ffd2541-0bbf-4a4b-adee-f3a2bd56d83f",
+             :trade-pattern/ancestors-path (),
+             :trade-pattern/id             #uuid "32429cdf-99d6-4893-ae3a-891f8c22aec6",
+             :crux.db/id                   #uuid "32429cdf-99d6-4893-ae3a-891f8c22aec6",
+             :trade-pattern/parent-id      nil}
+            { :trade-pattern/description   "",
+             :trade-pattern/creation-id    nil,
+             :trade-pattern/name           "Buy Support or Short Resistance",
+             :trade-pattern/user-id        #uuid "8ffd2541-0bbf-4a4b-adee-f3a2bd56d83f",
+             :trade-pattern/ancestors-path (),
+             :trade-pattern/id             #uuid "3c2d368f-aae5-4d13-a5bd-c5b340f09016",
+             :crux.db/id                   #uuid "3c2d368f-aae5-4d13-a5bd-c5b340f09016",
+             :trade-pattern/parent-id      #uuid "32429cdf-99d6-4893-ae3a-891f8c22aec6"})]
     #_(->> (map (fn [{:keys [id] :as itm}] ;; Index items into map by ID
                   {(keyword (str id)) itm})
               x)

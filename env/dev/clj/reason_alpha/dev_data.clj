@@ -1,18 +1,51 @@
 (ns reason-alpha.dev-data
-  (:require [reason-alpha.data :refer [add-all! db]]
-            [reason-alpha.data.management :as manage]
+  (:require [malli.core :as malli]
+            [reason-alpha.data :refer [add-all! query disconnect connect]]
+            [reason-alpha.data.crux :as data.crux]
             [reason-alpha.utils :as utils]))
 
-; Generate UUID (java.util.UUID/randomUUID)
+(malli/=> load-entity-test-data
+          [:function
+           [:=> :cat :nil]
+           [:=> [:cat :string] :nil]])
 
 (defn load-entity-test-data
-  ([migrate?]
-   (load-entity-test-data migrate? "test_data"))
-  ([migrate? test-data-dir]
-   (when migrate? (manage/migrate))
+  ([]
+   (load-entity-test-data "test_data"))
+  ([test-data-dir]
+   (disconnect data.crux/db)
+   (data.crux/drop-db! data.crux/db-name)
+   (connect data.crux/db)
    (doseq [ents (utils/edn-files->clj test-data-dir)]
-     (add-all! db ents))))
+     (add-all! data.crux/db ents))))
+
+;; (defn load-entity-test-data
+;;   ([migrate?]
+;;    (load-entity-test-data migrate? "test_data"))
+;;   ([migrate? test-data-dir]
+;;    (when migrate? (ignite/migrate))
+;;    (doseq [ents (utils/edn-files->clj test-data-dir)]
+;;      (add-all! db ents))))
+
 
 (comment
-  (load-entity-test-data true))
+  (load-entity-test-data)
+  (utils/edn-files->clj "test_data")
+
+  (query data.crux/db {:spec '{:find  [n creation-id]
+                               :where [[tp :trade-pattern/name n]
+                                       [tp :fin-security/creation-id creation-id]]}})
+
+  (require '[crux.api :as c])
+
+  (doseq [ents (utils/edn-files->clj "test_data")]
+    (add-all! crux/db ents))
+
+  (c/q (c/db @crux/crux-node)
+       '{:find  [nm creation-id]
+         :where [[tp :trade-pattern/name nm]
+                 [tp :fin-security/creation-id creation-id]]})
+
+  (java.util.UUID/randomUUID)
+  )
 

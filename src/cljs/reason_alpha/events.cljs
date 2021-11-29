@@ -1,6 +1,5 @@
 (ns reason-alpha.events
   (:require [day8.re-frame.tracing :refer-macros [fn-traced]]
-            [medley.core :refer [dissoc-in]]
             [re-frame.core :as rf]
             [reason-alpha.data :as data]
             [reason-alpha.utils :as utils]
@@ -19,16 +18,17 @@
 
 (rf/reg-event-db
  :save-local
- (fn [db [_ type {:keys [result] :as new}]]
-   (let [current     (get-in db (data/entity-data type))
-         new-val     (or result new)
-         new-coll    (cond
-                       (and (coll? new-val)
-                            (not (map? new-val))
-                            (map? (first new-val))) new-val
-                       (map? new-val)               [new-val])
-         merged-coll (when new-coll
-                       (utils/merge-by-id current new-coll))]
+ (fn-traced
+  [db [_ type {:keys [result] :as new}]]
+  (let [current     (get-in db (data/entity-data type))
+        new-val     (or result new)
+        new-coll    (cond
+                      (and (coll? new-val)
+                           (not (map? new-val))
+                           (map? (first new-val))) new-val
+                      (map? new-val)               [new-val])
+        merged-coll (when new-coll
+                      (utils/merge-by-id current new-coll))]
      (-> db
          (assoc-in [:loading type] false)
          (assoc-in [:data type] (or merged-coll new-val))
@@ -36,7 +36,7 @@
 
 (rf/reg-event-fx
  :save-remote
- (fn [_ [_ type entity]]
+ (fn-traced [_ [_ type entity]]
    (let [command (svc-api/entity-action->http-request
                   {:entities-type type
                    :action        :save
@@ -69,35 +69,11 @@
 
 (rf/reg-event-fx
  :delete-local
- (fn-traced
-  [{:keys [db]} [_ entities-type {{:keys [deleted-items]} :result
-                                  :as                     deleted}]]
-  (let [data-path      (data/entity-data entities-type)
-        deleted        (or deleted-items deleted)
-        del-col        (if (coll? deleted)
-                         deleted
-                         [deleted])
-        id-k           (utils/id-key (first del-col))
-        entities       (get-in db data-path)
-        remaining-ents (remove
-                        (fn [e]
-                          (let [id-v (get e id-k)]
-                            (some #(let [del-id-v (get % id-k)]
-                                     (= del-id-v id-v)) deleted)))
-                        entities)]
-    {:db (assoc-in db data-path remaining-ents)})))
+ data/delete-local)
 
 (rf/reg-event-fx
  :delete
- (fn [{:keys [db]} _]
-   (let [entity          (get-in db data/selected)
-         {:keys [model]} (get-in db data/active-view-model)
-         http-req        (svc-api/entity-action->http-request
-                          {:entities-type model
-                           :action        :delete
-                           :data          entity
-                           :on-success    [:delete-local model]})]
-     http-req)))
+ action-event)
 
 (rf/reg-event-fx
  :add
@@ -107,12 +83,16 @@
  :cancel
  action-event)
 
+(rf/reg-event-fx
+ :create
+ action-event)
+
 (rf/reg-event-db
  :select
- (fn [db [_ entity]]
-   (if (seq entity)
-     (assoc-in db data/selected entity)
-     (dissoc-in db data/selected))))
+ (fn [db [_ selected-ids]]
+   (let [{:keys [model]} (get-in db data/active-view-model)
+         ids             (map #(utils/maybe->uuid %) selected-ids)]
+     (assoc-in db (conj data/selected model) ids))))
 
 (rf/reg-event-db
  :set-view-models
