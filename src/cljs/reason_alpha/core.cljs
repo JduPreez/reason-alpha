@@ -3,9 +3,9 @@
             [day8.re-frame.http-fx]
             [goog.events :as events]
             [goog.history.EventType :as HistoryEventType]
+            [ra-datagrid.core]
             [re-frame.core :as rf]
             [reagent.dom :as r.dom]
-            [ra-datagrid.core]
             [reason-alpha.events]
             [reason-alpha.events.trade-patterns]
             [reason-alpha.subs]
@@ -13,6 +13,7 @@
             [reason-alpha.views.main :as main]
             [reason-alpha.views.trade-patterns :as trade-patterns]
             [reason-alpha.views.trades :as trades]
+            [reason-alpha.web.api-client :as api-client]
             [reitit.core :as reitit])
   (:import goog.History))
 
@@ -71,6 +72,7 @@
   (r.dom/render [#'show] (.getElementById js/document "app")))
 
 (defn ^:export init []
+  (api-client/start!)
   (rf/dispatch-sync [:set-view-models view-models])
   (rf/dispatch-sync (views/navigate :trades) #_[:navigate (reitit/match-by-name router :home)])
   (hook-browser-navigation!)

@@ -3,6 +3,7 @@
             [reason-alpha.data.trade-patterns :as tp-data]
             [reason-alpha.data :as data]
             [reason-alpha.web.service-api :as svc-api]
+            [reason-alpha.web.api-client :as api-client]
             [reason-alpha.utils :as utils]))
 
 (rf/reg-event-db
@@ -41,7 +42,7 @@
  (fn [{:keys [db]} _]
    (data/delete :trade-patterns db)))
 
-(rf/reg-event-fx
+#_(rf/reg-event-fx
  :get-trade-patterns
  (fn [{:keys [db]} [_ params]]
    (merge (svc-api/entity-action->http-request
@@ -50,6 +51,12 @@
             :data          params})
           {:db (-> db
                    (assoc-in [:loading :trade-patterns] true))})))
+
+(rf/reg-fx
+ :get-trade-patterns
+ (fn [_]
+   (cljs.pprint/pprint {:get-trade-patterns _})
+   (api-client/chsk! [:trade-patterns/get])))
 
 (comment
   {:method          :get

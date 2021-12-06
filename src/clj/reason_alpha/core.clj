@@ -1,18 +1,23 @@
 (ns reason-alpha.core
   (:require [malli.instrument :as malli.instr]
             [mount.lite :refer (defstate) :as mount]
-            [reason-alpha.web.handler :as handler]
-            [ring.adapter.jetty :as jetty]))
+            [reason-alpha.web.server :as web-server]
+            #_[reason-alpha.web.handler :as handler]
+            #_[ring.adapter.jetty :as jetty]))
 
-(defonce server (delay
+#_(defonce server (delay
                   (jetty/run-jetty (handler/app) {:port  3000
                                                   :join? false})))
 
-(defstate app
+#_(defstate app
    :start (do
             (.start @server)
             server)
    :stop  (.stop @server))
+
+(defstate app
+  :start (web-server/start!)
+  :stop (web-server/stop!))
 
 (defn -main []
   (mount/start)
