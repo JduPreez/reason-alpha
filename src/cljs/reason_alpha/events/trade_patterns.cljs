@@ -52,11 +52,16 @@
           {:db (-> db
                    (assoc-in [:loading :trade-patterns] true))})))
 
+(rf/reg-event-fx
+ :trade-patterns/success
+ (fn [_ [_ result]]
+   (cljs.pprint/pprint {:trade-patterns/success result})
+   {:dispatch [:save-local :trade-patterns result]}))
+
 (rf/reg-fx
- :get-trade-patterns
+ :trade-patterns/get
  (fn [_]
-   (cljs.pprint/pprint {:get-trade-patterns _})
-   (api-client/chsk! [:trade-patterns/get])))
+   (api-client/chsk-send! [:trade-patterns/get] {:on-success :trade-patterns/success})))
 
 (comment
   {:method          :get

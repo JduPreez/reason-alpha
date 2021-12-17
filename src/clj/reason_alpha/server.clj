@@ -1,16 +1,16 @@
-(ns reason-alpha.web.server
+(ns reason-alpha.server
   (:require [clojure.core.async :as async  :refer (<! <!! >! >!! put! chan go go-loop)]
-            [compojure.core     :as comp :refer (defroutes GET POST context)]
+            [clojure.pprint :as pprint]
+            [compojure.core     :as comp :refer (defroutes GET POST)]
             [compojure.route    :as route]
             [org.httpkit.server :as http-kit]
             [ring.middleware.anti-forgery :as anti-forgery]
-            [ring.middleware.defaults :as ring-defaults]
             [ring.middleware.cors :as ring-cors]
+            [ring.middleware.defaults :as ring-defaults]
             [taoensso.sente     :as sente]
             [taoensso.sente.packers.transit :as sente-transit]
             [taoensso.sente.server-adapters.http-kit :refer (get-sch-adapter)]
-            [taoensso.timbre    :as timbre :refer (tracef debugf infof warnf errorf)]
-            [clojure.pprint :as pprint]))
+            [taoensso.timbre    :as timbre :refer (tracef debugf infof warnf errorf)]))
 
 ;; (timbre/set-level! :trace) ; Uncomment for more logging
 (reset! sente/debug-mode?_ true) ; Uncomment for extra debug info
@@ -21,7 +21,7 @@
 
       chsk-server
       (sente/make-channel-socket-server!
-       (get-sch-adapter) {:packer packer})
+       (get-sch-adapter) {:packer packer :csrf-token-fn nil})
 
       {:keys [ch-recv send-fn connected-uids
               ajax-post-fn ajax-get-or-ws-handshake-fn]}
@@ -42,17 +42,15 @@
 
 ;;;; Ring handlers
 (defroutes ring-routes
-  (context "/api" []
-           (GET  "/chsk"  ring-req (ring-ajax-get-or-ws-handshake ring-req))
-           (POST "/chsk"  ring-req (ring-ajax-post                ring-req)))
-  (route/resources "/") ; Static files, notably public/main.js (our cljs target)
+  (GET  "/chsk"  ring-req (ring-ajax-get-or-ws-handshake ring-req))
+  (POST "/chsk"  ring-req (ring-ajax-post                ring-req))
   (route/not-found "<h1>Page not found</h1>"))
 
 (def main-ring-handler
-  (def main-ring-handler
-    (-> ring-routes
-        (ring-defaults/wrap-defaults ring-defaults/site-defaults)
-        (ring-cors/wrap-cors :access-control-allow-origin [#".*"]))))
+  (-> ring-routes
+      (ring-defaults/wrap-defaults ring-defaults/site-defaults)
+     ;;middleware/wrap-cors
+     (ring-cors/wrap-cors :access-control-allow-origin [#".*"])))
 
 (defonce broadcast-enabled?_ (atom true))
 
@@ -78,20 +76,12 @@
       (recur (inc i)))))
 
 ;;;; Sente event handlers
-
-(defmulti -event-msg-handler
+(defmulti event-msg-handler
   "Multimethod to handle Sente `event-msg`s"
   :id ; Dispatch on event-id
   )
 
-(defn event-msg-handler
-  "Wraps `-event-msg-handler` with logging, error catching, etc."
-  [{:as ev-msg :keys [id ?data event]}]
-  (-event-msg-handler ev-msg) ; Handle event-msgs on a single thread
-  ;; (future (-event-msg-handler ev-msg)) ; Handle event-msgs on a thread pool
-  )
-
-(defmethod -event-msg-handler
+(defmethod event-msg-handler
   :default ; Default/fallback case (no other matching handler)
   [{:as ev-msg :keys [event id ?data ring-req ?reply-fn send-fn]}]
   (let [session (:session ring-req)
@@ -100,10 +90,12 @@
     (when ?reply-fn
       (?reply-fn {:umatched-event-as-echoed-from-server event}))))
 
-(defmethod -event-msg-handler
-  :trade-patterns/get
-  [event]
-  (pprint/pprint {:trade-patterns/get event}))
+(defn server-event-msg-handler
+  "Wraps `-event-msg-handler` with logging, error catching, etc."
+  [{:as ev-msg :keys [id ?data event]}]
+  (event-msg-handler ev-msg) ; Handle event-msgs on a single thread
+  ;; (future (-event-msg-handler ev-msg)) ; Handle event-msgs on a thread pool
+  )
 
 ;;;; Sente event router (our `event-msg-handler` loop)
 (defonce router_ (atom nil))
@@ -112,7 +104,7 @@
   (stop-router!)
   (reset! router_
     (sente/start-server-chsk-router!
-      ch-chsk event-msg-handler)))
+      ch-chsk server-event-msg-handler)))
 
 ;;;; Init stuff
 (defonce web-server (atom nil)) ; (fn stop [])
@@ -130,7 +122,15 @@
         uri            (format "http://localhost:%s/" port)]
 
     (infof "Web server is running at `%s`" uri)
-    (reset! web-server stop-fn)))
+    (reset! web-server stop-fn)
+    web-server))
 
 (defn stop!  [] (stop-router!)  (stop-web-server!))
-(defn start! [] (start-router!) (start-web-server!) (start-example-broadcaster!))
+(defn start! [] (start-router!) (start-web-server! 5000) (start-example-broadcaster!))
+
+(comment
+  (stop!)
+
+  (start!)
+
+  )

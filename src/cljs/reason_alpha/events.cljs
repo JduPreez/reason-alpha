@@ -12,8 +12,8 @@
                        :active-view-model
                        (get-in db [:view-models name]))]
      (case name
-       :trade-patterns {:db       db-out
-                        :dispatch [:get-trade-patterns]}
+       :trade-patterns {:db                 db-out
+                        :trade-patterns/get []}
        {:db db-out}))))
 
 (rf/reg-event-db

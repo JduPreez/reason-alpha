@@ -1,12 +1,14 @@
-(ns reason-alpha.web.services
-  (:require  [reason-alpha.data :as data :refer [any save! db delete!]]
+(ns reason-alpha.services
+  (:require  [clojure.pprint :as pprint]
+             [reason-alpha.data :as data :refer [any save! db delete!]]
+             [reason-alpha.server :as server]
              [reason-alpha.services.trades :as trades-svc]
              [ring.util.http-response :refer :all]))
 
 ; TODO: Improve error handling
 
-(defn get-trade-patterns [_] #_[{{{user-id :user-id} :path} :parameters}]  
-  (ok {:result (trades-svc/get-trade-patterns)})) ;; (choose db [:trade-pattern/*])
+(defn get-trade-patterns [] #_[{{{user-id :user-id} :path} :parameters}]
+  {:result (trades-svc/get-trade-patterns)}) ;; (choose db [:trade-pattern/*])
 
 (defn get-trade-pattern [{{{:keys [id]} :path} :parameters}]
   (ok {:result (any db [:trade-pattern/id := id])}))
@@ -19,6 +21,13 @@
 
 (defn get-api-info [_]
   (ok {:result "Welcome to the Reason Alpha API :-)"}))
+
+(defmethod server/event-msg-handler
+  :trade-patterns/get
+  [{:keys [?reply-fn] :as event}]
+  (pprint/pprint {:trade-patterns/get event})
+  (when ?reply-fn
+    (?reply-fn (get-trade-patterns))))
 
 (comment
   (delete! db [:trade-pattern/id := #uuid "017ade64-1bfa-1586-119b-87df8dbec35d"])
