@@ -12,7 +12,6 @@ pom.xml.asc
 .hg/
 node_modules
 .shadow-cljs/*
-package-lock.json
 /node_modules
 /resources/public/js/compiled
 /.clj-kondo/*cache*
