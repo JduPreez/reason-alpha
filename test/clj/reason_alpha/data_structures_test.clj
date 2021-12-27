@@ -18,15 +18,15 @@
       (is (every? (fn [{:keys [ancestors-path]}]
                     (some? ancestors-path)) with-ancestors-path))
       (is (= (:ancestors-path (nth with-ancestors-path 0 nil))
-             '("Five" "Four" "Two")))
+             '("Five" "Four" "Two" "One")))
       (is (= (:ancestors-path (nth with-ancestors-path 1 nil))
-             '("Five" "Four")))
+             '("Five" "Four" "Two")))
       (is (= (:ancestors-path (nth with-ancestors-path 2 nil))
-             '("Five" "Four")))
+             '("Five" "Four" "Three")))
       (is (= (:ancestors-path (nth with-ancestors-path 3 nil))
-             '("Five")))
+             '("Five" "Four")))
       (is (= (:ancestors-path (nth with-ancestors-path 4 nil))
-             '()))))
+             '("Five")))))
   (testing "`data-structures/conj-ancestors-path` should use specified key"
     (let [with-ancestors-path (data-structs/conj-ancestors-path
                                data
@@ -39,5 +39,4 @@
 
 (comment
   (clojure.test/run-tests 'reason-alpha.data-structures-test)
-
 )
