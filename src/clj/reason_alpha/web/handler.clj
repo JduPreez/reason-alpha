@@ -1,5 +1,5 @@
 (ns reason-alpha.web.handler
-  (:require [reason-alpha.web.middleware :as middleware]
+  #_(:require [reason-alpha.web.middleware :as middleware]
             [reason-alpha.web.middleware.exception :as exception]
             [reason-alpha.web.middleware.formats :as formats]
             [reason-alpha.web.routes :as routes]
@@ -13,38 +13,38 @@
             [reitit.ring.middleware.parameters :as parameters]
             [ring.util.http-response :refer :all]))
 
-(def router (routes/app-router {:api               {:get svc/get-api-info}
-                                :trade-patterns    {:get    svc/get-trade-patterns
-                                                    :post   svc/save-trade-pattern!
-                                                    :delete svc/delete-trade-patterns!}
-                                :trade-patterns/id {:put svc/save-trade-pattern!
-                                                    :get svc/get-trade-pattern}
-                                :ping              {:get (constantly (ok {:message "pong"}))}}
-                               {:coercion   spec-coercion/coercion
-                                :muuntaja   formats/instance
-                                :middleware [parameters/parameters-middleware
-                                             muuntaja/format-negotiate-middleware
-                                             muuntaja/format-response-middleware
-                                             exception/exception-middleware
-                                             muuntaja/format-request-middleware
-                                             ring-coercion/coerce-request-middleware
-                                             ring-coercion/coerce-response-middleware
-                                             multipart/multipart-middleware]}))
+;; (def router (routes/app-router {:api               {:get svc/get-api-info}
+;;                                 :trade-patterns    {:get    svc/get-trade-patterns
+;;                                                     :post   svc/save-trade-pattern!
+;;                                                     :delete svc/delete-trade-patterns!}
+;;                                 :trade-patterns/id {:put svc/save-trade-pattern!
+;;                                                     :get svc/get-trade-pattern}
+;;                                 :ping              {:get (constantly (ok {:message "pong"}))}}
+;;                                {:coercion   spec-coercion/coercion
+;;                                 :muuntaja   formats/instance
+;;                                 :middleware [parameters/parameters-middleware
+;;                                              muuntaja/format-negotiate-middleware
+;;                                              muuntaja/format-response-middleware
+;;                                              exception/exception-middleware
+;;                                              muuntaja/format-request-middleware
+;;                                              ring-coercion/coerce-request-middleware
+;;                                              ring-coercion/coerce-response-middleware
+;;                                              multipart/multipart-middleware]}))
 
-(def app-routes
-  (ring/ring-handler
-   router
-   (ring/create-default-handler)))
+;; (def app-routes
+;;   (ring/ring-handler
+;;    router
+;;    (ring/create-default-handler)))
 
-(defn app []
-  (middleware/wrap-base #'app-routes))
+;; (defn app []
+;;   (middleware/wrap-base #'app-routes))
 
-(comment
-  (require '[reitit.core :as r])
+;; (comment
+;;   (require '[reitit.core :as r])
   
-  (coercion/coerce! 
-   (r/match-by-path  router "/api/users/8ffd2541-0bbf-4a4b-adee-f3a2bd56d83f/trade-patterns"))
+;;   (coercion/coerce! 
+;;    (r/match-by-path  router "/api/users/8ffd2541-0bbf-4a4b-adee-f3a2bd56d83f/trade-patterns"))
 
-   (r/match-by-path router "/api/trade-patterns")
+;;    (r/match-by-path router "/api/trade-patterns")
   
-  (remove-ns 'reason-alpha.web.handler))
+;;   (remove-ns 'reason-alpha.web.handler))

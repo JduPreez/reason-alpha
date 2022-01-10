@@ -66,8 +66,8 @@
                          :member-key :trade-pattern/parent-id} ;;:trade-pattern/parent-id
    :checkbox-select     true
    :on-selection-change #(rf/dispatch [:select %1])
-   :create-dispatch     [:trade-patterns/create]
-   :update-dispatch     [:save :trade-patterns]})
+   :create-dispatch     [:trade-pattern.command/create]
+   :update-dispatch     [:trade-pattern.command/save!]})
 
 (defn view []
   (fn []

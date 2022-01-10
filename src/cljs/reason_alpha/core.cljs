@@ -41,7 +41,7 @@
 (def view-models
   {:trades         {:view #'trades/view}
    :trade-patterns {:view  #'trade-patterns/view
-                    :model :trade-patterns}
+                    :model :trade-pattern}
    :about          {:view #'about-page}})
 
 (defn show []

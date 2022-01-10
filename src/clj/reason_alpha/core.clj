@@ -2,8 +2,8 @@
   (:require [malli.instrument :as malli.instr]
             [mount.lite :refer (defstate) :as mount]
             [reason-alpha.server :as server]
-            [reason-alpha.services]
-            #_[reason-alpha.web.handler :as handler]
+            [reason-alpha.services.trade-pattern]
+            ;;[reason-alpha.web.handler :as handler]
             #_[ring.adapter.jetty :as jetty]))
 
 #_(defonce server (delay

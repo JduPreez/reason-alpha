@@ -1,8 +1,9 @@
 (ns reason-alpha.events
-  (:require [day8.re-frame.tracing :refer-macros [fn-traced]]
+  (:require [day8.re-frame.tracing :refer-macros [fn-traced defn-traced]]
             [re-frame.core :as rf]
             [reason-alpha.data :as data]
             [reason-alpha.utils :as utils]
+            [reason-alpha.web.api-client :as api-client]
             [reason-alpha.web.service-api :as svc-api]))
 
 (rf/reg-event-fx
@@ -12,13 +13,11 @@
                        :active-view-model
                        (get-in db [:view-models name]))]
      (case name
-       :trade-patterns {:db                 db-out
-                        :trade-patterns/get []}
+       :trade-patterns {:db                      db-out
+                        :trade-pattern.query/get []}
        {:db db-out}))))
 
-(rf/reg-event-db
- :save-local
- (fn-traced
+(defn-traced save-local
   [db [_ type {:keys [result] :as new}]]
   (let [current     (get-in db (data/entity-data type))
         new-val     (or result new)
@@ -29,25 +28,45 @@
                       (map? new-val)               [new-val])
         merged-coll (when new-coll
                       (utils/merge-by-id current new-coll))]
-     (-> db
-         (assoc-in [:loading type] false)
-         (assoc-in [:data type] (or merged-coll new-val))
-         (assoc :saved new-val)))))
+    (-> db
+        (assoc-in [:loading type] false)
+        (assoc-in [:data type] (or merged-coll new-val))
+        (assoc :saved new-val))))
 
-(rf/reg-event-fx
+(rf/reg-event-db
+ :save-local
+ save-local)
+
+(defn save-remote [[command entity success]]
+  (api-client/chsk-send! [command entity] {:on-success success}))
+
+(rf/reg-fx
  :save-remote
- (fn-traced [_ [_ type entity]]
-   (let [command (svc-api/entity-action->http-request
-                  {:entities-type type
-                   :action        :save
-                   :data          entity})]
-     command)))
+ save-remote)
 
-(rf/reg-event-fx
+(defn fn-save [type success]
+  (fn [_ [_ entity]]
+    (let [cmd (-> type
+                  name
+                  (str ".command/save!")
+                  keyword)]
+      {:save-remote [cmd entity success]
+       :dispatch    [:save-local type entity]})))
+
+#_(rf/reg-event-fx
  :save
  (fn [_ [_ type entity]]
    {:dispatch-n [[:save-local type entity]
                  [:save-remote type entity]]}))
+
+(defn entity-event-or-fx-key [db action]
+  (let [{:keys [model]} (get-in db data/active-view-model)]
+    (when model
+      (-> model
+          name
+          (str ".command/"
+               (name action))
+          keyword))))
 
 (defn action-event
   "Derives the correct toolbar data event-fx from the current
@@ -56,7 +75,7 @@
   (let [{:keys [model]} (get-in db data/active-view-model)]
     (when model
       {:dispatch [(keyword (str (name model)
-                                "/"
+                                ".command/"
                                 (name action)))]})))
 
 (rf/reg-event-fx
@@ -68,12 +87,10 @@
                         :error-response error-response}})))
 
 (rf/reg-event-fx
- :delete-local
- data/delete-local)
-
-(rf/reg-event-fx
- :delete
- action-event)
+ :delete!
+ (fn [{:keys [db]} [action]]
+   (let [fx (entity-event-or-fx-key db action)]
+     {fx db})))
 
 (rf/reg-event-fx
  :add
