@@ -4,6 +4,8 @@
             [compojure.core     :as comp :refer (defroutes GET POST)]
             [compojure.route    :as route]
             [org.httpkit.server :as http-kit]
+            [reason-alpha.model :as model-def]
+            [reason-alpha.model.core :as model]
             [ring.middleware.anti-forgery :as anti-forgery]
             [ring.middleware.cors :as ring-cors]
             [ring.middleware.defaults :as ring-defaults]
@@ -71,29 +73,26 @@
                   :i i}]))))]
 
     (go-loop [i 0]
-      (<! (async/timeout 10000))
+      (<! (async/timeout 60000))
       (when @broadcast-enabled?_ (broadcast! i))
       (recur (inc i)))))
 
-;;;; Sente event handlers
-(defmulti event-msg-handler
-  "Multimethod to handle Sente `event-msg`s"
-  :id ; Dispatch on event-id
-  )
-
-(defmethod event-msg-handler
-  :default ; Default/fallback case (no other matching handler)
-  [{:as ev-msg :keys [event id ?data ring-req ?reply-fn send-fn]}]
-  (let [session (:session ring-req)
-        uid     (:uid     session)]
-    (debugf "Unhandled event: %s" event)
-    (when ?reply-fn
-      (?reply-fn {:umatched-event-as-echoed-from-server event}))))
-
 (defn server-event-msg-handler
   "Wraps `-event-msg-handler` with logging, error catching, etc."
-  [{:as ev-msg :keys [id ?data event]}]
-  (event-msg-handler ev-msg) ; Handle event-msgs on a single thread
+  [{:as ev-msg :keys [id ?data event ?reply-fn]}]
+  (let [handlers (model/handler-fns model-def/aggregates)
+        fun      (get handlers id)]
+    (if fun
+      (do
+        (debugf "Event handler found: %s" id)
+        (if ?reply-fn
+          (?reply-fn (fun ?data))
+          (fun ?data)))
+      (do
+        (debugf "Unhandled event: %s" event)
+        (when ?reply-fn
+          (?reply-fn {:umatched-event-as-echoed-from-server event}))) ))
+                                        ; Handle event-msgs on a single thread
   ;; (future (-event-msg-handler ev-msg)) ; Handle event-msgs on a thread pool
   )
 

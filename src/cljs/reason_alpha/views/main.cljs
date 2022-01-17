@@ -47,7 +47,7 @@
        [:i.fas.fa-plus-square] [:span "ADD"]]]
      [:li.nav-item
       [:a.nav-link {:href     "#"
-                    :on-click #(rf/dispatch [:delete])}
+                    :on-click #(rf/dispatch [:delete!])}
        [:i.fas.fa-minus-square] [:span "DELETE"]]]
      [:li.nav-item
       [:a.nav-link {:href "#"}

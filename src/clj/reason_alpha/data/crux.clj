@@ -22,7 +22,7 @@
             [mount.lite :refer (defstate) :as mount]
             [outpace.config :refer [defconfig]]
             [reason-alpha.data :refer [DataBase save! add-all!]]
-            [reason-alpha.model :as model])
+            [reason-alpha.model.core :as model])
   (:gen-class))
 
 (defconfig data-dir) ;; "data"
@@ -168,7 +168,16 @@
                       :where [[tp :trade-pattern/id]
                               #_[tp :trade-pattern/name "Breakout"]]}})
 
-  
+  (delete! db [[:crux.tx/delete #uuid "c7057fa6-f424-4b47-b1f2-de5ae63fb5fb"]])
+
+  (query db {:spec '{:find  [(pull tp [*])]
+                     :where [[tp :trade-pattern/id id]]
+                     :in    [id]}
+             :args [#uuid "c7057fa6-f424-4b47-b1f2-de5ae63fb5fb"]})
+
+  (query db
+         {:spec '{:find  [(pull tp [*])]
+                  :where [[tp :trade-pattern/id]]}})
 
   (query db
          {:spec '{:find  [?tp]
@@ -226,10 +235,7 @@
 
   
 
-  (query db {:spec '{:find  [(pull tp [*])]
-                     :where [[tp :trade-pattern/id id]]
-                     :in    [id]}
-             :args [#uuid "32429cdf-99d6-4893-ae3a-891f8c22aec6"]})
+  
 
   (query-impl! {:spec     '{:find   [name creation-id]
                             :where  [[tp :trade-pattern/name name]
@@ -247,6 +253,14 @@
                    :where [[tp :trade-pattern/id id]]
                    :in    [[id ...]]}
                  ids)))
+
+  (crux/entity-history
+   (crux/db @crux-node)
+   #uuid "32429cdf-99d6-4893-ae3a-891f8c22aec6"
+ ;;  #uuid "017dd37b-f32c-5d23-2832-e54a8a5cac9c"
+;;   #uuid "017dd37b-f32b-0b2b-f093-e1f543715fcf"
+   :asc
+   {:with-docs? true})
 
   (let [query-spec '{:find  [fin-sec amount]
                      :where [[fin-sec :fin-security/ticker ticker]

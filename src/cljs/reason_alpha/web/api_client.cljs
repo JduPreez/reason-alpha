@@ -23,10 +23,10 @@
      (let [cb-success? (sente/cb-success? reply)]
        (cond
          (and cb-success? on-success)
-         , (rf/dispatch [on-success reply])
+         , (rf/dispatch (conj on-success reply))
 
          (and (not cb-success?) on-failure)
-         , (rf/dispatch [on-failure]))))))
+         , (rf/dispatch (conj on-failure)))))))
 
 (defn state-watcher [_key _atom _old-state new-state]
   (.warn js/console "New state" new-state))

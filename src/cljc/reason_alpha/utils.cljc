@@ -43,8 +43,20 @@
                first
                namespace))
 
+(defn creation-id-key-by-type [type]
+  (-> type
+      name
+      (str "/creation-id")
+      keyword))
+
 (defn creation-id-key [m]
   (keyword (str (entity-ns m) "/creation-id")))
+
+(defn id-key-by-type [type]
+  (-> type
+      name
+      (str "/id")
+      keyword))
 
 (defn id-key [m]
   (keyword (str (entity-ns m) "/id")))
