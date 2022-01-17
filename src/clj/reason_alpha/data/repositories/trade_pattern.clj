@@ -16,17 +16,17 @@
 (defn save! [{:keys [trade-pattern/parent-id
                      trade-pattern/id]
               :as   trade-pattern}]
-  (pprint/pprint {::save! trade-pattern})
   (let [tp          (data/save! data.crux/db trade-pattern)
         parent-tp   (when parent-id
                       (data/any data.crux/db {:spec '{:find  [(pull tp [*])]
                                                       :where [[tp :trade-pattern/id id]]
                                                       :in    [id]}
                                               :args [parent-id]}))
-        children-tp (data/query data.crux/db {:spec '{:find  [(pull tp [*])]
-                                                      :where [[tp :trade-pattern/parent-id id]]
-                                                      :in    [id]}
-                                              :args [id]})
+        children-tp (when id
+                      (data/query data.crux/db {:spec '{:find  [(pull tp [*])]
+                                                        :where [[tp :trade-pattern/parent-id id]]
+                                                        :in    [id]}
+                                                :args [id]}))
         tps         (data-structs/conj-ancestors-path (cond-> [tp]
                                                         parent-tp         (conj parent-tp)
                                                         (seq children-tp) (into children-tp))
@@ -35,6 +35,18 @@
                                                       :trade-pattern/id
                                                       :trade-pattern/ancestors-path)]
     tps))
+
+(comment
+  (save! #:trade-pattern{:creation-id
+                         #uuid "0ffbf0d7-c735-4a50-baa4-700ca41c2d72",
+                         :parent-id
+                         #uuid "32429cdf-99d6-4893-ae3a-891f8c22aec6",
+                         :name
+                         "ffff",
+                         :description
+                         "frrfrf"})
+
+  )
 
 (defn delete! [trade-pattern-ids]
   (let [children   (data/query data.crux/db {:spec '{:find  [(pull tp [*])]

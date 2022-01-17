@@ -49,23 +49,25 @@
     {:db       (assoc-in db data-path remaining-ents)
      :dispatch [:select nil]}))
 
-(defn get-deleted-ids [type db]
-  (let [del-creation-ids (->> type
-                              (conj selected)
-                              (get-in db))
-        creation-id-k    (utils/creation-id-key-by-type type)
-        id-k             (utils/id-key-by-type type)
-        idx-ents         (->> type
-                              entity-data
-                              (get-in db)
-                              (reduce (fn [idx-ents' ent]
-                                        (assoc idx-ents' (get ent creation-id-k) ent))
-                                      {}))
-        del-ids          (->> del-creation-ids
-                              (map (fn [cid]
-                                     (-> (get idx-ents cid)
-                                         (get id-k)))))]
-   del-ids))
+(defn get-selected-ids [type db]
+  (let [selctd-creation-ids (->> type
+                                 (conj selected)
+                                 (get-in db))
+        creation-id-k       (utils/creation-id-key-by-type type)
+        id-k                (utils/id-key-by-type type)
+        idx-ents            (->> type
+                                 entity-data
+                                 (get-in db)
+                                 (reduce (fn [idx-ents' ent]
+                                           (assoc idx-ents' (get ent creation-id-k) ent))
+                                         {}))
+        ids                 (->> selctd-creation-ids
+                                 (map (fn [cid]
+                                        (-> idx-ents
+                                            (get cid)
+                                            (get id-k)))))]
+    (cljs.pprint/pprint {::get-selected-ids [ids]})
+   ids))
 
 (comment
   (get-deleted-ids :trade-pattern @db')

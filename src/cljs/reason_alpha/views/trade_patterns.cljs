@@ -22,13 +22,15 @@
                                       name))
     :custom-element-edit-renderer (fn [_field {:keys [trade-pattern/id trade-pattern/parent-id]
                                                :as   _record} fn-dispatch _val]
-                                    (let [*tps             (rf/subscribe [:trade-patterns])
-                                          eligible-parents (->> @*tps
-                                                                (remove #(or (= (:trade-pattern/id %) id)
-                                                                             (:trade-pattern/parent-id %)
-                                                                             (some (fn [tp]
-                                                                                     (= (:trade-pattern/parent-id tp) id))
-                                                                                   @*tps)))
+                                    (let [tps              @(rf/subscribe [:trade-patterns])
+                                          eligible-parents (->> tps
+                                                                (remove #(or (nil? (:trade-pattern/id %)) ;; If not saved to back-end
+                                                                             (= (:trade-pattern/id %) id) ;; If option is this record
+                                                                             (:trade-pattern/parent-id %) ;; If option is a child
+                                                                             (some (fn [tp] ;; If record has a child somewhere
+                                                                                     (and id
+                                                                                          (= (:trade-pattern/parent-id tp) id)))
+                                                                                   tps)))
                                                                 (sort-by :trade-pattern/name))]
                                       [:select.form-control {:value     (or parent-id "")
                                                              :on-change #(let [v (as-> % v

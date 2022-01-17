@@ -58,10 +58,10 @@
         [:p
          [:button.btn.cancel.btn-lg.btn-default
           {:on-click #(rf/dispatch [:datagrid/show-are-you-sure-popup id false])}
-          (or (:no-text @options) "Nee")]
+          (or (:no-text @options) "No")]
          [:button.btn.btn-lg.confirm.btn-warning
           {:on-click #(rf/dispatch [:datagrid/delete-record id])}
-          (or (:yes-text @options) "Ja")]]]])))
+          (or (:yes-text @options) "Yes")]]]])))
 
 (defn create-button
   [id]
@@ -611,7 +611,7 @@
                 [:tr
                  [:td.nodata {:style    {:padding-top "20px"}
                               :col-span colspan}
-                  [:i (or (:no-records-text options) "Geen gegevens gevonden.")]]]]
+                  [:i (or (:no-records-text options) "No rows")]]]]
 
                :else
                [table-data id (:data-subscription options)])]

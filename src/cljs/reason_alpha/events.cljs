@@ -8,11 +8,12 @@
 
 (rf/reg-event-fx
  :navigate
- (fn [{:keys [db]} [_ {{:keys [name]} :data}]]
-   (let [db-out (assoc db
-                       :active-view-model
-                       (get-in db [:view-models name]))]
-     (case name
+ (fn [{{:keys [view-models]
+        :as   db} :db} [_ {{vid :name} :data}]]
+   (let [db-out (->> {:view-id vid}
+                     (merge (get view-models vid))
+                     (assoc-in db data/active-view-model))]
+     (case vid
        :trade-patterns {:db                      db-out
                         :trade-pattern.query/get []}
        {:db db-out}))))
@@ -68,15 +69,18 @@
                (name action))
           keyword))))
 
-(defn action-event
+(defn-traced action-event
   "Derives the correct toolbar data event-fx from the current
   active model, and dispatches it."
   [{:keys [db]} [action]]
-  (let [{:keys [model]} (get-in db data/active-view-model)]
-    (when model
-      {:dispatch [(keyword (str (name model)
-                                ".command/"
-                                (name action)))]})))
+  (let [{:keys [model]} (get-in db data/active-view-model)
+        event           [(keyword (str (name model)
+                                       ".command/"
+                                       (name action)))]]
+    (cljs.pprint/pprint {::action-event [action event]})
+    (if model
+      {:dispatch event}
+      {})))
 
 (rf/reg-event-fx
  :api-request-failure
@@ -115,3 +119,13 @@
  :set-view-models
  (fn [db [_ view-models]]
    (assoc db :view-models view-models)))
+
+(rf/reg-event-fx
+ :edit
+ (fn [{:keys [db]} [_ entities]]
+   (let [{:keys [view-id]} (get-in db data/active-view-model)]
+     {:dispatch-n (mapv #(let [creation-id (->> %
+                                                utils/creation-id-key
+                                                (get %))]
+                           [:datagrid/start-edit view-id creation-id %])
+                        entities)})))

@@ -39,7 +39,8 @@
 
 ;; TODO: Move this to `reason-alpha.views`
 (def view-models
-  {:trades         {:view #'trades/view}
+  {:trades         {:view  #'trades/view
+                    :model :trade}
    :trade-patterns {:view  #'trade-patterns/view
                     :model :trade-pattern}
    :about          {:view #'about-page}})

@@ -7,28 +7,29 @@
             [reason-alpha.utils :as utils]
             [reason-alpha.events :as events]))
 
-(rf/reg-event-db
- :trade-patterns/add
- (fn [db _]
-   (update-in db
-              tp-data/root
-              (fn [trd-patrns]
-                (let [selected-ids   (get-in db data/selected)
-                      selected-ents  (filter #(and (some #{(get % :trade-pattern/id)} selected-ids)
-                                                   (not (:trade-pattern/parent-id %)))
-                                             trd-patrns)
-                      new-trd-patrns (if (seq selected-ents)
-                                       (mapv (fn [tp]
-                                               {:trade-pattern/id          (utils/new-uuid)
-                                                :trade-pattern/parent-id   (:trade-pattern/id tp)
-                                                :trade-pattern/name        ""
-                                                :trade-pattern/description ""})
-                                             selected-ents)
-                                       [{:trade-pattern/id          (utils/new-uuid)
-                                         :trade-pattern/name        ""
-                                         :trade-pattern/description ""}])]
-                  (cljs.pprint/pprint {:trade-patterns/add new-trd-patrns})
-                  (into trd-patrns new-trd-patrns))))))
+(rf/reg-event-fx
+ :trade-pattern.command/add
+ (fn [{:keys [db]} _]
+   (let [trd-patrns     (get-in db (data/entity-data :trade-pattern))
+         selected-ids   (data/get-selected-ids :trade-pattern db)
+         selected-ents  (filter #(and (some #{(get % :trade-pattern/id)} selected-ids)
+                                      (not (:trade-pattern/parent-id %)))
+                                trd-patrns)
+         new-trd-patrns (if (seq selected-ents)
+                          (mapv (fn [tp]
+                                  {:trade-pattern/creation-id (utils/new-uuid)
+                                   :trade-pattern/parent-id   (:trade-pattern/id tp)
+                                   :trade-pattern/name        ""
+                                   :trade-pattern/description ""})
+                                selected-ents)
+                          [{:trade-pattern/creation-id (utils/new-uuid)
+                            :trade-pattern/name        ""
+                            :trade-pattern/description ""}])]
+     {:dispatch [:edit new-trd-patrns]
+      :db       (update-in db
+                           tp-data/root
+                           (fn [trd-patrns]
+                             (into trd-patrns new-trd-patrns)))})))
 
 (rf/reg-event-fx
  :trade-pattern.command/create
@@ -45,7 +46,7 @@
 (rf/reg-fx
  :trade-pattern.command/delete!
  (fn [db]
-   (let [del-ids (data/get-deleted-ids :trade-pattern db)]
+   (let [del-ids (data/get-selected-ids :trade-pattern db)]
      (api-client/chsk-send! [:trade-pattern.command/delete! del-ids]
                             {:on-success [:trade-pattern/delete-success
                                           :trade-pattern]}))))
