@@ -2,7 +2,6 @@
   (:require [re-frame.core :as rf]
             [reason-alpha.data.trade-patterns :as tp-data]
             [reason-alpha.data :as data]
-            [reason-alpha.web.service-api :as svc-api]
             [reason-alpha.web.api-client :as api-client]
             [reason-alpha.utils :as utils]
             [reason-alpha.events :as events]))

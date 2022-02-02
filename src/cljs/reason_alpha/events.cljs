@@ -4,9 +4,41 @@
             [reason-alpha.data :as data]
             [reason-alpha.utils :as utils]
             [reason-alpha.web.api-client :as api-client]
-            [reason-alpha.web.service-api :as svc-api]))
+            [reitit.frontend.controllers :as rfe-ctrls]
+            [reitit.frontend.easy :as rfe-easy]))
+
+(rf/reg-event-db
+ :initialize-db
+ (fn [db _]
+   (if db
+     db
+     {:current-route nil})))
 
 (rf/reg-event-fx
+ :navigated
+ (fn [{:keys [db]} [_ {{:keys [name model
+                               data-subscription]} :data
+                       :as                         new-match}]]
+   (let [old-match   (:current-route db)
+         controllers (rfe-ctrls/apply-controllers (:controllers old-match) new-match)
+         updated-db  (-> db
+                         (assoc :current-route (assoc new-match :controllers controllers))
+                         (assoc-in data/active-view-model))]
+     (cond-> {:db       updated-db
+              :dispatch [:datagrid/update-history name]}
+       data-subscription (assoc data-subscription [])))))
+
+(rf/reg-fx
+ :push-state!
+ (fn [route]
+   (apply rfe-easy/push-state route)))
+
+(rf/reg-event-fx
+ :push-state
+ (fn [_ [_ & route]]
+   {:push-state! route}))
+
+#_(rf/reg-event-fx
  :navigate
  (fn [{{:keys [view-models]
         :as   db} :db} [_ {{vid :name} :data}]]
@@ -61,7 +93,7 @@
                  [:save-remote type entity]]}))
 
 (defn entity-event-or-fx-key [db action]
-  (let [{:keys [model]} (get-in db data/active-view-model)]
+  (let [model (get-in db data/active-view-model)]
     (when model
       (-> model
           name
@@ -115,7 +147,7 @@
          ids             (map #(utils/maybe->uuid %) selected-ids)]
      (assoc-in db (conj data/selected model) ids))))
 
-(rf/reg-event-db
+#_(rf/reg-event-db
  :set-view-models
  (fn [db [_ view-models]]
    (assoc db :view-models view-models)))

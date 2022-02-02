@@ -1,6 +1,5 @@
 (ns reason-alpha.data
-  (:require [reason-alpha.utils :as utils]
-            [reason-alpha.web.service-api :as svc-api]))
+  (:require [reason-alpha.utils :as utils]))
 
 (def ^:const selected [:selected])
 

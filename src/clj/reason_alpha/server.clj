@@ -42,17 +42,31 @@
     (when (not= old new)
       (infof "Connected uids change: %s" new))))
 
+(defn login-handler
+  "Here's where you'll add your server-side login/auth procedure (Friend, etc.).
+  In our simplified example we'll just always successfully authenticate the user
+  with whatever user-id they provided in the auth request."
+  [ring-req]
+  (let [{:keys [session params]} ring-req
+        {:keys [user-id]}        params]
+    (debugf "Login request: %s" params)
+    {:status  200
+     :session (assoc session :uid user-id)
+     :cookies {"reason-alpha" {:value user-id}}}))
+
 ;;;; Ring handlers
 (defroutes ring-routes
   (GET  "/chsk"  ring-req (ring-ajax-get-or-ws-handshake ring-req))
   (POST "/chsk"  ring-req (ring-ajax-post                ring-req))
+  (POST "/login" ring-req (login-handler                 ring-req))
   (route/not-found "<h1>Page not found</h1>"))
 
 (def main-ring-handler
   (-> ring-routes
       (ring-defaults/wrap-defaults ring-defaults/site-defaults)
      ;;middleware/wrap-cors
-     (ring-cors/wrap-cors :access-control-allow-origin [#".*"])))
+      (ring-cors/wrap-cors :access-control-allow-origin [#".*"])
+      ring.middleware.session/wrap-session))
 
 (defonce broadcast-enabled?_ (atom true))
 
@@ -79,7 +93,8 @@
 
 (defn server-event-msg-handler
   "Wraps `-event-msg-handler` with logging, error catching, etc."
-  [{:as ev-msg :keys [id ?data event ?reply-fn]}]
+  [{:as ev-msg :keys [id ?data event ?reply-fn ring-req]}]
+  (pprint/pprint {::server-event-msg-handler ring-req})
   (let [handlers (model/handler-fns model-def/aggregates)
         fun      (get handlers id)]
     (if fun

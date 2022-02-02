@@ -164,8 +164,8 @@
                            (conj edited-record))]
      (cljs.pprint/pprint {:datagrid/save-new-record edited-record})
      {:db       (-> db
-                    (update-in [:datagrid/data  id :edit-rows] dissoc nil)
-                    (assoc-in  [:datagrid/data  id :creating?] false))
+                    (update-in [:datagrid/data id :edit-rows] dissoc nil)
+                    (assoc-in  [:datagrid/data id :creating?] false))
       :dispatch dispatch})))
 
 (rf/reg-event-db
@@ -199,7 +199,18 @@
 (rf/reg-event-db
  :datagrid/show-are-you-sure-popup
  (fn [db [_ id show?]]
-   (assoc-in db [:datagrid/data  id :show-sure?] show?)))
+   (assoc-in db [:datagrid/data id :show-sure?] show?)))
+
+(rf/reg-event-db
+ :datagrid/update-history
+ (fn [db [_ id]]
+   (if id
+     (as-> (get-in db [:datagrid/history]) h
+       (or h '())
+       (remove #(= id %) h)
+       (conj h id)
+       (assoc-in db [:datagrid/history] h))
+     db)))
 
 (rf/reg-event-fx
  :datagrid/delete-record-maybe

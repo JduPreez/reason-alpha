@@ -78,6 +78,14 @@
    (get-in db [:datagrid/data id :options])))
 
 (rf/reg-sub
+ :datagrid/title
+ (fn [[_ id]]
+   (rf/subscribe [:datagrid/options id]))
+ (fn [{:keys [title]} _]
+   title))
+
+
+(rf/reg-sub
  :datagrid/sorting
  (fn [db [_ id]]
    (get-in db [:datagrid/data id :sorting])))
@@ -326,3 +334,18 @@
  (fn [v]
    (js/console.log v)
    v))
+
+(rf/reg-sub
+ :datagrid/history
+ (fn [db _]
+   ;;(cljs.pprint/pprint {::history (get-in db [:datagrid/history])})
+   (get-in db [:datagrid/history])))
+
+(rf/reg-sub
+ :datagrid/history-by-grid
+ (fn [[_ grid-id]]
+   ;;(cljs.pprint/pprint {::history-by-grid-1 grid-id})
+   (rf/subscribe [:datagrid/history]))
+ (fn [history [_ grid-id]]
+   ;;(cljs.pprint/pprint {::history-by-grid-2 [grid-id history]})
+   (vec (remove #(= grid-id %) history))))

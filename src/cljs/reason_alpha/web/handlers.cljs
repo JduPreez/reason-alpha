@@ -12,7 +12,7 @@
 
 (defmethod -event-msg-handler :default
   [{:keys [event]}]
-  (log "Unhandled event:" event))
+  (cljs.pprint/pprint ["Unhandled event:" event]))
 
 (defmethod -event-msg-handler :chsk/recv
   [{:keys [?data]}]

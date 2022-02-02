@@ -4,8 +4,6 @@
             [reason-alpha.utils :as utils]
             [reason-alpha.views.datagrid :as datagrid]))
 
-(def model :trade-patterns)
-
 (def fields
   [{:title    "Trade Pattern"
     :name     :trade-pattern/name
@@ -57,9 +55,11 @@
   
   )
 
+(def title "Trade Patterns")
+
 (def options
-  {:grid-id             :trade-patterns
-   :title               "Trade Patterns"
+  {:grid-id             ::view
+   :title               title
    :data-subscription   [:trade-patterns]
    :id-field            :trade-pattern/creation-id
    :can-sort            true
@@ -73,5 +73,6 @@
 
 (defn view []
   (fn []
+    ;;[:div "TRADE PATTERNS"]
     [datagrid/view fields options]))
 
