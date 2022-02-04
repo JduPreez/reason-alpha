@@ -9,13 +9,13 @@
    (when load-test-data?
      (dev-data/load-entity-test-data))
    (reason-alpha/-main)
-   (mount/start))
+   #_(mount/start))
   ([]
    (reason-alpha/-main)
-   (mount/start)))
+   #_(mount/start)))
 
 (defn stop []
-  (server/stop!)
+  ;;(server/stop!)
   (mount/stop))
 
 (comment

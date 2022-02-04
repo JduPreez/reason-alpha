@@ -1,14 +1,15 @@
 (ns reason-alpha.core
   (:require [malli.instrument :as malli.instr]
-            [mount.lite :refer (defstate) :as mount]
-            [reason-alpha.server :as server]
+            [mount.lite :as mount]
             [reason-alpha.data.model]
             [reason-alpha.model.portfolio-management]
             [reason-alpha.services.trade-pattern]))
 
 (defn -main []
   (mount/start)
-  (server/start!)
-  (malli.instr/instrument!))
+  #_(server/start!)
+  #_(malli.instr/collect!)
+  (malli.instr/instrument!)
+  )
 
 

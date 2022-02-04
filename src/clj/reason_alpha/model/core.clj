@@ -26,7 +26,7 @@
                               (merge @*model-keys-mapping))]
     (reset! *model updtd-m)
     (reset! *model-keys-mapping updtd-m-keys-map)
-    @*model))
+    add-m))
 
 (defmacro def-model [sym new-m]
   `(let [ns#      (str *ns*)

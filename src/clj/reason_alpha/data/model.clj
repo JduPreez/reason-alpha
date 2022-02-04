@@ -7,5 +7,3 @@
                  [:was-deleted? boolean?]
                  [:num-deleted int?]
                  [:message {:optional true} string?]]])
-
-(model/+def! {"=>delete!" =>delete!})

@@ -3,6 +3,7 @@
             [clojure.pprint :as pprint]
             [compojure.core     :as comp :refer (defroutes GET POST)]
             [compojure.route    :as route]
+            [mount.lite :refer (defstate) :as mount]
             [org.httpkit.server :as http-kit]
             [reason-alpha.model :as model-def]
             [reason-alpha.model.core :as model]
@@ -121,8 +122,8 @@
       ch-chsk server-event-msg-handler)))
 
 ;;;; Init stuff
-(defonce web-server (atom nil)) ; (fn stop [])
-(defn stop-web-server! [] (when-let [stop-fn @web-server] (stop-fn)))
+(defonce *web-server (atom nil)) ; (fn stop [])
+(defn stop-web-server! [] (when-let [stop-fn @*web-server] (stop-fn)))
 (defn start-web-server! [& [port]]
   (stop-web-server!)
   (let [port         (or port 0) ; 0 => Choose any available port
@@ -136,11 +137,24 @@
         uri            (format "http://localhost:%s/" port)]
 
     (infof "Web server is running at `%s`" uri)
-    (reset! web-server stop-fn)
-    web-server))
+    (reset! *web-server stop-fn)
+    *web-server))
 
-(defn stop!  [] (stop-router!)  (stop-web-server!))
-(defn start! [] (start-router!) (start-web-server! 5000) (start-example-broadcaster!))
+(defn stop!  []
+  (stop-router!)
+  (stop-web-server!))
+
+(defn start! []
+  (start-router!)
+  (let [*ws (start-web-server! 5000)]
+    (start-example-broadcaster!)
+    *ws))
+
+(defstate web-server
+  :start
+  , (start!)
+  :stop
+  , (stop!))
 
 (comment
   (stop!)
