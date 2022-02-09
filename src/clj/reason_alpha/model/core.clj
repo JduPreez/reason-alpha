@@ -67,23 +67,7 @@
   (let [ent-type (entity-type entity-map)]
     (keyword (str ent-type "/id"))))
 
-(defn handler-fns [aggregates]
-  (-> aggregates
-      (tl/update
-       tl/all-entries
-       (fn [[aggr-k {cmds  :commands
-                     qries :queries}]]
-         (letfn [(to-ns-keys [{:keys [commands queries]}]
-                   (-> commands
-                       (or queries)
-                       (tl/update
-                        tl/all-keys
-                        #(-> aggr-k
-                             name
-                             (str "." (if commands "command" "query") "/" (name %))
-                             keyword))))]
-           (merge (to-ns-keys {:commands cmds})
-                  (to-ns-keys {:queries qries})))))))
+
 
 (comment
 

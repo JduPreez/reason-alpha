@@ -19,11 +19,9 @@
   (:require [clojure.java.io :as io]
             [crux.api :as crux]
             [me.raynes.fs :as fs]
-            [mount.lite :refer (defstate) :as mount]
             [outpace.config :refer [defconfig]]
-            [reason-alpha.data :refer [DataBase save! add-all!]]
-            [reason-alpha.model.core :as model])
-  (:gen-class))
+            [reason-alpha.data.model :refer [DataBase]]
+            [reason-alpha.model.core :as model]))
 
 (defconfig data-dir) ;; "data"
 (defconfig db-name) ;; "dev"
@@ -62,8 +60,8 @@
                                              [:crux.tx/delete id]))
                                      vec))}]]))))
 
-(defn start-crux! []
-  (clojure.pprint/pprint ::start-crux!)
+(defn xtdb-start! []
+  (clojure.pprint/pprint ::xtdb-start!)
   (let [fn-kv-store (fn [dir]
                       {:kv-store {:crux/module 'crux.rocksdb/->kv-store
                                   :db-dir      (-> data-dir
@@ -76,10 +74,6 @@
                       :crux/index-store    (fn-kv-store "index-store")})]
     (put-delete-fn! {:node node})
     node))
-
-(defstate crux-node
-  :start (start-crux!)
-  :stop ,(.close @crux-node))
 
 (defn- maybe-add-id [entities]
   (->> entities
@@ -95,63 +89,63 @@
        (map (fn [ent] [:crux.tx/put ent]))
        vec))
 
-(defn save-impl! [entities]
+(defn xtdb-save! [*db-node entities]
   (let [ents-with-ids (maybe-add-id entities)]
-    (crux/submit-tx @crux-node (crux-puts ents-with-ids))
+    (crux/submit-tx @*db-node (crux-puts ents-with-ids))
     ents-with-ids))
 
-(defn delete-impl! [{:keys [spec] :as crux-del-command}]
+(defn xtdb-delete! [*db-node {:keys [spec] :as crux-del-command}]
   (let [{:keys [crux.tx/tx-id]
          :as   tx-details} (cond
                              spec
-                             , (crux/submit-tx @crux-node
+                             , (crux/submit-tx @*db-node
                                                [[:crux.tx/fn
                                                  ::delete
                                                  crux-del-command]])
 
                              crux-del-command
-                             , (crux/submit-tx @crux-node
+                             , (crux/submit-tx @*db-node
                                                crux-del-command)
 
                              :else {:was-deleted? false})]
     {:tx-details   tx-details
      :was-deleted? (not (nil? tx-id))}))
 
-(def db (let [add-al-impl! save-impl!
-              sav-impl!    save-impl!
-              del-impl!    delete-impl!]
-          (reify DataBase
-            (connect [_]
-              (mount/start #'crux-node)
-              @crux-node)
+(deftype XTDB [*db-node fn-save!
+               fn-delete! fn-start-db!]
+  DataBase
+  (disconnect [_]
+    (.close @*db-node))
 
-            (disconnect [_] (mount/stop #'crux-node))
+  (connect [_]
+    (clojure.pprint/pprint ::connect)
+    (when @*db-node
+      (.close @*db-node))
+    (reset! *db-node (fn-start-db!))
+    @*db-node)
 
-            (query [_ {:keys [spec args]}]
-              (->> (apply crux/q (crux/db @crux-node) spec args)
-                   (map (fn [[entity :as all]]
-                          (if (map? entity)
-                            entity
-                            all)))))
+  (query [_ {:keys [spec args]}]
+    (->> (apply crux/q (crux/db @*db-node) spec args)
+         (map (fn [[entity :as all]]
+                (if (map? entity)
+                  entity
+                  all)))))
 
-            (any [this query-spec]
-              (first (.query this query-spec)))
+  (any [this query-spec]
+    (first (.query this query-spec)))
 
-            ;; Delete command's spec should only return :crux.db/id
-            (delete! [this delete-command]
-              (del-impl! delete-command))
+  ;; Delete command's spec should only return :crux.db/id
+  (delete! [this delete-command]
+    (fn-delete! *db-node delete-command))
 
-            (save! [this entity]
-              (save! this entity sav-impl!))
+  (save! [this entity]
+    (first (fn-save! *db-node [entity])))
 
-            (save! [_ entity fn-save-impl!]
-              (first (fn-save-impl! [entity])))
+  (add-all! [this entities]
+    (fn-save! *db-node entities)))
 
-            (add-all! [this entities]
-              (add-all! this entities add-al-impl!))
-
-            (add-all! [_ entities fn-add-all-impl!]
-              (fn-add-all-impl! entities)))))
+(def db
+  (XTDB. (atom nil) xtdb-save! xtdb-delete! xtdb-start!))
 
 (comment
 

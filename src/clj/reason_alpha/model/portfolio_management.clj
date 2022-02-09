@@ -75,12 +75,12 @@
          cls-price    :price} (map? close-trade-transaction
                                     close-trade-transaction
                                     (first open-trade-transaction))
-        #_#_divi-txs              (->> dividend-trade-transactions
+        #_#_divi-txs          (->> dividend-trade-transactions
                                    (map #(if (map? %) % (first %)))
                                    (reduce + ))
         beginning-val         (* opn-quantity opn-price)
         ending-val            (* cls-quantity cls-price)]
-    ))
+    0))
 
 ;; TODO: ENABLE THIS WHEN DONE WITH `position-holding-period-return`
 ;;(malli.instr/collect!)
