@@ -1,5 +1,4 @@
 (ns reason-alpha.model
-  #_(:import [reason-alpha.data.crux XTDB])
   (:require [clojure.pprint :as pprint]
             [integrant.core :as ig]
             [reason-alpha.data.crux :as crux]
@@ -74,7 +73,6 @@
    ::handlers   {:aggregates (ig/ref ::aggregates)}
    ::server     {:handlers (ig/ref ::handlers)}})
 
-;; TODO: Save to atom, so we can discard the value on `stop-system`
 (def system
   (ig/init sys-def))
 

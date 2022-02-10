@@ -60,9 +60,6 @@
     (when current-route
       [main/view (-> current-route :data :view)])))
 
-#_(defn navigate [view]
-  [:navigate (reitit/match-by-name router view)])
-
 (defn init []
   (init-routes!)
   (r.dom/render [router-component {:router router}]

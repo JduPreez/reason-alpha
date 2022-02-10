@@ -38,18 +38,6 @@
  (fn [_ [_ & route]]
    {:push-state! route}))
 
-#_(rf/reg-event-fx
- :navigate
- (fn [{{:keys [view-models]
-        :as   db} :db} [_ {{vid :name} :data}]]
-   (let [db-out (->> {:view-id vid}
-                     (merge (get view-models vid))
-                     (assoc-in db data/active-view-model))]
-     (case vid
-       :trade-patterns {:db                      db-out
-                        :trade-pattern.query/get []}
-       {:db db-out}))))
-
 (defn-traced save-local
   [db [_ type {:keys [result] :as new}]]
   (let [current     (get-in db (data/entity-data type))
@@ -77,6 +65,7 @@
  :save-remote
  save-remote)
 
+;; TODO: Maybe rename & move to `data` ns?
 (defn fn-save [type success]
   (fn [_ [_ entity]]
     (let [cmd (-> type
@@ -85,12 +74,6 @@
                   keyword)]
       {:save-remote [cmd entity success]
        :dispatch    [:save-local type entity]})))
-
-#_(rf/reg-event-fx
- :save
- (fn [_ [_ type entity]]
-   {:dispatch-n [[:save-local type entity]
-                 [:save-remote type entity]]}))
 
 (defn entity-event-or-fx-key [db action]
   (let [model (get-in db data/active-view-model)]
@@ -147,11 +130,6 @@
          ids             (map #(utils/maybe->uuid %) selected-ids)]
      (assoc-in db (conj data/selected model) ids))))
 
-#_(rf/reg-event-db
- :set-view-models
- (fn [db [_ view-models]]
-   (assoc db :view-models view-models)))
-
 (rf/reg-event-fx
  :edit
  (fn [{:keys [db]} [_ entities]]
@@ -161,3 +139,24 @@
                                                 (get %))]
                            [:datagrid/start-edit view-id creation-id %])
                         entities)})))
+
+(rf/reg-event-fx
+ :auth-failure
+ (fn [_ [_ error-response]]
+   (cljs.pprint/pprint {:auth-failure error-response})))
+
+(rf/reg-event-fx
+ :auth-success
+ (fn [_ x]
+   (cljs.pprint/pprint {:auth-success x})))
+
+#_(rf/reg-event-fx
+ :authenticate
+ (fn [_ _]
+   {:http-xhrio {:method          :post
+                 :format          (ajax/transit-request-format)
+                 :response-format (ajax/transit-response-format)
+                 :on-success      [:auth-success]
+                 :on-failure      [:auth-failure]
+                 :uri             "http://localhost:5000/login"
+                 :params          {:user-id "Jacques"}}}))

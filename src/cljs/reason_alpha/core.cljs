@@ -50,6 +50,7 @@
   (js/console.log "stop"))
 
 (defn start []
+  
   (js/console.log "stop"))
 
 (defmethod handlers/-event-msg-handler :chsk/handshake
@@ -60,4 +61,5 @@
 (defn ^:export init []
   (rf/clear-subscription-cache!)
   (rf/dispatch-sync [:initialize-db])
+  ;;(rf/dispatch [:authenticate])
   (api-client/start!))

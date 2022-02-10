@@ -4,8 +4,6 @@
             [compojure.core     :as comp :refer (defroutes GET POST)]
             [compojure.route    :as route]
             [org.httpkit.server :as http-kit]
-            ;;[reason-alpha.model :as model]
-            ;;[reason-alpha.model.core :as model]
             [ring.middleware.anti-forgery :as anti-forgery]
             [ring.middleware.cors :as ring-cors]
             [ring.middleware.defaults :as ring-defaults]
@@ -17,13 +15,20 @@
 ;; (timbre/set-level! :trace) ; Uncomment for more logging
 (reset! sente/debug-mode?_ true) ; Uncomment for extra debug info
 
+(defn authenticated? [{:keys [request-method] :as _request}]
+  (pprint/pprint {::authenticated? _request})
+  (when (not= request-method :options)
+    false))
+
 (let [;; Serialization format, must use same val for client + server:
       packer :edn ; Default packer, a good choice in most cases
       ;; (sente-transit/get-transit-packer) ; Needs Transit dep
 
       chsk-server
       (sente/make-channel-socket-server!
-       (get-sch-adapter) {:packer packer :csrf-token-fn nil})
+       (get-sch-adapter) {:packer         packer
+                          :csrf-token-fn  nil
+                          #_#_:authorized?-fn authenticated?})
 
       {:keys [ch-recv send-fn connected-uids
               ajax-post-fn ajax-get-or-ws-handshake-fn]}
@@ -50,9 +55,10 @@
   (let [{:keys [session params]} ring-req
         {:keys [user-id]}        params]
     (debugf "Login request: %s" params)
-    {:status  200
-     :session (assoc session :uid user-id)
-     :cookies {"reason-alpha" {:value user-id}}}))
+    {:status      401
+     :body        {:error "Access denied"}
+     #_#_:session (assoc session :uid user-id)
+     #_#_:cookies {"reason-alpha" {:value user-id}}}))
 
 ;;;; Ring handlers
 (defroutes ring-routes
@@ -63,10 +69,12 @@
 
 (def main-ring-handler
   (-> ring-routes
-      (ring-defaults/wrap-defaults ring-defaults/site-defaults)
+      (ring-defaults/wrap-defaults ring-defaults/api-defaults)
      ;;middleware/wrap-cors
-      (ring-cors/wrap-cors :access-control-allow-origin [#".*"])
-      ring.middleware.session/wrap-session))
+      (ring-cors/wrap-cors :access-control-allow-origin [#"http://localhost:8700"]
+                           :access-control-allow-methods [:get :put :post :delete])
+      ring.middleware.session/wrap-session
+      ))
 
 (defonce broadcast-enabled?_ (atom true))
 
@@ -93,7 +101,7 @@
 
 (defn server-event-msg-handler
   "Wraps `-event-msg-handler` with logging, error catching, etc."
-  [handlers {:as ev-msg :keys [id ?data event ?reply-fn ring-req]}]
+  [handlers {:as ev-msg :keys [id ?data event ?reply-fn ring-req uid]}]
   (pprint/pprint {::server-event-msg-handler ring-req})
   (let [fun (get handlers id)]
     (if fun

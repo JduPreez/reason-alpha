@@ -13,8 +13,7 @@
    (reason-alpha/-main)))
 
 (defn stop []
-  ;;(server/stop!)
-  (mount/stop))
+  (model/stop-system!))
 
 (comment
   (dev-data/load-entity-test-data)
