@@ -1,2 +1,3 @@
-{reason-alpha.data.crux/db-name  "dev"
- reason-alpha.data.crux/data-dir "data"}
+{reason-alpha.data.crux/db-name             "dev"
+ reason-alpha.data.crux/data-dir            "data"
+ reason-alpha.infrastructure.auth/tenant-id "7n8w5rqb"}

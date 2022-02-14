@@ -39,7 +39,6 @@
     (reset! *chsk-send! send-fn)
     (reset! *chsk chsk)
     (reset! *chsk-state state)
-    (login)
     (add-watch state :state-watcher state-watcher)))
 
 (defn stop-router! []
@@ -50,14 +49,16 @@
   (reset! *router (sente/start-client-chsk-router! @*ch-chsk handlers/event-msg-handler)))
 
 (defn auth-else-start []
+  (cljs.pprint/pprint {::auth-else-start (-> js/document.cookie)})
   (sente/ajax-lite
    "http://localhost:5000/login"
-   {:method :post
-    :params {}}
+   {:method            :post
+    :with-credentials? true
+    :params            {:user-id "test"}}
 
    (fn [{:keys [?status]}]
      (if (= ?status 401)
-       (set! js/window.location.href "/signup.html")
+       (set! js/window.location.href "/login.html")
        (do
          (create-client!)
          (start-router!))))))

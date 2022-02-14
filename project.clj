@@ -5,7 +5,9 @@
   :license          {:name "EPL-2.0 OR GPL-2.0-or-later WITH Classpath-exception-2.0"
                      :url  "https://www.eclipse.org/legal/epl-2.0/"}
 
-  :dependencies [[cc.qbits/spandex "0.7.6"]
+  :dependencies [[buddy/buddy-core "1.10.413"]
+                 [buddy/buddy-sign "3.4.333"]
+                 [cc.qbits/spandex "0.7.6"]
                  [cheshire "5.8.1"]
                  [cljs-ajax "0.8.0"]
                  [com.andrewmcveigh/cljs-time "0.5.2"]
@@ -36,6 +38,7 @@
                  [org.clojure/clojurescript "1.10.879" :scope "provided"]
                  [org.clojure/core.async "0.4.500"]
                  [org.clojure/core.cache "1.0.217"]
+                 [org.clojure/data.codec "0.1.1"]
                  [org.clojure/google-closure-library "0.0-20201211-3e6c510d" :scope "provided"]
                  [org.clojure/tools.cli "1.0.206"]
                  [org.clojure/tools.logging "1.1.0"]
