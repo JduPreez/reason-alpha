@@ -1,7 +1,7 @@
 (ns reason-alpha.model
   (:require [clojure.pprint :as pprint]
             [integrant.core :as ig]
-            [reason-alpha.data.crux :as crux]
+            [reason-alpha.data.xtdb :as xtdb]
             [reason-alpha.data.model :as data.model :refer [DataBase]]
             [reason-alpha.data.repositories.trade-pattern :as repo.trade-pattern]
             [reason-alpha.infrastructure.server]
@@ -40,11 +40,11 @@
                   (to-ns-keys {:queries qries})))))))
 
 (defmethod ig/init-key ::db [_ _opts]
-  (data.model/connect crux/db)
-  crux/db)
+  (data.model/connect xtdb/db)
+  xtdb/db)
 
 (defmethod ig/halt-key! ::db [_ _]
-  (data.model/disconnect crux/db))
+  (data.model/disconnect xtdb/db))
 
 (defmethod ig/init-key ::aggregates [_ {:keys [db]}]
   {:trade-pattern

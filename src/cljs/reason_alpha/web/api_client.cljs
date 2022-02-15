@@ -49,12 +49,11 @@
   (reset! *router (sente/start-client-chsk-router! @*ch-chsk handlers/event-msg-handler)))
 
 (defn auth-else-start []
-  (cljs.pprint/pprint {::auth-else-start (-> js/document.cookie)})
   (sente/ajax-lite
    "http://localhost:5000/login"
    {:method            :post
     :with-credentials? true
-    :params            {:user-id "test"}}
+    :params            {}}
 
    (fn [{:keys [?status]}]
      (if (= ?status 401)

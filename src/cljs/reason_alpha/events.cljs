@@ -139,24 +139,3 @@
                                                 (get %))]
                            [:datagrid/start-edit view-id creation-id %])
                         entities)})))
-
-(rf/reg-event-fx
- :auth-failure
- (fn [_ [_ error-response]]
-   (cljs.pprint/pprint {:auth-failure error-response})))
-
-(rf/reg-event-fx
- :auth-success
- (fn [_ x]
-   (cljs.pprint/pprint {:auth-success x})))
-
-#_(rf/reg-event-fx
- :authenticate
- (fn [_ _]
-   {:http-xhrio {:method          :post
-                 :format          (ajax/transit-request-format)
-                 :response-format (ajax/transit-response-format)
-                 :on-success      [:auth-success]
-                 :on-failure      [:auth-failure]
-                 :uri             "http://localhost:5000/login"
-                 :params          {:user-id "Jacques"}}}))

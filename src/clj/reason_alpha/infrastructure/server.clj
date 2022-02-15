@@ -4,23 +4,28 @@
             [compojure.core     :as comp :refer (defroutes GET POST ANY)]
             [compojure.route    :as route]
             [org.httpkit.server :as http-kit]
+            [outpace.config :refer [defconfig]]
+            [reason-alpha.infrastructure.auth :as auth]
             [ring.middleware.anti-forgery :as anti-forgery]
             [ring.middleware.cors :as ring-cors]
             [ring.middleware.defaults :as ring-defaults]
             [taoensso.sente     :as sente]
             [taoensso.sente.packers.transit :as sente-transit]
             [taoensso.sente.server-adapters.http-kit :refer (get-sch-adapter)]
-            [taoensso.timbre    :as timbre :refer (tracef debugf infof warnf errorf)]
-            [reason-alpha.infrastructure.auth :as auth]))
+            [taoensso.timbre    :as timbre :refer (tracef debugf infof warnf errorf)]))
+
+(defconfig allowed-origins)
 
 ;; (timbre/set-level! :trace) ; Uncomment for more logging
 (reset! sente/debug-mode?_ true) ; Uncomment for extra debug info
 
-(defn authenticated? [{:keys [request-method] :as _request}]
-  #_(pprint/pprint {::authenticated? _request})
-  #_(when (not= request-method :options)
-      false)
-  nil)
+(defn authenticated? [{:keys [request-method compojure/route] :as request}]
+  (let [{:keys [user-token] :as tokens}                (auth/tokens request)
+        {:keys [is-valid? error userUuid email] :as x} (auth/verify-token user-token)]
+    (debugf "User autenticated? %s (%s): %b" userUuid email is-valid?)
+
+    (or (= request-method :options)
+        is-valid?)))
 
 (let [;; Serialization format, must use same val for client + server:
       packer :edn ; Default packer, a good choice in most cases
@@ -28,9 +33,9 @@
 
       chsk-server
       (sente/make-channel-socket-server!
-       (get-sch-adapter) {:packer             packer
-                          :csrf-token-fn      nil
-                          #_#_:authorized?-fn authenticated?})
+       (get-sch-adapter) {:packer         packer
+                          :csrf-token-fn  nil
+                          :authorized?-fn authenticated?})
 
       {:keys [ch-recv send-fn connected-uids
               ajax-post-fn ajax-get-or-ws-handshake-fn]}
@@ -50,22 +55,17 @@
       (infof "Connected uids change: %s" new))))
 
 (defn login-handler
-  "Here's where you'll add your server-side login/auth procedure (Friend, etc.).
-  In our simplified example we'll just always successfully authenticate the user
-  with whatever user-id they provided in the auth request."
   [{:keys [request-method] :as request}]
   (when (not= request-method :options)
     (let [{:keys [user-token] :as tokens}          (auth/tokens request)
           {:keys [is-valid? error userUuid email]} (auth/verify-token user-token)]
-      (clojure.pprint/pprint {::login-handler {:request request
-                                               :tokens  tokens}})
       (debugf "Verified login of user %s (%s): %b" userUuid email is-valid?)
 
       (if is-valid?
         {:status 200
          :body   {:result "Access granted"}}
         (do
-          (debugf "Error verifying login %s" userUuid email error)
+          (debugf "Error verifying login %s" error)
           {:status 401
            :body   {:result "Access denied"
                     :reason (when error "Error")}})))))
@@ -74,26 +74,24 @@
 (defroutes ring-routes
   (GET  "/chsk"  ring-req (ring-ajax-get-or-ws-handshake ring-req))
   (POST "/chsk"  ring-req (ring-ajax-post                ring-req))
-  (POST "/login" ring-req (login-handler                 ring-req))
-  #_(route/not-found "<h1>Page not found</h1>"))
+  (POST "/login" ring-req (login-handler                 ring-req)))
 
-(defn wrap-cors [handler allowed-origins]
+(defn wrap-cors [handler allow-origin]
   (fn [{:keys [request-method] :as request}]
     (let [response (handler request)
           response (cond-> (-> response
-                               (assoc-in [:headers "Access-Control-Allow-Origin"] allowed-origins)
+                               (assoc-in [:headers "Access-Control-Allow-Origin"] allow-origin)
                                (assoc-in [:headers "Access-Control-Allow-Credentials"] "true")
                                (assoc-in [:headers "Access-Control-Allow-Headers"] "x-requested-with, content-type")
                                (assoc-in [:headers "Access-Control-Allow-Methods"] "*"))
                      (#{:options} request-method) (assoc :status 200))]
-      (clojure.pprint/pprint {::wrap-cors response})
       response)))
 
 (def main-ring-handler
   (-> ring-routes
       (ring-defaults/wrap-defaults ring-defaults/api-defaults)
       ring.middleware.session/wrap-session
-      (wrap-cors "http://localhost:8700")))
+      (wrap-cors allowed-origins)))
 
 (defonce broadcast-enabled?_ (atom true))
 
@@ -121,7 +119,6 @@
 (defn server-event-msg-handler
   "Wraps `-event-msg-handler` with logging, error catching, etc."
   [handlers {:as ev-msg :keys [id ?data event ?reply-fn ring-req uid]}]
-  (pprint/pprint {::server-event-msg-handler ring-req})
   (let [fun (get handlers id)]
     (if fun
       (do

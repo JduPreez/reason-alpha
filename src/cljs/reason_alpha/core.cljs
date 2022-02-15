@@ -50,16 +50,13 @@
   (js/console.log "stop"))
 
 (defn start []
-  
   (js/console.log "stop"))
 
 (defmethod handlers/-event-msg-handler :chsk/handshake
   [{event :event}]
-  (cljs.pprint/pprint {::handshake event})
   (views/init))
 
 (defn ^:export init []
   (rf/clear-subscription-cache!)
   (rf/dispatch-sync [:initialize-db])
-  ;;(rf/dispatch [:authenticate])
   (api-client/start!))

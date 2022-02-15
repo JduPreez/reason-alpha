@@ -1,3 +1,4 @@
-{reason-alpha.data.crux/db-name             "dev"
- reason-alpha.data.crux/data-dir            "data"
- reason-alpha.infrastructure.auth/tenant-id "7n8w5rqb"}
+{reason-alpha.data.xtdb/db-name                     "dev"
+ reason-alpha.data.xtdb/data-dir                    "data"
+ reason-alpha.infrastructure.auth/tenant-id         "7n8w5rqb"
+ reason-alpha.infrastructure.server/allowed-origins "http://localhost:8700"}

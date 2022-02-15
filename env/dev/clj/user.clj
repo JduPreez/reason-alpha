@@ -16,7 +16,7 @@
   (model/stop-system!))
 
 (comment
-  (dev-data/load-entity-test-data)
+  (dev-data/load-entity-test-data (::model/db model/system))
 
   (start true)
 

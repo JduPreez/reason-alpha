@@ -1,4 +1,4 @@
-(ns reason-alpha.data.crux
+(ns reason-alpha.data.xtdb
 "Some concepts about this Crux DB namespace:
   - Entity: Is a thing expressed through a map, with a unique identity.
   - Identity: An entity's identity consists of two namespaced UUID keys with the
@@ -17,7 +17,7 @@
   `creation-id` key."
   (:import [com.github.f4b6a3.uuid UuidCreator])
   (:require [clojure.java.io :as io]
-            [crux.api :as crux]
+            [xtdb.api :as xt]
             [me.raynes.fs :as fs]
             [outpace.config :refer [defconfig]]
             [reason-alpha.data.model :refer [DataBase]]
@@ -33,45 +33,45 @@
   [{node                  :node
     only-when-not-exists? :only-when-not-exists?
     :or                   {only-when-not-exists? true}}]
-  (let [already-exists? (-> (crux/db node)
-                            (crux/q  '{:find  [(count fun)]
-                                       :where [[del-tx-fn :crux.db/fn fun]
-                                               [del-tx-fn :crux.db/id ::delete]]})
+  (let [already-exists? (-> (xt/db node)
+                            (xt/q  '{:find  [(count fun)]
+                                     :where [[del-tx-fn :xt/fn fun]
+                                             [del-tx-fn :xt/id ::delete]]})
                             first
                             first
                             (= 0))]
     (when (or (and only-when-not-exists?
                    (false? already-exists?))
               (false? only-when-not-exists?))
-        (crux/submit-tx node
-                        [[:crux.tx/put
-                          {:crux.db/id ::delete
-                           :crux.db/fn
-                           , '(fn [ctx {:keys [spec args]
-                                        :as   crux-del-command}]
-                                (->> args
-                                     (apply crux.api/q
-                                            (crux.api/db ctx)
-                                            spec)
-                                     (map #(let [doc (first %)
-                                                 id  (if (map? doc)
-                                                       (-> % first vals first)
-                                                       doc)]
-                                             [:crux.tx/delete id]))
-                                     vec))}]]))))
+        (xt/submit-tx node
+                      [[::xt/put
+                        {:xt/id ::delete
+                         :xt/fn
+                         , '(fn [ctx {:keys [spec args]
+                                      :as   crux-del-command}]
+                              (->> args
+                                   (apply xt.api/q
+                                          (xt.api/db ctx)
+                                          spec)
+                                   (map #(let [doc (first %)
+                                               id  (if (map? doc)
+                                                     (-> % first vals first)
+                                                     doc)]
+                                           [::xt/delete id]))
+                                   vec))}]]))))
 
 (defn xtdb-start! []
   (clojure.pprint/pprint ::xtdb-start!)
   (let [fn-kv-store (fn [dir]
-                      {:kv-store {:crux/module 'crux.rocksdb/->kv-store
+                      {:kv-store {:xtdb/module 'xtdb.rocksdb/->kv-store
                                   :db-dir      (-> data-dir
                                                    (str "/" db-name "/" dir)
                                                    io/file)
                                   :sync?       true}})
-        node        (crux/start-node
-                     {:crux/tx-log         (fn-kv-store "tx-log")
-                      :crux/document-store (fn-kv-store "doc-store")
-                      :crux/index-store    (fn-kv-store "index-store")})]
+        node        (xt/start-node
+                     {:xtdb/tx-log         (fn-kv-store "tx-log")
+                      :xtdb/document-store (fn-kv-store "doc-store")
+                      :xtdb/index-store    (fn-kv-store "index-store")})]
     (put-delete-fn! {:node node})
     node))
 
@@ -81,31 +81,31 @@
                (-> %
                    id-key
                    (or (UuidCreator/getLexicalOrderGuid))
-                   (as-> idv (assoc % :crux.db/id idv))
-                   (as-> ent (assoc ent id-key (:crux.db/id ent))))))))
+                   (as-> idv (assoc % :xt/id idv))
+                   (as-> ent (assoc ent id-key (:xt/id ent))))))))
 
-(defn- crux-puts [entities]
+(defn- xtdb-puts [entities]
   (->> entities
-       (map (fn [ent] [:crux.tx/put ent]))
+       (map (fn [ent] [::xt/put ent]))
        vec))
 
 (defn xtdb-save! [*db-node entities]
   (let [ents-with-ids (maybe-add-id entities)]
-    (crux/submit-tx @*db-node (crux-puts ents-with-ids))
+    (xt/submit-tx @*db-node (xtdb-puts ents-with-ids))
     ents-with-ids))
 
-(defn xtdb-delete! [*db-node {:keys [spec] :as crux-del-command}]
-  (let [{:keys [crux.tx/tx-id]
+(defn xtdb-delete! [*db-node {:keys [spec] :as del-command}]
+  (let [{:keys [xt/tx-id]
          :as   tx-details} (cond
                              spec
-                             , (crux/submit-tx @*db-node
-                                               [[:crux.tx/fn
-                                                 ::delete
-                                                 crux-del-command]])
+                             , (xt/submit-tx @*db-node
+                                             [[:xtdb.tx/fn
+                                               ::delete
+                                               del-command]])
 
-                             crux-del-command
-                             , (crux/submit-tx @*db-node
-                                               crux-del-command)
+                             del-command
+                             , (xt/submit-tx @*db-node
+                                             del-command)
 
                              :else {:was-deleted? false})]
     {:tx-details   tx-details
@@ -118,14 +118,13 @@
     (.close @*db-node))
 
   (connect [_]
-    (clojure.pprint/pprint ::connect)
     (when @*db-node
       (.close @*db-node))
     (reset! *db-node (fn-start-db!))
     @*db-node)
 
   (query [_ {:keys [spec args]}]
-    (->> (apply crux/q (crux/db @*db-node) spec args)
+    (->> (apply xt/q (xt/db @*db-node) spec args)
          (map (fn [[entity :as all]]
                 (if (map? entity)
                   entity
@@ -162,7 +161,7 @@
                       :where [[tp :trade-pattern/id]
                               #_[tp :trade-pattern/name "Breakout"]]}})
 
-  (delete! db [[:crux.tx/delete #uuid "c7057fa6-f424-4b47-b1f2-de5ae63fb5fb"]])
+  (delete! db [[:xtdb.tx/delete #uuid "c7057fa6-f424-4b47-b1f2-de5ae63fb5fb"]])
 
   (query db {:spec '{:find  [(pull tp [*])]
                      :where [[tp :trade-pattern/id id]]
@@ -185,9 +184,6 @@
   (drop-db! "dev")
 
   (concat {:a 1 :title "ddd"} {:b 2 :title "qwerrt"})
-
-
-  
 
   (let [entities [{:fin-security/id          #uuid "017b4ed0-c816-b7bc-dc85-2c4f5d5dd7f0"
                    :fin-security/creation-id #uuid "017b4ed4-393f-27d4-24ab-a62973c4098c"
@@ -227,42 +223,25 @@
                           [tp :trade-pattern/user-id uid]
                           [tp :trade-pattern/parent-id pid]]}})
 
-  
-
-  
-
   (query-impl! {:spec     '{:find   [name creation-id]
                             :where  [[tp :trade-pattern/name name]
                                      [tp :trade-pattern/creation-id creation-id]]
                             #_#_:in [name]}
                 #_#_:args ["Breakout"]})
 
-  
-
-  (let [ids '(#uuid "32429cdf-99d6-4893-ae3a-891f8c22aec6"
-              #uuid "017d3e1a-348d-d3f3-1bf8-03388d9db527")]
-    (-> @crux-node
-        crux/db
-        (crux/q  '{:find  [tp]
-                   :where [[tp :trade-pattern/id id]]
-                   :in    [[id ...]]}
-                 ids)))
-
-  (crux/entity-history
-   (crux/db @crux-node)
-   #uuid "32429cdf-99d6-4893-ae3a-891f8c22aec6"
- ;;  #uuid "017dd37b-f32c-5d23-2832-e54a8a5cac9c"
-;;   #uuid "017dd37b-f32b-0b2b-f093-e1f543715fcf"
-   :asc
-   {:with-docs? true})
+  ;; (xt/entity-history
+  ;;  (xt/db @crux-node)
+  ;;  #uuid "32429cdf-99d6-4893-ae3a-891f8c22aec6"
+  ;;  :asc
+  ;;  {:with-docs? true})
 
   (let [query-spec '{:find  [fin-sec amount]
                      :where [[fin-sec :fin-security/ticker ticker]
                              [fin-sec :fin-security/amount amount]]
                      :in    [ticker]}
         args       ["DM"]]
-    (-> crux/q
-        (partial (crux/db @crux-node) query-spec)
+    (-> xt/q
+        (partial (xt/db @crux-node) query-spec)
         (apply args)))
   )
 
