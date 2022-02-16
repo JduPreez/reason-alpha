@@ -1,5 +1,6 @@
 (ns ra-datagrid.views
-    (:require [cljs-time.coerce :as coerce]
+    (:require [accountant.core :as accountant]
+              [cljs-time.coerce :as coerce]
               [cljs-time.format :as fmt]
               [cljs.pprint :as pprint]
               [ra-datagrid.events]
@@ -164,10 +165,10 @@
                                 :aria-expanded "false"
                                 :type          "button"} [:i.fas.fa-ellipsis-h.rotate-90]]
               [:div.dropdown-menu.dropdown-menu-right
-               (for [{:keys [title event]} menu]
+               (for [{:keys [title view]} menu]
                  ^{:key title}
                  [:button.dropdown-item {:type     "button"
-                                         :on-click #(rf/dispatch event)}
+                                         :on-click #(rf/dispatch [:push-state view])}
                   title])
                #_[:a.dropdown-item {:href "#"} "Edit"]]])]]
 

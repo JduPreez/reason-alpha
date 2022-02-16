@@ -19,3 +19,4 @@ sqlite.5.db
 .lsp/
 .calva/
 /data
+jwt.key

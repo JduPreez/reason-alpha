@@ -1,7 +1,7 @@
 (ns reason-alpha.dev-data
   (:require [malli.core :as malli]
-            [reason-alpha.data :refer [add-all! query disconnect connect]]
-            [reason-alpha.data.crux :as data.crux]
+            [reason-alpha.data.model :refer [add-all! query disconnect connect]]
+            [reason-alpha.data.xtdb :as xtdb]
             [reason-alpha.utils :as utils]))
 
 (malli/=> load-entity-test-data
@@ -10,23 +10,14 @@
            [:=> [:cat :string] :nil]])
 
 (defn load-entity-test-data
-  ([]
-   (load-entity-test-data "test_data"))
-  ([test-data-dir]
-   (disconnect data.crux/db)
-   (data.crux/drop-db! data.crux/db-name)
-   (connect data.crux/db)
+  ([db]
+   (load-entity-test-data db "test_data"))
+  ([db test-data-dir]
+   (disconnect db)
+   (xtdb/drop-db! xtdb/db-name)
+   (connect db)
    (doseq [ents (utils/edn-files->clj test-data-dir)]
-     (add-all! data.crux/db ents))))
-
-;; (defn load-entity-test-data
-;;   ([migrate?]
-;;    (load-entity-test-data migrate? "test_data"))
-;;   ([migrate? test-data-dir]
-;;    (when migrate? (ignite/migrate))
-;;    (doseq [ents (utils/edn-files->clj test-data-dir)]
-;;      (add-all! db ents))))
-
+     (add-all! db ents))))
 
 (comment
   (load-entity-test-data)
@@ -39,9 +30,9 @@
   (require '[crux.api :as c])
 
   (doseq [ents (utils/edn-files->clj "test_data")]
-    (add-all! crux/db ents))
+    (add-all! xtdb/db ents))
 
-  (c/q (c/db @crux/crux-node)
+  (c/q (c/db @xtdb/crux-node)
        '{:find  [nm creation-id]
          :where [[tp :trade-pattern/name nm]
                  [tp :fin-security/creation-id creation-id]]})

@@ -124,3 +124,8 @@
  (fn [db [_ key']]
    {key' (true?
           (get-in db [:loading key']))}))
+
+(rf/reg-sub
+ :current-route
+ (fn [db]
+   (:current-route db)))

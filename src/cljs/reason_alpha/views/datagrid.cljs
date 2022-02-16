@@ -2,7 +2,8 @@
   (:require [ra-datagrid.views :as ra-datagrid]
             [re-frame.core :as rf]
             [reagent.core :as r]
-            [reason-alpha.views :as views] ))
+            ;;[reason-alpha.views :as views]
+            ))
 
 (def default-opts
   {;;:grid-id                    :my-grid
@@ -29,27 +30,33 @@
    ;;:delete-dispatch            [:delete]
    :additional-css-class-names "table-striped table-sm"})
 
-(def sheets (r/atom {}))
+(defn history-item [grid-id]
+  (fn [grid-id]
+    (let [title @(rf/subscribe
+                  [:datagrid/title grid-id])]
+      [:button.btn.btn-outline-primary
+       {:on-click #(rf/dispatch [:push-state grid-id])}
+       title])))
 
-(defn view [fields options]
+(defn history-list [grid-id title]
+  (fn [grid-id title]
+    (let [history (or (and grid-id
+                           @(rf/subscribe [:datagrid/history grid-id]))
+                      [])]
+      [:div.card-header.bg-gradient-indigo.br-tr-3.br-tl-3
+       [:div.btn-list
+        (for [hgrid-id history]
+          (if (= hgrid-id grid-id)
+            ^{:key (str "history-item-" hgrid-id)}
+            [:button.btn.btn-primary {:type "button"} title]
+            ^{:key (str "history-item-" hgrid-id)}
+            [history-item hgrid-id]))]])))
+
+(defn view [fields {:keys [grid-id] :as options}]
   (fn [fields {:keys [grid-id title] :as options}]
-      (when-not (get sheets grid-id)
-        (swap! sheets assoc grid-id options))
+    (let[*grid-options (rf/subscribe [:datagrid/options grid-id])]
       [:div.card
-       [:div.card-header.bg-gradient-indigo.br-tr-3.br-tl-3
-        [:div.btn-list
-         ^{:key grid-id}
-         [:button.btn.btn-primary {:type "button"} title]
-         (for [[sheet-grid-id {sheet-title :title}]
-               , @sheets
-               :when
-               , (not= grid-id sheet-grid-id)]
-           ^{:key sheet-grid-id}
-           [:button.btn.btn-outline-primary
-            {:on-click #(rf/dispatch (views/navigate sheet-grid-id))}
-            sheet-title])]
-        #_[:h2.card-title "Portfolio Trades"]]
-       ;;[:div.card-status.bg-yellow.br-tr-3.br-tl-3]
+       [history-list grid-id title]
        [:div.card-body {:style {:padding-top    0
                                 :padding-bottom 0}}
-        [ra-datagrid/datagrid (merge default-opts options) fields]]]))
+        [ra-datagrid/datagrid (merge default-opts options) fields]]])))

@@ -1,8 +1,8 @@
-(ns reason-alpha.model.trade-pattern-test
-  (:require #_[reason-alpha.model.trade-pattern :as sut]
+(ns reason-alpha.model.portfolio-management-test
+  (:require [reason-alpha.model.portfolio-management :as sut]
             [clojure.test :refer :all]))
 
-#_(deftest test-update
+(deftest test-update
   (testing "`update` should create an event to update the name"
     (let [current                   {:trade-pattern/id        (java.util.UUID/randomUUID)
                                      :trade-pattern/name      "Golden Shore"

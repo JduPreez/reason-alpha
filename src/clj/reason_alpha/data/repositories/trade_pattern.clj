@@ -1,32 +1,31 @@
 (ns reason-alpha.data.repositories.trade-pattern
-  (:require [reason-alpha.data :as data]
-            [reason-alpha.data.crux :as data.crux]
+  (:require [reason-alpha.data.model :as data.model]
             [reason-alpha.data-structures :as data-structs]
             [clojure.pprint :as pprint]))
 
-(defn getn []
-  (let [trade-patrns (data/query data.crux/db
-                                 {:spec '{:find  [(pull tp [*])]
-                                          :where [[tp :trade-pattern/id]]}})]
+(defn getn [db]
+  (let [trade-patrns (data.model/query db
+                                       {:spec '{:find  [(pull tp [*])]
+                                                :where [[tp :trade-pattern/id]]}})]
     trade-patrns))
 
-(defn get1 [id]
-  (data/any data.crux/db [:trade-pattern/id := id]))
+(defn get1 [db id]
+  (data.model/any db [:trade-pattern/id := id]))
 
-(defn save! [{:keys [trade-pattern/parent-id
-                     trade-pattern/id]
-              :as   trade-pattern}]
-  (let [tp          (data/save! data.crux/db trade-pattern)
+(defn save! [db {:keys [trade-pattern/parent-id
+                        trade-pattern/id]
+                 :as   trade-pattern}]
+  (let [tp          (data.model/save! db trade-pattern)
         parent-tp   (when parent-id
-                      (data/any data.crux/db {:spec '{:find  [(pull tp [*])]
-                                                      :where [[tp :trade-pattern/id id]]
-                                                      :in    [id]}
-                                              :args [parent-id]}))
+                      (data.model/any db {:spec '{:find  [(pull tp [*])]
+                                                  :where [[tp :trade-pattern/id id]]
+                                                  :in    [id]}
+                                          :args [parent-id]}))
         children-tp (when id
-                      (data/query data.crux/db {:spec '{:find  [(pull tp [*])]
-                                                        :where [[tp :trade-pattern/parent-id id]]
-                                                        :in    [id]}
-                                                :args [id]}))
+                      (data.model/query db {:spec '{:find  [(pull tp [*])]
+                                                    :where [[tp :trade-pattern/parent-id id]]
+                                                    :in    [id]}
+                                            :args [id]}))
         tps         (data-structs/conj-ancestors-path (cond-> [tp]
                                                         parent-tp         (conj parent-tp)
                                                         (seq children-tp) (into children-tp))
@@ -48,16 +47,16 @@
 
   )
 
-(defn delete! [trade-pattern-ids]
-  (let [children   (data/query data.crux/db {:spec '{:find  [(pull tp [*])]
-                                                     :where [[tp :trade-pattern/parent-id id]]
-                                                     :in    [[id ...]]}
-                                             :args [trade-pattern-ids]})
-        del-result (data/delete! data.crux/db {:spec '{:find  [tp]
-                                                       :where [(or [tp :trade-pattern/id id]
-                                                                   [tp :trade-pattern/parent-id id])]
-                                                       :in    [[id ...]]}
-                                               :args [trade-pattern-ids]})]
+(defn delete! [db trade-pattern-ids]
+  (let [children   (data.model/query db {:spec '{:find  [(pull tp [*])]
+                                                 :where [[tp :trade-pattern/parent-id id]]
+                                                 :in    [[id ...]]}
+                                         :args [trade-pattern-ids]})
+        del-result (data.model/delete! db {:spec '{:find  [tp]
+                                                   :where [(or [tp :trade-pattern/id id]
+                                                               [tp :trade-pattern/parent-id id])]
+                                                   :in    [[id ...]]}
+                                           :args [trade-pattern-ids]})]
     #_(def del-reslt del-result)
     (-> children
         (as-> cdn (map #(select-keys % [:trade-pattern/id]) cdn))

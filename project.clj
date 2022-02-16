@@ -5,7 +5,9 @@
   :license          {:name "EPL-2.0 OR GPL-2.0-or-later WITH Classpath-exception-2.0"
                      :url  "https://www.eclipse.org/legal/epl-2.0/"}
 
-  :dependencies [[cc.qbits/spandex "0.7.6"]
+  :dependencies [[buddy/buddy-core "1.10.413"]
+                 [buddy/buddy-sign "3.4.333"]
+                 [cc.qbits/spandex "0.7.6"]
                  [cheshire "5.8.1"]
                  [cljs-ajax "0.8.0"]
                  [com.andrewmcveigh/cljs-time "0.5.2"]
@@ -20,9 +22,11 @@
                  [day8.re-frame/http-fx "0.2.3"]
                  [functionalbytes/mount-lite "2.1.1"]
                  [http-kit "2.5.3"]
-                 [juxt/crux-core "21.06-1.17.1-beta"]
-                 [juxt/crux-rocksdb "21.06-1.17.1-beta"]
-                 [luminus-transit "0.1.2"]
+                 [integrant "0.8.0"]
+                 ;;[juxt/crux-core "21.06-1.17.1-beta"]
+                 ;;[juxt/crux-rocksdb "21.06-1.17.1-beta"]
+                 [com.xtdb/xtdb-core "1.20.0"]
+                 [com.xtdb/xtdb-rocksdb "1.20.0"]
                  [markdown-clj "1.10.0"]
                  [me.raynes/fs "1.4.6"]
                  [medley "1.3.0"]
@@ -36,15 +40,11 @@
                  [org.clojure/clojurescript "1.10.879" :scope "provided"]
                  [org.clojure/core.async "0.4.500"]
                  [org.clojure/core.cache "1.0.217"]
+                 [org.clojure/data.codec "0.1.1"]
                  [org.clojure/google-closure-library "0.0-20201211-3e6c510d" :scope "provided"]
                  [org.clojure/tools.cli "1.0.206"]
                  [org.clojure/tools.logging "1.1.0"]
                  [org.clojure/tools.reader "1.3.6"]
-                 [org.apache.ignite/ignite-core "2.7.5"]
-                 [org.apache.ignite/ignite-indexing "2.7.5"]
-                 [org.apache.ignite/ignite-spring "2.7.5"]
-                 [org.apache.ignite/ignite-spring-data "2.7.5"]
-                 [org.clojure/java.jdbc "0.7.10"]
                  [org.slf4j/slf4j-log4j12 "1.7.29"]
                  [prone "2019-07-08"]
                  [prismatic/schema "1.1.6"]
@@ -58,7 +58,8 @@
                  [ring-ttl-session "0.3.1"]
                  [selmer "1.12.17"]
                  [thheller/shadow-cljs "2.15.2" :scope "provided"]
-                 [traversy "0.5.0"]]
+                 [traversy "0.5.0"]
+                 [venantius/accountant "0.2.5"]]
 
   :main ^:skip-aot reason-alpha.core
 

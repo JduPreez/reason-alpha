@@ -4,19 +4,39 @@
             [reason-alpha.data :as data]
             [reason-alpha.utils :as utils]
             [reason-alpha.web.api-client :as api-client]
-            [reason-alpha.web.service-api :as svc-api]))
+            [reitit.frontend.controllers :as rfe-ctrls]
+            [reitit.frontend.easy :as rfe-easy]))
+
+(rf/reg-event-db
+ :initialize-db
+ (fn [db _]
+   (if db
+     db
+     {:current-route nil})))
 
 (rf/reg-event-fx
- :navigate
- (fn [{{:keys [view-models]
-        :as   db} :db} [_ {{vid :name} :data}]]
-   (let [db-out (->> {:view-id vid}
-                     (merge (get view-models vid))
-                     (assoc-in db data/active-view-model))]
-     (case vid
-       :trade-patterns {:db                      db-out
-                        :trade-pattern.query/get []}
-       {:db db-out}))))
+ :navigated
+ (fn [{:keys [db]} [_ {{:keys [name model
+                               data-subscription]} :data
+                       :as                         new-match}]]
+   (let [old-match   (:current-route db)
+         controllers (rfe-ctrls/apply-controllers (:controllers old-match) new-match)
+         updated-db  (-> db
+                         (assoc :current-route (assoc new-match :controllers controllers))
+                         (assoc-in data/active-view-model))]
+     (cond-> {:db       updated-db
+              :dispatch [:datagrid/update-history name]}
+       data-subscription (assoc data-subscription [])))))
+
+(rf/reg-fx
+ :push-state!
+ (fn [route]
+   (apply rfe-easy/push-state route)))
+
+(rf/reg-event-fx
+ :push-state
+ (fn [_ [_ & route]]
+   {:push-state! route}))
 
 (defn-traced save-local
   [db [_ type {:keys [result] :as new}]]
@@ -45,6 +65,7 @@
  :save-remote
  save-remote)
 
+;; TODO: Maybe rename & move to `data` ns?
 (defn fn-save [type success]
   (fn [_ [_ entity]]
     (let [cmd (-> type
@@ -54,14 +75,8 @@
       {:save-remote [cmd entity success]
        :dispatch    [:save-local type entity]})))
 
-#_(rf/reg-event-fx
- :save
- (fn [_ [_ type entity]]
-   {:dispatch-n [[:save-local type entity]
-                 [:save-remote type entity]]}))
-
 (defn entity-event-or-fx-key [db action]
-  (let [{:keys [model]} (get-in db data/active-view-model)]
+  (let [model (get-in db data/active-view-model)]
     (when model
       (-> model
           name
@@ -114,11 +129,6 @@
    (let [{:keys [model]} (get-in db data/active-view-model)
          ids             (map #(utils/maybe->uuid %) selected-ids)]
      (assoc-in db (conj data/selected model) ids))))
-
-(rf/reg-event-db
- :set-view-models
- (fn [db [_ view-models]]
-   (assoc db :view-models view-models)))
 
 (rf/reg-event-fx
  :edit

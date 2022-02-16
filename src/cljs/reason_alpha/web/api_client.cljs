@@ -11,6 +11,8 @@
 
 (def *chsk-state (atom nil))
 
+(def *chsk (atom nil))
+
 (def config {:type     :auto
              :packer   :edn
              :protocol :http
@@ -32,9 +34,11 @@
   (.warn js/console "New state" new-state))
 
 (defn create-client! []
-  (let [{:keys [ch-recv send-fn state]} (sente/make-channel-socket-client! "/chsk" nil config)]
+  (let [{:keys [ch-recv send-fn state chsk]} (sente/make-channel-socket-client! "/chsk" nil config)]
     (reset! *ch-chsk ch-recv)
     (reset! *chsk-send! send-fn)
+    (reset! *chsk chsk)
+    (reset! *chsk-state state)
     (add-watch state :state-watcher state-watcher)))
 
 (defn stop-router! []
@@ -44,6 +48,22 @@
   (stop-router!)
   (reset! *router (sente/start-client-chsk-router! @*ch-chsk handlers/event-msg-handler)))
 
+(defn auth-else-start []
+  (sente/ajax-lite
+   "http://localhost:5000/login"
+   {:method            :post
+    :with-credentials? true
+    :params            {}}
+
+   (fn [{:keys [?status]}]
+     (if (= ?status 401)
+       (set! js/window.location.href "/login.html")
+       (do
+         (create-client!)
+         (start-router!))))))
+
 (defn start! []
-  (create-client!)
-  (start-router!))
+  (auth-else-start))
+
+
+

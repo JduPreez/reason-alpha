@@ -1,21 +1,19 @@
 (ns reason-alpha.services.trade-pattern
-  (:require  [clojure.pprint :as pprint]
-             [reason-alpha.data.repositories.trade-pattern :as repo.trade-pattern]
-             [clojure.pprint :as pprint]))
+  (:require  [clojure.pprint :as pprint]))
 
 ; TODO: Improve error handling
-(defn getn [_qry] #_[{{{user-id :user-id} :path} :parameters}]
+(defn getn [fn-repo-getn _qry]
   (pprint/pprint {::get-trade-patterns _qry})
-  {:result (repo.trade-pattern/getn)}) ;; (choose db [:trade-pattern/*])
+  {:result (fn-repo-getn)}) ;; (choose db [:trade-pattern/*])
 
-(defn get1 [id]
-  {:result (repo.trade-pattern/get1 id)})
+(defn get1 [fn-repo-get1 id]
+  {:result (fn-repo-get1 id)})
 
-(defn save! [ent]
-  {:result (repo.trade-pattern/save! ent)})
+(defn save! [fn-repo-save! ent]
+  {:result (fn-repo-save! ent)})
 
-(defn delete! [ids]
-  {:result (repo.trade-pattern/delete! ids)})
+(defn delete! [fn-repo-delete! ids]
+  {:result (fn-repo-delete! ids)})
 
 #_(defmethod server/event-msg-handler
   :trade-pattern.query/get
