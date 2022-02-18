@@ -65,7 +65,7 @@
    :can-sort            true
    :can-edit            true
    :group-by            {:group-key  :trade-pattern/id
-                         :member-key :trade-pattern/parent-id} ;;:trade-pattern/parent-id
+                         :member-key :trade-pattern/parent-id}
    :checkbox-select     true
    :on-selection-change #(rf/dispatch [:select %1])
    :create-dispatch     [:trade-pattern.command/create]

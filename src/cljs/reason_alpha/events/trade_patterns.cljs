@@ -1,6 +1,5 @@
 (ns reason-alpha.events.trade-patterns
   (:require [re-frame.core :as rf]
-            [reason-alpha.data.trade-patterns :as tp-data]
             [reason-alpha.data :as data]
             [reason-alpha.web.api-client :as api-client]
             [reason-alpha.utils :as utils]
@@ -26,7 +25,7 @@
                             :trade-pattern/description ""}])]
      {:dispatch [:edit new-trd-patrns]
       :db       (update-in db
-                           tp-data/root
+                           data/trade-patterns
                            (fn [trd-patrns]
                              (into trd-patrns new-trd-patrns)))})))
 
@@ -61,10 +60,11 @@
    {:dispatch [:save-local :trade-pattern result]}))
 
 (rf/reg-fx
- :trade-pattern.query/get
+ :trade-pattern.query/getn
  (fn [_]
-   (cljs.pprint/pprint {:trade-pattern.query/get _})
-   (api-client/chsk-send! [:trade-pattern.query/get] {:on-success [:trade-pattern/success]})))
+   (cljs.pprint/pprint {:trade-pattern.query/getn _})
+   (api-client/chsk-send! [:trade-pattern.query/getn]
+                          {:on-success [:trade-pattern/success]})))
 
 (comment
   {:method          :get

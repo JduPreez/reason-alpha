@@ -14,10 +14,3 @@
 
 (defn delete! [fn-repo-delete! ids]
   {:result (fn-repo-delete! ids)})
-
-#_(defmethod server/event-msg-handler
-  :trade-pattern.query/get
-  [{:keys [?reply-fn] :as event}]
-  (pprint/pprint {:trade-pattern.query/get event})
-  (when ?reply-fn
-    (?reply-fn (get-trade-patterns))))

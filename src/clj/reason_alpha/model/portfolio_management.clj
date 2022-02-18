@@ -1,6 +1,6 @@
 (ns reason-alpha.model.portfolio-management
-  (:require [reason-alpha.model.core :as model :refer [def-model]]
-            [malli.instrument :as malli.instr]
+  (:require [malli.instrument :as malli.instr]
+            [reason-alpha.model.core :as model :refer [def-model]]
             [reason-alpha.model.fin-instruments :as model.fin-instruments]))
 
 (def-model TradePattern
@@ -17,7 +17,7 @@
    [:trade-transaction/id {:optional true} uuid?]
    [:trade-transaction/type [:enum :buy :sell :dividend :reinvest-divi
                              :corp-action :fee :tax :exchange-fee :stamp-duty]]
-   [:trade-transaction/time inst?]
+   [:trade-transaction/date inst?]
    [:trade-transaction/quantity decimal?]
    [:trade-transaction/price decimal?]
    [:trade-transaction/fee-of-transaction-id {:optional true} uuid?]
@@ -37,12 +37,15 @@
   [:map
    [:position/creation-id uuid?]
    [:position/id {:optional true} uuid?]
-   [:position/open-trade-transaction {:optional true} TradeTransaction]
+   [:position/status [:enum :open :closed]]
+   [:position/open-trade-transaction TradeTransaction]
    [:position/close-trade-transaction {:optional true} TradeTransaction]
    [:position/dividend-trade-transactions {:optional true} [:sequential TradeTransaction]]
-   [:position/instrument-id {:optional true} uuid?]])
+   [:position/instrument-id {:optional true} uuid?]
+   [:position/holding-position-id {:optional true} uuid?]
+   [:position/account-id uuid?]])
 
-(defn position-total-return
+#_(defn position-total-return
   "Also know as the Holding Period Yield"
   {:malli/schema
    [:=>

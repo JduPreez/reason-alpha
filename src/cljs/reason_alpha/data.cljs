@@ -7,6 +7,10 @@
 
 (def ^:const api-info [:data :api])
 
+(def ^:const trade-patterns [:data :trade-pattern])
+
+(def ^:const holdings [:data :holding])
+
 (defn entity-data [type]
   [:data type])
 

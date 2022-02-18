@@ -17,8 +17,8 @@
 (rf/reg-event-fx
  :navigated
  (fn [{:keys [db]} [_ {{:keys [name model
-                               data-subscription]} :data
-                       :as                         new-match}]]
+                               fetch-data-fx]} :data
+                       :as                     new-match}]]
    (let [old-match   (:current-route db)
          controllers (rfe-ctrls/apply-controllers (:controllers old-match) new-match)
          updated-db  (-> db
@@ -26,7 +26,7 @@
                          (assoc-in data/active-view-model))]
      (cond-> {:db       updated-db
               :dispatch [:datagrid/update-history name]}
-       data-subscription (assoc data-subscription [])))))
+       fetch-data-fx (assoc fetch-data-fx [])))))
 
 (rf/reg-fx
  :push-state!

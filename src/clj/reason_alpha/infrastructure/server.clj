@@ -1,18 +1,18 @@
 (ns reason-alpha.infrastructure.server
   (:require [clojure.core.async :as async  :refer (<! <!! >! >!! put! chan go go-loop)]
             [clojure.pprint :as pprint]
-            [compojure.core     :as comp :refer (defroutes GET POST ANY)]
-            [compojure.route    :as route]
+            [compojure.core :as comp :refer (defroutes GET POST ANY)]
+            [compojure.route :as route]
             [org.httpkit.server :as http-kit]
             [outpace.config :refer [defconfig]]
             [reason-alpha.infrastructure.auth :as auth]
             [ring.middleware.anti-forgery :as anti-forgery]
             [ring.middleware.cors :as ring-cors]
             [ring.middleware.defaults :as ring-defaults]
-            [taoensso.sente     :as sente]
+            [taoensso.sente :as sente]
             [taoensso.sente.packers.transit :as sente-transit]
             [taoensso.sente.server-adapters.http-kit :refer (get-sch-adapter)]
-            [taoensso.timbre    :as timbre :refer (tracef debugf infof warnf errorf)]))
+            [taoensso.timbre :as timbre :refer (tracef debugf infof warnf errorf)]))
 
 (defconfig allowed-origins)
 
@@ -70,7 +70,6 @@
            :body   {:result "Access denied"
                     :reason (when error "Error")}})))))
 
-;;;; Ring handlers
 (defroutes ring-routes
   (GET  "/chsk"  ring-req (ring-ajax-get-or-ws-handshake ring-req))
   (POST "/chsk"  ring-req (ring-ajax-post                ring-req))

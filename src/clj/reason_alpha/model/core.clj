@@ -1,6 +1,5 @@
 (ns reason-alpha.model.core
-  (:require [clojure.core.cache :as cache]
-            [clojure.pprint]
+  (:require [clojure.pprint]
             [malli.core :as m]
             [reason-alpha.utils :as utils]
             [traversy.lens :as tl]))

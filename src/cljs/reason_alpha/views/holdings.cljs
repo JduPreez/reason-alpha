@@ -1,23 +1,22 @@
-(ns reason-alpha.views.trades
+(ns reason-alpha.views.holdings
   (:require [reason-alpha.views.datagrid :as datagrid]
             [reason-alpha.views.trade-patterns :as views.trade-patterns]))
 
 (def fields
   [#_{:title "Open Date"
       :name  :open-date}
+   
+   {:title    "Instrument"
+    :name     [:holding/aggregate-position :position/instrument :instrument/name]
+    :can-sort true}
+   {:title "Quantity"
+    :name  [:holding/aggregate-position ] :trade-transaction/quantity}
+   {:title "Open Time"
+    :name  :trade-transaction/date}
    {:title "Trade Pattern"
-    :name  :trade-pattern
+    :name  ::trade-pattern/name
     :menu  [{:title "Edit"
              :view  ::views.trade-patterns/view}]}
-   {:title    "Security"
-    :name     :security
-    :can-sort true}
-   #_{:title "Long/Short"
-      :name  :long-short}
-   #_{:title "Trading Time Frame"
-      :name  :trading-time-frame}
-   {:title "Quantity"
-    :name  :quantity}
    #_{:title "Open"
       :name  :open}
    #_{:title "Close"
@@ -69,9 +68,9 @@
 
 (def options
   {:grid-id           ::view
-   :title             "Trades"
-   :data-subscription [:trades]
-   :id-field          :trade/id
+   :title             "Holdings"
+   :data-subscription [:holdings]
+   :id-field          :holding/id
    :can-sort          true})
 
 (defn view []

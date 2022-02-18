@@ -4,7 +4,7 @@
             [reagent.dom :as r.dom]
             [reason-alpha.views.main :as main]
             [reason-alpha.views.trade-patterns :as trade-patterns]
-            [reason-alpha.views.trades :as trades]
+            [reason-alpha.views.holdings :as holdings]
             [reason-alpha.views.datagrid :as datagrid]
             [reitit.coercion.spec :as rss]
             [reitit.core :as r]
@@ -25,16 +25,17 @@
 
 (def routes
   ["/"
-   ["" {:name  ::trades/view
-        :view  trades/view
-        :model :trade
+   ["" {:name          ::holdings/view
+        :view          holdings/view
+        :model         :holding
+        :fetch-data-fx :holding.query/getn
         :controllers
-        [{:start (fn [& params] (js/console.log "Entering :trades"))
-          :stop  (fn [& params] (js/console.log "Leaving :trades"))}]}]
-   ["trade-patterns" {:name              ::trade-patterns/view
-                      :view              trade-patterns/view
-                      :model             :trade-pattern
-                      :data-subscription :trade-pattern.query/get
+        [{:start (fn [& params] (js/console.log "Entering :holdings"))
+          :stop  (fn [& params] (js/console.log "Leaving :holdings"))}]}]
+   ["trade-patterns" {:name          ::trade-patterns/view
+                      :view          trade-patterns/view
+                      :model         :trade-pattern
+                      :fetch-data-fx :trade-pattern.query/getn
                       :controllers
                       [{:start (fn [& params] (cljs.pprint/pprint ["Entering :trade-patterns" params]))
                         :stop  (fn [& params] (js/console.log "Leaving :trade-patterns"))}]}]])

@@ -6,21 +6,23 @@
 
 (defn start
   ([load-test-data?]
+   (reason-alpha/start)
    (when load-test-data?
-     (dev-data/load-entity-test-data (::model/db model/system)))
-   (reason-alpha/-main))
+     (dev-data/load-entity-test-data (::model/db @model/*system))))
   ([]
-   (reason-alpha/-main)))
+   (reason-alpha/start)))
 
 (defn stop []
-  (model/stop-system!))
+  (reason-alpha/stop))
 
 (comment
-  (dev-data/load-entity-test-data (::model/db model/system))
+  (dev-data/load-entity-test-data (::model/db @model/*system))
 
   (start true)
 
   (start)
+
+  @model/*system
 
   (stop)
 

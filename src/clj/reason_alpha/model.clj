@@ -1,25 +1,16 @@
 (ns reason-alpha.model
   (:require [clojure.pprint :as pprint]
             [integrant.core :as ig]
-            [reason-alpha.data.xtdb :as xtdb]
+            [malli.instrument :as malli.instr]
             [reason-alpha.data.model :as data.model :refer [DataBase]]
+            [reason-alpha.data.repositories.position :as repo.position]
             [reason-alpha.data.repositories.trade-pattern :as repo.trade-pattern]
+            [reason-alpha.data.xtdb :as xtdb]
             [reason-alpha.infrastructure.server]
+            [reason-alpha.infrastructure.server :as server]
+            [reason-alpha.services.position :as svc.position]
             [reason-alpha.services.trade-pattern :as svc.trade-pattern]
-            [traversy.lens :as tl]
-            [reason-alpha.infrastructure.server :as server]))
-
-;; TODO: Route queries directly to repo functions.
-#_(def aggregates
-  {:trade-pattern
-   {:commands {:save!   svc.trade-pattern/save!
-               :delete! svc.trade-pattern/delete!}
-    :queries  {:get  svc.trade-pattern/getn
-               :get1 svc.trade-pattern/get1}} ;; TODO: Fix get-trade-pattern input args to handle command
-   :position
-   {:commands {:save! nil}
-    :queries  {:get  nil
-               :get1 nil}}})
+            [traversy.lens :as tl]))
 
 (defn handlers [aggregates]
   (-> aggregates
@@ -29,7 +20,7 @@
                      qries :queries}]]
          (letfn [(to-ns-keys [{:keys [commands queries]}]
                    (-> commands
-                       (or queries)
+                       (or queries {})
                        (tl/update
                         tl/all-keys
                         #(-> aggr-k
@@ -46,46 +37,80 @@
 (defmethod ig/halt-key! ::db [_ _]
   (data.model/disconnect xtdb/db))
 
+
+;; https://stackoverflow.com/questions/26116277/getting-argument-type-hints-of-a-function-in-clojure
 (defmethod ig/init-key ::aggregates [_ {:keys [db]}]
   {:trade-pattern
    {:commands {:save! (as-> db d
                         (partial repo.trade-pattern/save! d)
                         (partial svc.trade-pattern/save! d))}
-    ;; TODO: Change `:get` to `:getn`
-    :queries  {:get  (as-> db d
+    :queries  {:getn (as-> db d
                        (partial repo.trade-pattern/getn d)
                        (partial svc.trade-pattern/getn d))
-               :get1 svc.trade-pattern/get1}}})
+               :get1 svc.trade-pattern/get1}}
+   :position
+   {:commands {:save! (as-> db d
+                        (partial repo.position/save! d)
+                        (partial svc.position/save! d))}
+    :queries  {:getn (as-> db d
+                       (partial repo.position/getn d))}}})
 
 (defmethod ig/init-key ::handlers [_ {:keys [aggregates]}]
-  (pprint/pprint aggregates)
+  (pprint/pprint {::aggregates aggregates})
   (handlers aggregates))
 
 (defmethod ig/init-key ::server [_ {:keys [handlers]}]
+  (pprint/pprint {::handlers handlers})
   (server/start! handlers))
 
 (defmethod ig/halt-key! ::server [_ _]
   (server/stop!))
 
-(def sys-def
-  {::db         {}
-   ::aggregates {:db (ig/ref ::db)}
-   ::handlers   {:aggregates (ig/ref ::aggregates)}
-   ::server     {:handlers (ig/ref ::handlers)}})
+(defmethod ig/init-key ::instrumentation [_ {:keys [nss]}]
+  (doall
+   (for [n nss]
+     (malli.instr/collect! {:ns (the-ns n)})))
+  (malli.instr/instrument!))
 
-(def system
-  (ig/init sys-def))
+(defmethod ig/halt-key! ::instrumentation [_ _]
+  (malli.instr/unstrument!))
+
+(def sys-def
+  {::db              {}
+   ::aggregates      {:db (ig/ref ::db)}
+   ::handlers        {:aggregates (ig/ref ::aggregates)}
+   ::server          {:handlers (ig/ref ::handlers)}
+   ::instrumentation {:nss ['reason-alpha.data.model
+                            'reason-alpha.data.repositories.position
+                            'reason-alpha.services.position]}})
+
+(def *system
+  (atom nil))
+
+(defn start-system []
+  (reset! *system (ig/init sys-def)))
 
 (defn stop-system! []
-  (ig/halt! system))
+  (ig/halt! @*system))
 
 (comment
-  (let [m {:trade-pattern
-           {:commands {:save! nil},
-            :queries
-            {:get  nil,
-             :get1 nil}}}]
-    (handlers m))
+  (require '[malli.instrument :as malli.instr])
+
+  (start-system)
+
+  @*system
+
+  (let [aggregates {:trade-pattern
+                    {:commands
+                     {:save!
+                      0},
+                     :queries
+                     {:getn 1,
+                      :get1 2}},
+                    :holding
+                    {:commands
+                     {:save! 3}}}]
+    (handlers aggregates))
 
   (let [m        (ig/init config)
         id       :trade-pattern.query/get
