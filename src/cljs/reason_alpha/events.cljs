@@ -23,7 +23,7 @@
          controllers (rfe-ctrls/apply-controllers (:controllers old-match) new-match)
          updated-db  (-> db
                          (assoc :current-route (assoc new-match :controllers controllers))
-                         (assoc-in data/active-view-model))]
+                         (assoc-in data/active-view-model model))]
      (cond-> {:db       updated-db
               :dispatch [:datagrid/update-history name]}
        fetch-data-fx (assoc fetch-data-fx [])))))
@@ -88,11 +88,12 @@
   "Derives the correct toolbar data event-fx from the current
   active model, and dispatches it."
   [{:keys [db]} [action]]
-  (let [{:keys [model]} (get-in db data/active-view-model)
-        event           [(keyword (str (name model)
-                                       ".command/"
-                                       (name action)))]]
-    (cljs.pprint/pprint {::action-event [action event]})
+  (let [model (get-in db data/active-view-model)
+        _     (cljs.pprint/pprint {::action-event-1 model})
+        event [(keyword (str (name model)
+                             ".command/"
+                             (name action)))]]
+    (cljs.pprint/pprint {::action-event-2 [action event]})
     (if model
       {:dispatch event}
       {})))

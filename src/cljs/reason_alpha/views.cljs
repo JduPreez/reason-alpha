@@ -4,7 +4,7 @@
             [reagent.dom :as r.dom]
             [reason-alpha.views.main :as main]
             [reason-alpha.views.trade-patterns :as trade-patterns]
-            [reason-alpha.views.holdings :as holdings]
+            [reason-alpha.views.positions :as positions]
             [reason-alpha.views.datagrid :as datagrid]
             [reitit.coercion.spec :as rss]
             [reitit.core :as r]
@@ -25,10 +25,10 @@
 
 (def routes
   ["/"
-   ["" {:name          ::holdings/view
-        :view          holdings/view
-        :model         :holding
-        :fetch-data-fx :holding.query/getn
+   ["" {:name          ::positions/view
+        :view          positions/view
+        :model         :position
+        :fetch-data-fx :position.query/getn
         :controllers
         [{:start (fn [& params] (js/console.log "Entering :holdings"))
           :stop  (fn [& params] (js/console.log "Leaving :holdings"))}]}]

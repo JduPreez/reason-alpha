@@ -1,15 +1,22 @@
 (ns reason-alpha.model.fin-instruments
   (:require [reason-alpha.model.core :as model :refer [def-model]]))
 
+(def-model Provider
+  :model/provider
+  [:enum {:provider/titles {:yahoo-finance "Yahoo! Finance"
+                            :saxo-dma      "Saxo/DMA"
+                            :easy-equities "Easy Equities"}}
+   :yahoo-finance :saxo-dma :easy-equities])
+
 (def-model Symbol
-  ^:symbol
+  :model/symbol
   [:map
    [:symbol/ticker [:string {:min 1}]]
    [:symbol/instrument-id uuid?]
-   [:symbol/provider [:enum :yahoo-finance :saxo-dma :easy-equities]]])
+   [:symbol/provider [:ref :model/provider]]])
 
 (def-model Price
-  ^:instrument-price
+  :model/instrument-price
   [:map
    [:price/creation-id uuid?]
    [:price/id uuid?]
@@ -23,7 +30,7 @@
    [:price/volume int?]])
 
 (def-model Instrument
-  ^:instrument
+  :model/instrument
   [:map
    [:instrument/creation-id uuid?]
    [:instrument/id {:optional true} uuid?]
@@ -31,4 +38,5 @@
    [:instrument/symbols {:optional true} [:sequential Symbol]]
    [:instrument/type [:enum :share :etf :currency :crypto]]
    [:instrument/currency-instrument-id uuid?]
-   [:instrument/prices {:optional true} [:sequential Price]]])
+   [:instrument/prices {:optional true} [:sequential Price]]
+   [:instrument/account-id uuid?]])

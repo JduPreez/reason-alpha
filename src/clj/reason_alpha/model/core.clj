@@ -6,7 +6,7 @@
 
 (def *model (atom {}))
 
-(def *model-keys-mapping (atom {}))
+#_(def *model-keys-mapping (atom {}))
 
 (defn get-type-key [ns-key schema]
   (->> schema
@@ -15,19 +15,31 @@
        (some (fn [[k v]] (when (true? v) k)))))
 
 (defn +def! [add-m]
-  (let [updtd-m          (merge @*model add-m)
-        updtd-m-keys-map (->> add-m
-                              (map (fn [[k v]]
-                                     (when-let [tpe-k (get-type-key k v)]
-                                       [tpe-k k])))
-                              (remove nil?)
-                              (into {})
-                              (merge @*model-keys-mapping))]
+  (let [updtd-m              (merge @*model add-m)
+        #_#_updtd-m-keys-map (->> add-m
+                                  (map (fn [[k v]]
+                                         (when-let [tpe-k (get-type-key k v)]
+                                           [tpe-k k])))
+                                  (remove nil?)
+                                  (into {})
+                                  (merge @*model-keys-mapping))]
     (reset! *model updtd-m)
-    (reset! *model-keys-mapping updtd-m-keys-map)
+    #_(reset! *model-keys-mapping updtd-m-keys-map)
     add-m))
 
-(defmacro def-model [sym new-m]
+(defmacro def-model [sym ref-key new-m]
+  `(let [add-def# {ref-key ~new-m}]
+     (do
+       (def ~sym ~new-m)
+       (+def! add-def#))))
+
+(defn get-schema [model-k]
+  [:schema {:registry @*model} model-k])
+
+(defn get-defs [model-ks]
+  (select-keys @*model model-ks))
+
+#_(defmacro def-model [sym new-m]
   `(let [ns#      (str *ns*)
          sym-nm#  (name '~sym)
          malli-k# (keyword (str ns# "/" sym-nm#))
@@ -36,18 +48,7 @@
        (def ~sym ~new-m)
        (+def! add-def#))))
 
-(comment
-  (str *ns*)
-
-  (macroexpand-1 '(def-model Test [:the :model]))
-
-  (def-model Test ^:test [:the :model])
-
-  (reset! *model-keys-mapping {})
-
-  )
-
-(defn get-def [model-k]
+#_(defn get-def [model-k]
   (let [ns-model-k (get @*model-keys-mapping model-k)]
     [:schema {:registry @*model} ns-model-k]))
 

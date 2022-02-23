@@ -3,7 +3,7 @@
 
 (def =>delete! [:=>
                 [:catn [:vector any?]]
-                [:map
+              [:map
                  [:was-deleted? boolean?]
                  [:num-deleted int?]
                  [:message {:optional true} string?]]])

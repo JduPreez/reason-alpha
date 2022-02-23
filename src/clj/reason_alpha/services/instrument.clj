@@ -1,7 +1,7 @@
-(ns reason-alpha.services.position
+(ns reason-alpha.services.instrument
   (:require [malli.core :as m]
             [reason-alpha.model.common :as common]
-            [reason-alpha.model.portfolio-management :as portfolio-management]
+            [reason-alpha.model.fin-instruments :as fin-instruments]
             [taoensso.timbre :as timbre :refer (errorf)]))
 
 (m/=> save! [:=>
@@ -9,9 +9,9 @@
               [:=>
                [:cat
                 :any
-                portfolio-management/Position]
-               portfolio-management/Position]]
-             (common/result-schema portfolio-management/Position)])
+                fin-instruments/Instrument]
+               fin-instruments/Instrument]]
+             (common/result-schema fin-instruments/Instrument)])
 
 (defn save!
   [fn-repo-save! fn-get-account ent]
@@ -19,7 +19,7 @@
     (let [{:keys [account/id]} (fn-get-account ent)]
 
       (if id
-        {:result (fn-repo-save! (assoc ent :position/account-id id))
+        {:result (fn-repo-save! (assoc ent :instrument/account-id id))
          :type   :success}
         {:description "No account found."
          :type        :error}))

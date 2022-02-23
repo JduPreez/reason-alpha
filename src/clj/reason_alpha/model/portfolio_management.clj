@@ -4,7 +4,7 @@
             [reason-alpha.model.fin-instruments :as model.fin-instruments]))
 
 (def-model TradePattern
-  ^:trade-pattern
+  :model/trade-pattern
   [:map
    [:trade-pattern/creation-id uuid?]
    [:trade-pattern/id {:optional true} uuid?]
@@ -27,13 +27,13 @@
 ;; We have to define entity schemas like this because function schemas
 ;; don't support recursive references
 (def-model TradeTransaction
-  ^:trade-transaction
+  :model/trade-transaction
   (conj Transaction
         [:trade-transaction/fee-transactions {:optional true}
          [:sequential Transaction]]))
 
 (def-model Position
-  ^:position
+  :model/position
   [:map
    [:position/creation-id uuid?]
    [:position/id {:optional true} uuid?]
@@ -44,6 +44,19 @@
    [:position/instrument-id {:optional true} uuid?]
    [:position/holding-position-id {:optional true} uuid?]
    [:position/account-id uuid?]])
+
+(def PositionDto
+  [:map
+   [:creation-id uuid?]
+   [:id {:optional true} uuid?]
+   [:instrument-id uuid?]
+   [:instrument-name string?]
+   [:quantity decimal?]
+   [:symbols {:optional true} string?]
+   [:open-price decimal?]
+   [:close-price {:optional true} decimal?]
+   [:trade-pattern-name {:optional true} string?]
+   [:holding-position-id {:optional true} string?]])
 
 #_(defn position-total-return
   "Also know as the Holding Period Yield"

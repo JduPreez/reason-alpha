@@ -1,22 +1,23 @@
 (ns reason-alpha.data.repositories.position
-  (:require [reason-alpha.model.portfolio-management :as portfolio-management]
+  (:require [malli.core :as m]
             [reason-alpha.data.model :as data.model]
+            [reason-alpha.model.portfolio-management :as portfolio-management]
             [taoensso.timbre :as timbre :refer (tracef debugf infof warnf errorf)]))
 
+(m/=> save! [:=>
+             [:cat
+              :any
+              portfolio-management/Position]
+             portfolio-management/Position])
+
 (defn save!
-  {:malli/schema
-   [:=>
-    [:cat
-     :any
-     portfolio-management/Position]
-    portfolio-management/Position]}
   [db position]
   (data.model/save! db position))
 
 (defn getn [db account-id]
   (let [positions (data.model/query
                    db
-                   {:spec '{:find  [(pull h [*])]
-                            :where [[h :position/account-id account-id]]
+                   {:spec '{:find  [(pull p [*])]
+                            :where [[p :position/account-id account-id]]
                             :in    [account-id]}})]
     positions))

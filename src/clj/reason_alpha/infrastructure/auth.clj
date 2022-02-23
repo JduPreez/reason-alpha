@@ -5,7 +5,10 @@
             [clojure.data.codec.base64 :as b64]
             [clojure.java.io :as io]
             [clojure.string :as str]
-            [outpace.config :refer [defconfig]]))
+            [malli.core :as m]
+            [outpace.config :refer [defconfig]]
+            [reason-alpha.model.account :as account]
+            [reason-alpha.model.common :as common]))
 
 (defconfig tenant-id)
 
@@ -13,7 +16,7 @@
                             slurp
                             keys/str->public-key)))
 
-(defn verify-token [token & [public-key]]
+(defn token-data [token & [public-key]]
   (try
     (let [pk                           (or public-key @*public-key)
           {:keys [userId] :as content} (jwt/unsign token pk {:alg :rs256})]
@@ -27,6 +30,20 @@
   {:access-token  (get-in cookies [(str "access." tenant-id) :value])
    :user-token    (get-in cookies [(str "id." tenant-id) :value])
    :refresh-token (get-in cookies [(str "refresh." tenant-id) :value])})
+
+(m/=> account
+      [:=> [:cat :any]
+       account/AccountDto])
+
+;; TODO: This must be cached
+(defn account [request]
+  (let [{:keys [user-token] :as tokens}              (tokens request)
+        {:keys [userUuid email username name image]} (token-data user-token)]
+    {:user-id   userUuid
+     :user-name username
+     :email     email
+     :name      name
+     :image     image}))
 
 (comment
 

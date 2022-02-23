@@ -6,6 +6,7 @@
             [org.httpkit.server :as http-kit]
             [outpace.config :refer [defconfig]]
             [reason-alpha.infrastructure.auth :as auth]
+            [reason-alpha.model.common :as common]
             [ring.middleware.anti-forgery :as anti-forgery]
             [ring.middleware.cors :as ring-cors]
             [ring.middleware.defaults :as ring-defaults]
@@ -20,8 +21,10 @@
 (reset! sente/debug-mode?_ true) ; Uncomment for extra debug info
 
 (defn authenticated? [{:keys [request-method compojure/route] :as request}]
-  (let [{:keys [user-token] :as tokens}                (auth/tokens request)
-        {:keys [is-valid? error userUuid email] :as x} (auth/verify-token user-token)]
+  (let [{:keys [is-valid? error userUuid email]} (-> request
+                                                     auth/tokens
+                                                     :user-token
+                                                     auth/token-data)]
     (debugf "User autenticated? %s (%s): %b" userUuid email is-valid?)
 
     (or (= request-method :options)
@@ -57,8 +60,10 @@
 (defn login-handler
   [{:keys [request-method] :as request}]
   (when (not= request-method :options)
-    (let [{:keys [user-token] :as tokens}          (auth/tokens request)
-          {:keys [is-valid? error userUuid email]} (auth/verify-token user-token)]
+    (let [{:keys [is-valid? error userUuid email]} (-> request
+                                                       auth/tokens
+                                                       :user-token
+                                                       auth/token-data)]
       (debugf "Verified login of user %s (%s): %b" userUuid email is-valid?)
 
       (if is-valid?
@@ -118,12 +123,15 @@
 (defn server-event-msg-handler
   "Wraps `-event-msg-handler` with logging, error catching, etc."
   [handlers {:as ev-msg :keys [id ?data event ?reply-fn ring-req uid]}]
-  (let [fun (get handlers id)]
+  (let [fun     (get handlers id)
+        account (auth/account ring-req)
+        data    (common/set-context ?data {:user-account account
+                                           :send-message #(chsk-send! uid %)})]
     (if fun
       (do
         (debugf "Event handler found: %s" id)
         (if ?reply-fn
-          (?reply-fn (fun ?data))
+          (?reply-fn (fun data))
           (fun ?data)))
       (do
         (debugf "Unhandled event: %s" event)

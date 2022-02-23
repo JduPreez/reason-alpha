@@ -11,8 +11,10 @@
   (-event-msg-handler ev-msg))
 
 (defmethod -event-msg-handler :default
-  [{:keys [event]}]
-  (cljs.pprint/pprint ["Unhandled event:" (js->clj event)]))
+  [{:keys [id event ?data]}]
+  (if (= (namespace id) "chsk"
+         (cljs.pprint/pprint ["Unhandled event:" (js->clj event)]))
+    (rf/dispatch [id ?data])))
 
 (defmethod -event-msg-handler :chsk/recv
   [{:keys [?data]}]
