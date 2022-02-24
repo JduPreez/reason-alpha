@@ -1,14 +1,14 @@
 (ns reason-alpha.views.positions
   (:require [reason-alpha.views.datagrid :as datagrid]
+            [reason-alpha.views.instruments :as views.instruments]
             [reason-alpha.views.trade-patterns :as views.trade-patterns]))
 
 (def fields
   [{:title    "Instrument"
     :name     :instrument-name
     :can-sort true
-    ;;:menu     [{:title "Edit"
-    ;;            :view  ::views.instruments/view}]
-    }
+    :menu     [{:title "Edit"
+                :view  ::views.instruments/view}]}
    {:title "Quantity"
     :name  :trade-transaction-quantity}
    {:title "Open Time"

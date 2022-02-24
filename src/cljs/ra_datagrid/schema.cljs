@@ -120,4 +120,5 @@
    ;;for a future feature for exporting the current grid as it's displaying now, we want to allow this.
    ;;we'll base it on SheetJS cljsjs package: https://github.com/cljsjs/packages/tree/master/xlsx
    (s/optional-key :excel-formatter)              s/Any
-   (s/optional-key :menu)                         s/Any})
+   (s/optional-key :menu)                         s/Any
+   (s/optional-key :data-subscription)            s/Any})

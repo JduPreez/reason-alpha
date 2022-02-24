@@ -11,8 +11,3 @@
  (fn [db [_ {:keys [result]}]]
    (let [models (get-in db data/models {})]
      (assoc-in db data/models (merge models result)))))
-
-(rf/reg-event-fx
- :model.query/getn
- (fn [_ [_ model-ks]]
-   (api-client/chsk-send! [:model.query/getn model-ks])))

@@ -38,48 +38,6 @@
   (into {} (for [[k v] item]
              [(keyword k) v])))
 
-(defn entity-ns [m]
-           (-> (keys m)
-               first
-               namespace))
-
-(defn creation-id-key-by-type [type]
-  (-> type
-      name
-      (str "/creation-id")
-      keyword))
-
-(defn creation-id-key [m]
-  (keyword (str (entity-ns m) "/creation-id")))
-
-(defn id-key-by-type [type]
-  (-> type
-      name
-      (str "/id")
-      keyword))
-
-(defn id-key [m]
-  (keyword (str (entity-ns m) "/id")))
-
-(defn merge-by-id [maps1 maps2]
-  (let [m         (first (or maps2 maps1))
-        id-k      (id-key m)
-        crtn-id-k (creation-id-key m)
-        updated   (-> (remove
-                       (fn [m1]
-                         (some #(let [id-val1      (id-k m1)
-                                      crtn-id-val1 (crtn-id-k m1)
-                                      id-val2      (id-k %)
-                                      crtn-id-val2 (crtn-id-k %)]
-                                  (when (or (and (contains? m1 id-k)
-                                                 (= id-val1 id-val2))
-                                            (and (not (contains? m1 id-k))
-                                                 (= crtn-id-val1 crtn-id-val2)))
-                                    %)) maps2))
-                       maps1)
-                      (into maps2))]
-    updated))
-
 #?(:cljs
    (defn log [& args]
      (apply js/console.log (conj (vec (map str (butlast args)))

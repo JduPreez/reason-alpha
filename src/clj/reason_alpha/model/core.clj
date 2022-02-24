@@ -28,13 +28,16 @@
     add-m))
 
 (defmacro def-model [sym ref-key new-m]
-  `(let [add-def# {ref-key ~new-m}]
+  `(let [add-def# {~ref-key ~new-m}]
      (do
        (def ~sym ~new-m)
        (+def! add-def#))))
 
 (defn get-schema [model-k]
   [:schema {:registry @*model} model-k])
+
+(defn get-def [model-k]
+  (get @*model model-k))
 
 (defn get-defs [model-ks]
   (select-keys @*model model-ks))

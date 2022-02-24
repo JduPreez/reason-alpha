@@ -2,6 +2,7 @@
   (:require [day8.re-frame.tracing :refer-macros [fn-traced defn-traced]]
             [re-frame.core :as rf]
             [reason-alpha.data :as data]
+            [reason-alpha.model.utils :as model.utils]
             [reason-alpha.utils :as utils]
             [reason-alpha.web.api-client :as api-client]
             [reitit.frontend.controllers :as rfe-ctrls]
@@ -48,7 +49,7 @@
                            (map? (first new-val))) new-val
                       (map? new-val)               [new-val])
         merged-coll (when new-coll
-                      (utils/merge-by-id current new-coll))]
+                      (model.utils/merge-by-id current new-coll))]
     (-> db
         (assoc-in [:loading type] false)
         (assoc-in [:data type] (or merged-coll new-val))
@@ -136,7 +137,7 @@
  (fn [{:keys [db]} [_ entities]]
    (let [{:keys [view-id]} (get-in db data/active-view-model)]
      {:dispatch-n (mapv #(let [creation-id (->> %
-                                                utils/creation-id-key
+                                                model.utils/creation-id-key
                                                 (get %))]
                            [:datagrid/start-edit view-id creation-id %])
                         entities)})))

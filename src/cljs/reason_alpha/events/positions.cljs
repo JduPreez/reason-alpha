@@ -3,6 +3,12 @@
             [re-frame.core :as rf]
             [reason-alpha.web.api-client :as api-client]))
 
+(rf/reg-event-fx
+ :position/success
+ (fn [_ [_ result]]
+   (cljs.pprint/pprint {:position/success result})
+   #_{:dispatch [:save-local :position result]}))
+
 (rf/reg-fx
  :position.query/getn
  (fn [_]

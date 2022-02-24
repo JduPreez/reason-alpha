@@ -2,10 +2,11 @@
   (:require [accountant.core :as accountant]
             [re-frame.core :as rf]
             [reagent.dom :as r.dom]
-            [reason-alpha.views.main :as main]
-            [reason-alpha.views.trade-patterns :as trade-patterns]
-            [reason-alpha.views.positions :as positions]
             [reason-alpha.views.datagrid :as datagrid]
+            [reason-alpha.views.instruments :as instruments]
+            [reason-alpha.views.main :as main]
+            [reason-alpha.views.positions :as positions]
+            [reason-alpha.views.trade-patterns :as trade-patterns]
             [reitit.coercion.spec :as rss]
             [reitit.core :as r]
             [reitit.frontend :as rfe]
@@ -38,7 +39,11 @@
                       :fetch-data-fx :trade-pattern.query/getn
                       :controllers
                       [{:start (fn [& params] (cljs.pprint/pprint ["Entering :trade-patterns" params]))
-                        :stop  (fn [& params] (js/console.log "Leaving :trade-patterns"))}]}]])
+                        :stop  (fn [& params] (js/console.log "Leaving :trade-patterns"))}]}]
+   ["instruments" {:name          ::instruments/view
+                   :view          instruments/view
+                   :model         :instrument
+                   :fetch-data-fx :instrument.query/getn}]])
 
 (defn on-navigate [new-match]
   (when new-match

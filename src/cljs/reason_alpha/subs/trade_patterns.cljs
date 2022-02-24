@@ -10,8 +10,7 @@
 
 (rf/reg-sub
  :trade-pattern
- (fn [_ [_ _id]]
-   (rf/subscribe [:trade-patterns]))
+ :<- [:trade-patterns]
  (fn [trade-patterns [_ id]]
    (some #(when (= id (:trade-pattern/id %)) %)
          trade-patterns)))

@@ -12,11 +12,12 @@
             [reason-alpha.infrastructure.server]
             [reason-alpha.infrastructure.server :as server]
             [reason-alpha.model.account :as account]
+            [reason-alpha.model.common :as common]
             [reason-alpha.services.account :as svc.account]
             [reason-alpha.services.instrument :as svc.instrument]
+            [reason-alpha.services.model :as svc.model]
             [reason-alpha.services.position :as svc.position]
             [reason-alpha.services.trade-pattern :as svc.trade-pattern]
-            [reason-alpha.services.model :as svc.model]
             [traversy.lens :as tl]))
 
 (defn handlers [aggregates]

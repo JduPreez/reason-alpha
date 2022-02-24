@@ -1,5 +1,5 @@
 (ns reason-alpha.data
-  (:require [reason-alpha.utils :as utils]))
+  (:require [reason-alpha.model.utils :as model.utils]))
 
 (def ^:const selected [:selected])
 
@@ -24,7 +24,7 @@
         del-col        (if (coll? deleted)
                          deleted
                          [deleted])
-        id-k           (utils/id-key (first del-col))
+        id-k           (model.utils/id-key (first del-col))
         entities       (get-in db data-path)
         remaining-ents (remove
                         (fn [e]
@@ -58,8 +58,8 @@
   (let [selctd-creation-ids (->> type
                                  (conj selected)
                                  (get-in db))
-        creation-id-k       (utils/creation-id-key-by-type type)
-        id-k                (utils/id-key-by-type type)
+        creation-id-k       (model.utils/creation-id-key-by-type type)
+        id-k                (model.utils/id-key-by-type type)
         idx-ents            (->> type
                                  entity-data
                                  (get-in db)

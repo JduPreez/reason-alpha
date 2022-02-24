@@ -7,16 +7,17 @@
             [re-frame.core :as rf]
             [reagent.dom :as r.dom]
             [reason-alpha.events]
-            [reason-alpha.events.trade-patterns]
+            [reason-alpha.events.instruments]
+            [reason-alpha.events.models]
             [reason-alpha.events.positions]
+            [reason-alpha.events.trade-patterns]
             [reason-alpha.subs]
-            [reason-alpha.subs.trade-patterns]
+            [reason-alpha.subs.instruments]
+            [reason-alpha.subs.models]
             [reason-alpha.subs.positions]
+            [reason-alpha.subs.trade-patterns]
             [reason-alpha.views :as views]
-            [reason-alpha.views.main :as main]
-            [reason-alpha.views.trade-patterns :as trade-patterns]
             [reason-alpha.web.api-client :as api-client]
-            [reitit.core :as reitit]
             [reason-alpha.web.handlers :as handlers])
   (:import goog.History))
 
