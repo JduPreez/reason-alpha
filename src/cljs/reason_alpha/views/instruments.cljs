@@ -46,4 +46,5 @@
 
 (defn view []
   (let [*symbol-providers (rf/subscribe [:models/members-of :model/symbol :symbol/provider])]
+    (cljs.pprint/pprint {::view @*symbol-providers})
     [datagrid/view fields #_(fields @*symbol-providers) options]))

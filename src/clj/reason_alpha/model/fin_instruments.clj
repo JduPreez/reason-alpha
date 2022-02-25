@@ -19,11 +19,11 @@
    [:price/id uuid?]
    [:price/symbol Symbol]
    [:price/date inst?]
-   [:price/open decimal?]
-   [:price/close decimal?]
-   [:price/high decimal?]
-   [:price/low decimal?]
-   [:price/adj-close decimal?]
+   [:price/open float?]
+   [:price/close float?]
+   [:price/high float?]
+   [:price/low float?]
+   [:price/adj-close float?]
    [:price/volume int?]])
 
 (def-model Instrument

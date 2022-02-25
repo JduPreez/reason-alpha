@@ -18,5 +18,13 @@
 (defn set-context [data ctx]
   (if (and data (instance? clojure.lang.IObj
                            data))
-    (with-meta data ctx)
+    (with-meta data {:context ctx})
     data))
+
+(comment
+
+  (let [d (set-context [:one :two] {:something "very cool"})]
+    (get-context d))
+  
+
+  )

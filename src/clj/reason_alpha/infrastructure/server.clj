@@ -123,16 +123,16 @@
 (defn server-event-msg-handler
   "Wraps `-event-msg-handler` with logging, error catching, etc."
   [handlers {:as ev-msg :keys [id ?data event ?reply-fn ring-req uid]}]
+  (clojure.pprint/pprint {::server-event-msg-handler ev-msg})
   (let [fun     (get handlers id)
         account (auth/account ring-req)
         data    (common/set-context ?data {:user-account account
                                            :send-message #(chsk-send! uid %)})]
     (if fun
-      (do
-        (debugf "Event handler found: %s" id)
-        (if ?reply-fn
-          (?reply-fn (fun data))
-          (fun ?data)))
+      (let [_      (debugf "Event handler found: %s" id) ;; Log before calling `fun` might throw exception
+            result (fun data)]
+        (when ?reply-fn
+          (?reply-fn result)))
       (do
         (debugf "Unhandled event: %s" event)
         (when ?reply-fn
@@ -175,6 +175,7 @@
 
 (defn start! [handlers]
   (start-router! handlers)
-  (let [*ws (start-web-server! 5000)]
+  (start-web-server! 5000)
+  #_(let [*ws (start-web-server! 5000)]
     (start-example-broadcaster!)
     *ws))
