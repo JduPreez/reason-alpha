@@ -49,12 +49,11 @@
   [:map
    [:creation-id uuid?]
    [:id {:optional true} uuid?]
-   [:instrument-id uuid?]
-   [:instrument-name string?]
-   [:quantity decimal?]
+   [:instrument-id {:ref :instrument} uuid?]
+   [:quantity float?]
    [:symbols {:optional true} string?]
-   [:open-price decimal?]
-   [:close-price {:optional true} decimal?]
+   [:open-price float?]
+   [:close-price {:optional true} float?]
    [:trade-pattern-name {:optional true} string?]
    [:holding-position-id {:optional true} string?]])
 

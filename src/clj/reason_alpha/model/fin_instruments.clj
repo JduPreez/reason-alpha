@@ -1,5 +1,6 @@
 (ns reason-alpha.model.fin-instruments
-  (:require [reason-alpha.model.core :as model :refer [def-model]]))
+  (:require [reason-alpha.model.core :as model :refer [def-model]]
+            [reason-alpha.model.utils :as model.utils]))
 
 (def-model Symbol
   :model/symbol
@@ -42,3 +43,45 @@
    [:instrument/currency-instrument-id uuid?]
    [:instrument/prices {:optional true} [:sequential Price]]
    [:instrument/account-id uuid?]])
+
+(let [{{ptitles :enum/titles} :properties
+       providers              :members} (model.utils/get-model-members-of
+                                         Symbol
+                                         :symbol/provider)
+      symbols-schema                    (for [p    providers
+                                              :let [t (get ptitles p)]]
+                                          [(keyword "symbol" (name p))
+                                           {:title    t
+                                            :optional true} string?])]
+  (def-model InstrumentDao
+    :model/instrument-dao
+    (into
+     [:map
+      [:instrument-id {:optional true} uuid?]
+      [:instrument-creation-id uuid?]
+      [:instrument-name {:title    "Instrument"
+                         :optional true} string?]]
+     cat
+     [providers-schema
+      [[:instrument-type {:title    "Type"
+                          :optional true} keyword?]]])))
+
+(comment
+  (let [{{ptitles :enum/titles} :properties
+         providers              :members} (model.utils/get-model-members-of
+                                           Symbol
+                                           :symbol/provider)
+        providers-schema                  (for [p    providers
+                                                :let [t (get ptitles p)]]
+                                            [p {:title    t
+                                                :optional true} keyword?])]
+      (into
+       [:map
+        [:instrument-name {:title    "Instrument"
+                           :optional true} string?]]
+       cat
+       [providers-schema
+        [[:instrument-type {:title    "Type"
+                            :optional true} keyword?]]]))
+
+  )

@@ -1,6 +1,8 @@
 (ns reason-alpha.events.instruments
   (:require [day8.re-frame.tracing :refer-macros [fn-traced defn-traced]]
             [re-frame.core :as rf]
+            [reason-alpha.data :as data]
+            [reason-alpha.model.utils :as model.utils]
             [reason-alpha.web.api-client :as api-client]))
 
 (rf/reg-event-fx
@@ -19,5 +21,12 @@
 
 (rf/reg-event-fx
  :instrument.command/add
- (fn-traced [{:keys [db]} _]
+ (fn [{:keys [db]} _]
+   (let [instrs           (get-in db (data/entity-data :instrument))
+         symbol-providers (-> db
+                              (get-in data/models)
+                              (get :model/symbol)
+                              (model.utils/get-model-members-of :symbol/provider))
+         
+         new-instr {:instrument-}])
    {:db db}))

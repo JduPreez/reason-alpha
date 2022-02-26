@@ -2,11 +2,10 @@
   (:require [reason-alpha.views.datagrid :as datagrid]
             [re-frame.core :as rf]))
 
-#_(defn fields [providers-model]
-  (let [{{ptitles :enum/titles} :properties
-         providers              :members} providers-model
-
-        symbol-fields (for [p    providers
+(defn fields [[_ & members]]
+  (for [m members]
+    )
+  #_(let [symbol-fields (for [p    providers
                             :let [t (get ptitles p)]]
                         {:title    t
                          :name     p
@@ -22,7 +21,7 @@
         :type              :select
         :data-subscription [:models/members-of :model/instrument :instrument/type]}]])))
 
-(def fields
+#_(def fields
   [{:title    "Instrument"
     :name     :instrument-name
     :can-sort true}
@@ -45,6 +44,6 @@
    :can-sort          true})
 
 (defn view []
-  (let [*symbol-providers (rf/subscribe [:models/members-of :model/symbol :symbol/provider])]
-    (cljs.pprint/pprint {::view @*symbol-providers})
-    [datagrid/view fields #_(fields @*symbol-providers) options]))
+  (let [*schema (rf/subscribe [:model :model/instrument-dao])
+        flds    (fields @*schema)]
+    [datagrid/view flds options]))

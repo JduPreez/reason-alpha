@@ -2,7 +2,7 @@
   (:require [re-frame.core :as rf]))
 
 (rf/reg-sub
- :instruments/types
+ :instrument/types
  :<- [:models/members-of :model/instrument :instrument/type]
  (fn [{{:keys [enum/titles]} :properties
        mbrs                  :members
@@ -13,6 +13,6 @@
       :text  t})))
 
 (rf/reg-sub
- :instruments
+ :instrument/options
  (fn [db _]
    []))
