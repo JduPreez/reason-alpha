@@ -1,4 +1,5 @@
-(ns reason-alpha.model.utils)
+(ns reason-alpha.model.utils
+  (:require [clojure.string :as str]))
 
 (defn creation-id-key-by-type [type]
   (-> type
@@ -12,7 +13,18 @@
       namespace))
 
 (defn creation-id-key [m]
-  (keyword (str (entity-ns m) "/creation-id")))
+  (if-let [ent-ns (entity-ns m)]
+    (keyword (str ent-ns) "creation-id")
+    (->> m
+         keys
+         (some #(when (str/ends-with? (name %)
+                                      "creation-id")
+                  %)))))
+
+(comment
+  (creation-id-key {:instrument/creation-id 33232
+                    :instrument/name        "dde"})
+  )
 
 (defn id-key-by-type [type]
   (-> type
@@ -56,32 +68,3 @@
 
     {:properties maybe-props
      :members    child-members}))
-
-(comment
-  (letfn [(get-members-of [schema member-k]
-            (let [member        (->> schema
-                                     rest
-                                     (into {})
-                                     member-k
-                                     rest)
-                  maybe-props   (first member)
-                  has-props?    (map? maybe-props)
-                  child-members (if has-props?
-                                  (rest member)
-                                  member)]
-
-              {:properties maybe-props
-               :members    child-members})
-            )]
-    (let [schema [:map
-                  [:symbol/ticker [:string {:min 1}]]
-                  [:symbol/instrument-id uuid?]
-                  [:symbol/provider
-                   [:enum {:enum/titles {:yahoo-finance "Yahoo! Finance"
-                                         :saxo-dma      "Saxo/DMA"
-                                         :easy-equities "Easy Equities"}}
-                    :yahoo-finance :saxo-dma :easy-equities]]]]
-      (get-members-of schema :symbol/provider)))
-
-
-  )

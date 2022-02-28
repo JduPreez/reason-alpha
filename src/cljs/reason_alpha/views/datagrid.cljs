@@ -3,7 +3,8 @@
             [re-frame.core :as rf]
             [reagent.core :as r]
             ;;[reason-alpha.views :as views]
-            ))
+
+            [clojure.string :as str]))
 
 (def default-opts
   {;;:grid-id                    :my-grid
@@ -60,3 +61,60 @@
        [:div.card-body {:style {:padding-top    0
                                 :padding-bottom 0}}
         [ra-datagrid/datagrid (merge default-opts options) fields]]])))
+
+(defn model-member->field [[member-nm & schema] & [{:keys [ref-suffix]
+                                                    :as   field-opts}]]
+  (let [id-member           (-> member-nm
+                                name
+                                (str/ends-with? "-id"))
+        fo                  (cond-> field-opts
+                              (not (contains? field-opts :can-sort))
+                              , (assoc :can-sort true)
+                              :default
+                              , (dissoc field-opts :ref-suffix))
+        props-or-type       (first schema)
+        has-props?          (map? props-or-type)
+        {:keys [title ref]} props-or-type
+        ref-nm              (when ref
+                              (name ref))
+        ref-ns              (when ref
+                              (namespace ref))
+        type                (if has-props?
+                              (second schema)
+                              props-or-type)]
+    (cond
+      ;; Id members are either the current entity's `:id` or `:creation-id` fields
+      ;; or they should be 'foreign keys' with a `:ref` pointing to another entity
+      ;; using an `<select>`
+      (and id-member
+           (not ref)) nil
+
+      (and ref-ns
+           ref)       (merge
+                       {:title             title
+                        :name              member-nm
+                        :type              :select
+                        :data-subscription [(keyword ref-ns (str ref-nm "-" ref-suffix))]}
+                       fo)
+
+      ref             (merge
+                       {:title             title
+                        :name              member-nm
+                        :type              :select
+                        :data-subscription [(keyword ref-nm ref-suffix)]}
+                       fo)
+
+      :default        (merge
+                       {:title title
+                        :name  member-nm}
+                       fo))))
+
+(defn model->fields [[_ & members] & [{fields-opts :fields-opts
+                                       ref-suffix  :ref-suffix
+                                       :or         {ref-suffix "ref-list"}}]]
+  (->> (mapv (fn [[membr-k & _ :as m]]
+               (let [fo (-> fields-opts
+                            (get membr-k)
+                            (assoc :ref-suffix "ref-list"))]
+                 (model-member->field m fo))) members)
+       (remove nil?)))

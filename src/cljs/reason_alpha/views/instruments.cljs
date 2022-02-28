@@ -2,14 +2,12 @@
   (:require [reason-alpha.views.datagrid :as datagrid]
             [re-frame.core :as rf]))
 
-(defn fields [[_ & members]]
-  (for [m members]
-    )
+#_(defn fields [[_ & members]]
   #_(let [symbol-fields (for [p    providers
-                            :let [t (get ptitles p)]]
-                        {:title    t
-                         :name     p
-                         :can-sort true})]
+                              :let [t (get ptitles p)]]
+                          {:title    t
+                           :name     p
+                           :can-sort true})]
     (into
      [{:title    "Instrument"
        :name     :instrument-name
@@ -39,11 +37,11 @@
 (def options
   {:grid-id           ::view
    :title             "Instruments"
-   :data-subscription [:instruments]
-   :id-field          :instrument/id
+   :data-subscription [:instrument/list]
+   :id-field          :instrument-creation-id
    :can-sort          true})
 
 (defn view []
   (let [*schema (rf/subscribe [:model :model/instrument-dao])
-        flds    (fields @*schema)]
+        flds    (datagrid/model->fields @*schema)]
     [datagrid/view flds options]))

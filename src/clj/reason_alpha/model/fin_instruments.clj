@@ -62,7 +62,7 @@
       [:instrument-name {:title    "Instrument"
                          :optional true} string?]]
      cat
-     [providers-schema
+     [symbols-schema
       [[:instrument-type {:title    "Type"
                           :optional true} keyword?]]])))
 

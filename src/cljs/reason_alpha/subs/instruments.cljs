@@ -1,5 +1,6 @@
 (ns reason-alpha.subs.instruments
-  (:require [re-frame.core :as rf]))
+  (:require [re-frame.core :as rf]
+            [reason-alpha.data :as data]))
 
 (rf/reg-sub
  :instrument/types
@@ -13,6 +14,13 @@
       :text  t})))
 
 (rf/reg-sub
- :instrument/options
+ :instrument/ref-list
  (fn [db _]
    []))
+
+(rf/reg-sub
+ :instrument/list
+ (fn [db _]
+   (cljs.pprint/pprint {::list (get-in db data/instruments)})
+   (sort-by :instrument-name
+            (get-in db data/instruments))))

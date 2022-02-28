@@ -11,7 +11,9 @@
 
 (def ^:const holdings [:data :holding])
 
-(def ^:const models [:data :models])
+(def ^:const models [:data :model])
+
+(def ^:const instruments [:data :instrument])
 
 (defn entity-data [type]
   [:data type])

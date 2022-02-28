@@ -2,6 +2,7 @@
   (:require [day8.re-frame.tracing :refer-macros [fn-traced defn-traced]]
             [re-frame.core :as rf]
             [reason-alpha.data :as data]
+            [reason-alpha.data :as data]
             [reason-alpha.model.utils :as model.utils]
             [reason-alpha.utils :as utils]
             [reason-alpha.web.api-client :as api-client]
@@ -18,13 +19,16 @@
 (rf/reg-event-fx
  :navigated
  (fn [{:keys [db]} [_ {{:keys [name model
-                               fetch-data-fx]} :data
-                       :as                     new-match}]]
+                               fetch-data-fx]
+                        :as   d} :data
+                       :as       new-match}]]
+   (cljs.pprint/pprint {::navigated d})
    (let [old-match   (:current-route db)
          controllers (rfe-ctrls/apply-controllers (:controllers old-match) new-match)
          updated-db  (-> db
                          (assoc :current-route (assoc new-match :controllers controllers))
-                         (assoc-in data/active-view-model model))]
+                         (assoc-in data/active-view-model {:view  name
+                                                           :model model}))]
      (cond-> {:db       updated-db
               :dispatch [:datagrid/update-history name]}
        fetch-data-fx (assoc fetch-data-fx [])))))
@@ -77,7 +81,7 @@
        :dispatch    [:save-local type entity]})))
 
 (defn entity-event-or-fx-key [db action]
-  (let [model (get-in db data/active-view-model)]
+  (let [{:keys [model]} (get-in db data/active-view-model)]
     (when model
       (-> model
           name
@@ -89,9 +93,9 @@
   "Derives the correct toolbar data event-fx from the current
   active model, and dispatches it."
   [{:keys [db]} [action]]
-  (let [model (get-in db data/active-view-model)
-        _     (cljs.pprint/pprint {::action-event-1 model})
-        event [(keyword (str (name model)
+  (let [{:keys [model]} (get-in db data/active-view-model)
+        _               (cljs.pprint/pprint {::action-event-1 model})
+        event           [(keyword (str (name model)
                              ".command/"
                              (name action)))]]
     (cljs.pprint/pprint {::action-event-2 [action event]})
@@ -135,9 +139,12 @@
 (rf/reg-event-fx
  :edit
  (fn [{:keys [db]} [_ entities]]
-   (let [{:keys [view-id]} (get-in db data/active-view-model)]
-     {:dispatch-n (mapv #(let [creation-id (->> %
-                                                model.utils/creation-id-key
-                                                (get %))]
-                           [:datagrid/start-edit view-id creation-id %])
-                        entities)})))
+   (let [{:keys [view]} (get-in db data/active-view-model)
+         edit-evts      (mapv
+                         #(let [creation-id (->> %
+                                                 model.utils/creation-id-key
+                                                 (get %))]
+                            [:datagrid/start-edit view creation-id %])
+                         entities)]
+     (cljs.pprint/pprint {::edit edit-evts})
+     {:dispatch-n edit-evts})))

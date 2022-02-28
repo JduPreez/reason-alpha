@@ -43,7 +43,8 @@
        [:i.fas.fa-file-import] [:span "IMPORT"]]]
      [:li.nav-item
       [:a.nav-link {:href     "#"
-                    :on-click #(rf/dispatch [:add])}
+                    :on-click #(do (.preventDefault %)
+                                   (rf/dispatch [:add]))}
        [:i.fas.fa-plus-square] [:span "ADD"]]]
      [:li.nav-item
       [:a.nav-link {:href     "#"
