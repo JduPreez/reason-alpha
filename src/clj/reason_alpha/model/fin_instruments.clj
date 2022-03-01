@@ -64,7 +64,8 @@
      cat
      [symbols-schema
       [[:instrument-type {:title    "Type"
-                          :optional true} keyword?]]])))
+                          :optional true
+                          :ref      :instrument/type} keyword?]]])))
 
 (comment
   (let [{{ptitles :enum/titles} :properties

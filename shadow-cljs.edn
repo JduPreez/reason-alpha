@@ -17,7 +17,14 @@
                                {"re_frame.trace.trace_enabled_QMARK_"        true
                                 "day8.re_frame.tracing.trace_enabled_QMARK_" true
                                 re-frame.trace.trace-enabled?                true
-                                day8.re-frame.tracing.trace-enabled?         true}}}}
+                                day8.re-frame.tracing.trace-enabled?         true}}}
+                 :js-options {:resolve
+                              {"jquery"
+                               {:target :file
+                                :file   "resources/public/assets/js/vendors/jquery-3.2.1.min.js"}
+                               "js-select2"
+                               {:target :file
+                                :file   "resources/public/assets/plugins/select2/select2.full.min.js"}}}}
           :test {:target    :node-test
                  :output-to "target/test/tests.js"
                  :autorun   true}}}

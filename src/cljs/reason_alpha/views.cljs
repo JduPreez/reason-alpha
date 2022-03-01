@@ -26,24 +26,24 @@
 
 (def routes
   ["/"
-   ["" {:name          ::positions/view
-        :view          positions/view
-        :model         :position
-        :fetch-data-fx :position.query/getn
+   ["" {:name    ::positions/view
+        :view    positions/view
+        :model   :position
+        :load-fx :position.query/getn
         :controllers
         [{:start (fn [& params] (js/console.log "Entering :holdings"))
           :stop  (fn [& params] (js/console.log "Leaving :holdings"))}]}]
-   ["trade-patterns" {:name          ::trade-patterns/view
-                      :view          trade-patterns/view
-                      :model         :trade-pattern
-                      :fetch-data-fx :trade-pattern.query/getn
+   ["trade-patterns" {:name    ::trade-patterns/view
+                      :view    trade-patterns/view
+                      :model   :trade-pattern
+                      :load-fx :trade-pattern.query/getn
                       :controllers
                       [{:start (fn [& params] (cljs.pprint/pprint ["Entering :trade-patterns" params]))
                         :stop  (fn [& params] (js/console.log "Leaving :trade-patterns"))}]}]
-   ["instruments" {:name          ::instruments/view
-                   :view          instruments/view
-                   :model         :instrument
-                   :fetch-data-fx :instrument.query/getn}]])
+   ["instruments" {:name       ::instruments/view
+                   :view       instruments/view
+                   :model      :instrument
+                   :load-event [:instrument/load]}]])
 
 (defn on-navigate [new-match]
   (when new-match

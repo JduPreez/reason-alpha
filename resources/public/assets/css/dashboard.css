@@ -1433,7 +1433,6 @@ pre code {
     right: 0px;
     font-size: smaller;
     color: #fff!important;
-	
 }
 /*------- 2. Forms -------*/
 
@@ -1450,7 +1449,8 @@ pre code {
 	color: #f1f2f3!important;
 }
 .select2-container--default .select2-selection--single {
-	background-color: #243253 !important;
+    /*background-color:  #243253 !important;*/
+  background-color: rgb(43, 57, 93) !important;
 	border: 1px solid rgba(255, 255, 255, 0.12) !important;
 	border-radius: 4px;
 }
@@ -3885,7 +3885,7 @@ input[type="submit"].btn-block, input[type="reset"].btn-block, input[type="butto
 
 .bg-gradient-primary
 {
-    background: linear-gradient(87deg, #5e72e4 0, #825ee4 100%) !important;
+    background : linear-gradient (87deg, #5e72e4 0, #825ee4 100%) !important ;
 }
 
 .bg-gradient-secondary

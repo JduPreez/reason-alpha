@@ -19,19 +19,21 @@
 (rf/reg-event-fx
  :navigated
  (fn [{:keys [db]} [_ {{:keys [name model
-                               fetch-data-fx]
+                               load-event
+                               load-fx]
                         :as   d} :data
                        :as       new-match}]]
-   (cljs.pprint/pprint {::navigated d})
    (let [old-match   (:current-route db)
          controllers (rfe-ctrls/apply-controllers (:controllers old-match) new-match)
          updated-db  (-> db
                          (assoc :current-route (assoc new-match :controllers controllers))
                          (assoc-in data/active-view-model {:view  name
                                                            :model model}))]
-     (cond-> {:db       updated-db
-              :dispatch [:datagrid/update-history name]}
-       fetch-data-fx (assoc fetch-data-fx [])))))
+     (cond-> {:db updated-db}
+       load-fx          (assoc load-fx [])
+       load-event       (assoc :dispatch-n [[:datagrid/update-history name]
+                                            load-event])
+       (not load-event) (assoc :dispatch [:datagrid/update-history name])))))
 
 (rf/reg-fx
  :push-state!

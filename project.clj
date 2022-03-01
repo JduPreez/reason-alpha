@@ -23,6 +23,7 @@
                  [functionalbytes/mount-lite "2.1.1"]
                  [http-kit "2.5.3"]
                  [integrant "0.8.0"]
+                 [cljsjs/jquery "3.2.1-0"]
                  [com.xtdb/xtdb-core "1.20.0"]
                  [com.xtdb/xtdb-rocksdb "1.20.0"]
                  [markdown-clj "1.10.0"]

@@ -3,20 +3,14 @@
             [reason-alpha.data :as data]))
 
 (rf/reg-sub
- :instrument/types
+ :instrument/type-ref-list
  :<- [:models/members-of :model/instrument :instrument/type]
  (fn [{{:keys [enum/titles]} :properties
        mbrs                  :members
        :as                   instr-types} _]
-   (for [m    mbrs
-         :let [t (get titles m)]]
-     {:value m
-      :text  t})))
-
-(rf/reg-sub
- :instrument/ref-list
- (fn [db _]
-   []))
+   (into {} (for [m    mbrs
+                  :let [t (get titles m)]]
+              [(name m) t]))))
 
 (rf/reg-sub
  :instrument/list

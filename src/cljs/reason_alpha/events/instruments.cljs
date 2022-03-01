@@ -12,11 +12,19 @@
    (cljs.pprint/pprint {:instrument/success result})
    #_{:dispatch [:save-local :instrument result]}))
 
+(rf/reg-event-fx
+ :instrument/load
+ (fn [{:keys [db]}]
+   (cljs.pprint/pprint :instrument/load)
+   {:instrument.query/getn nil
+    :dispatch              [:model.query/getn
+                            [:model/instrument :model/symbol
+                             :model/instrument-dao]]}))
+
 (rf/reg-fx
  :instrument.query/getn
  (fn [_]
-   (cljs.pprint/pprint {:instrument.query/getn _})
-   (api-client/chsk-send! [:model.query/getn [:model/instrument :model/symbol :model/instrument-dao]])
+   (cljs.pprint/pprint :instrument.query/getn)
    (api-client/chsk-send! [:instrument.query/getn]
                           {:on-success [:instrument/success]})))
 
