@@ -45,42 +45,30 @@
  (fn [_ [_ & route]]
    {:push-state! route}))
 
-(defn-traced save-local
-  [db [_ type {:keys [result] :as new}]]
-  (let [current     (get-in db (data/entity-data type))
-        new-val     (or result new)
-        new-coll    (cond
-                      (and (coll? new-val)
-                           (not (map? new-val))
-                           (map? (first new-val))) new-val
-                      (map? new-val)               [new-val])
-        merged-coll (when new-coll
-                      (model.utils/merge-by-id current new-coll))]
-    (-> db
-        (assoc-in [:loading type] false)
-        (assoc-in [:data type] (or merged-coll new-val))
-        (assoc :saved new-val))))
+;; (defn-traced save-local
+;;   [db [_ type {:keys [result] :as new}]]
+;;   (let [current     (get-in db (data/entity-data type))
+;;         new-val     (or result new)
+;;         new-coll    (cond
+;;                       (and (coll? new-val)
+;;                            (not (map? new-val))
+;;                            (map? (first new-val))) new-val
+;;                       (map? new-val)               [new-val])
+;;         merged-coll (when new-coll
+;;                       (model.utils/merge-by-id current new-coll))]
+;;     (-> db
+;;         (assoc-in [:loading type] false)
+;;         (assoc-in [:data type] (or merged-coll new-val))
+;;         (assoc :saved new-val))))
 
-(rf/reg-event-db
- :save-local
- save-local)
+;; (rf/reg-event-db
+;;  :save-local
+;;  (defn-traced [db [_ type result]]
+;;    (data/save-local! {:db db, :model-type type, :result result})))
 
-(defn save-remote [[command entity success]]
-  (api-client/chsk-send! [command entity] {:on-success success}))
-
-(rf/reg-fx
- :save-remote
- save-remote)
-
-;; TODO: Maybe rename & move to `data` ns?
-(defn fn-save [type success]
-  (fn [_ [_ entity]]
-    (let [cmd (-> type
-                  name
-                  (str ".command/save!")
-                  keyword)]
-      {:save-remote [cmd entity success]
-       :dispatch    [:save-local type entity]})))
+;; (rf/reg-fx
+;;  :save-remote
+;;  save-remote)
 
 (defn entity-event-or-fx-key [db action]
   (let [{:keys [model]} (get-in db data/active-view-model)]

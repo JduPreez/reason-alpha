@@ -122,7 +122,8 @@
 
 (defn server-event-msg-handler
   "Wraps `-event-msg-handler` with logging, error catching, etc."
-  [handlers {:as ev-msg :keys [id ?data event ?reply-fn ring-req uid]}]
+  [handlers {:as ev-msg :keys [id ?data event ?reply-fn ring-req uid]
+             :or {?data {}}}]
   (clojure.pprint/pprint {::server-event-msg-handler ev-msg})
   (let [fun     (get handlers id)
         account (auth/account ring-req)

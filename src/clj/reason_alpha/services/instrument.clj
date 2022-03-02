@@ -25,6 +25,8 @@
          :type        :error}))
 
     (catch Exception e
-      (errorf e "Error saving Position")
-      {:error (ex-data e)
-       :type  :error})))
+      (let [descr "Error saving Position"]
+        (errorf e err-msg)
+        {:error       (ex-data e)
+         :description (str descr (ex-message e))
+         :type        :error}))))

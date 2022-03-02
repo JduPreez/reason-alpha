@@ -28,16 +28,37 @@
    (api-client/chsk-send! [:instrument.query/getn]
                           {:on-success [:instrument/success]})))
 
+(rf/reg-fx
+ :instrument.query/get1
+ (fn [instr-id]
+   (api-client/chsk-send! [:instrument.query/get1 {:instrument-id instr-id}])))
+
 (rf/reg-event-fx
  :instrument.command/add
  (fn [{:keys [db]} _]
-   (let [instrs        (get-in db (data/entity-data :instrument))
-         #_#_instr-dao (-> db
-                           (get-in data/models)
-                           (get :model/instrument-dao))
-         creation-id   (utils/new-uuid)
-         new-instr     {:instrument-creation-id creation-id}]
+   (let [instrs      (get-in db (data/entity-data :instrument))
+         creation-id (utils/new-uuid)
+         new-instr   {:instrument-creation-id creation-id}]
      {:dispatch [:edit [new-instr]]
       :db       (update-in db
                            data/instruments
                            #(conj % new-instr))})))
+
+(rf/reg-event-db
+ :instrument.command/create
+ (fn [db [_ new-instrument]]
+   (let [updated-db (data/save-local! {:model-type :instrument
+                                       :data       new-instrument
+                                       :db         db})]
+     (data/save-remote! {:command       :instrument.command/save!
+                         :data          new-instrument
+                         :success-event [:instrument/save-success]})
+     updated-db)))
+
+(rf/reg-event-fx
+ :instrument/save-success
+ (fn [_ [evt {:keys [type] :as result}]]
+   (if (= type :success)
+     ;;(data/save-local! result)
+     (utils/log evt result))))
+

@@ -39,7 +39,7 @@
 
 (rf/reg-event-fx
  :trade-pattern.command/save!
- (events/fn-save :trade-pattern [:trade-pattern/success]))
+ (data/save-event-fn :trade-pattern [:trade-pattern/success]))
 
 (rf/reg-fx
  :trade-pattern.command/delete!
@@ -65,12 +65,3 @@
    (cljs.pprint/pprint {:trade-pattern.query/getn _})
    (api-client/chsk-send! [:trade-pattern.query/getn]
                           {:on-success [:trade-pattern/success]})))
-
-(comment
-  {:method          :get
-   :uri             (endpoint "trade-patterns")
-   :params          params
-   :headers         (standard-headers db)
-   :format          (ajax/transit-request-format)
-   :response-format (ajax/transit-response-format)
-   :on-success      [:save-local :trade-patterns]})

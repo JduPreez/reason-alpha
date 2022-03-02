@@ -1,9 +1,11 @@
 (ns reason-alpha.utils
   #?(:clj (:require [clojure.edn :as edn]
                     [clojure.java.io :as io]
-                    [clojure.string :as str])
+                    [clojure.string :as str]
+                    [taoensso.timbre :as timbre :refer-macros (tracef debugf infof warnf errorf)])
      :cljs (:require [clojure.string :as str]
-                     [cljs-uuid-utils.core :as uuid])))
+                     [cljs-uuid-utils.core :as uuid]
+                     [taoensso.timbre :as timbre :refer-macros (infof warnf errorf)])))
 
 (defn maybe->uuid [v]
   #?(:clj (try
@@ -39,9 +41,16 @@
              [(keyword k) v])))
 
 #?(:cljs
-   (defn log [& args]
-     (apply js/console.log (conj (vec (map str (butlast args)))
-                                 (pr-str (last args))))))
+   (defn log [location {:keys [location type description error] :as log}]
+     (let [l (assoc log :location location)]
+       (case type
+         :error
+         , (do (errorf "%s %s" location description)
+               (cljs.pprint/pprint {:log/error l}))
+         :warn
+         , (do (warnf "%s %s" location description)
+               (cljs.pprint/pprint {:log/warn l}))
+         (cljs.pprint/pprint {:log/info l})))))
 
 #?(:clj
    (defn list-resource-files [dir file-type]

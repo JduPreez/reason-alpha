@@ -6,7 +6,7 @@
   :model/symbol
   [:map
    [:symbol/ticker [:string {:min 1}]]
-   [:symbol/instrument-id uuid?]
+   [:symbol/instrument-id {:optional true} uuid?]
    [:symbol/provider
     [:enum {:enum/titles {:yahoo-finance "Yahoo! Finance"
                           :saxo-dma      "Saxo/DMA"
@@ -18,7 +18,7 @@
   [:map
    [:price/creation-id uuid?]
    [:price/id uuid?]
-   [:price/symbol Symbol]
+   [:price/symbol Symbol] ;; Symbol or Instrument ID?
    [:price/date inst?]
    [:price/open float?]
    [:price/close float?]
@@ -51,16 +51,24 @@
       symbols-schema                    (for [p    providers
                                               :let [t (get ptitles p)]]
                                           [(keyword "symbol" (name p))
-                                           {:title    t
-                                            :optional true} string?])]
+                                           {:title        t
+                                            :optional     true
+                                            :command-path [:instrument/symbols [[:symbol/ticker]
+                                                                                {:symbol/provider p}]]}
+                                           string?])]
+  ;; HOW TO HANDLE `:symbol/provider` that's actually a constant?
   (def-model InstrumentDao
     :model/instrument-dao
     (into
      [:map
-      [:instrument-id {:optional true} uuid?]
-      [:instrument-creation-id uuid?]
-      [:instrument-name {:title    "Instrument"
-                         :optional true} string?]]
+      [:instrument-id {:command-path [:instrument/id]
+                       :optional     true}
+       uuid?]
+      [:instrument-creation-id {:command-path [:instrument/creation-id]}
+       uuid?]
+      [:instrument-name {:title        "Instrument"
+                         :optional     true
+                         :command-path [:instrument/name]} string?]]
      cat
      [symbols-schema
       [[:instrument-type {:title    "Type"
