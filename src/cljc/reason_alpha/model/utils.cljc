@@ -57,14 +57,12 @@
 (defn get-model-members-of [schema member-k]
   (let [member        (->> schema
                            rest
-                           (into {})
-                           member-k
-                           rest)
-        maybe-props   (first member)
+                           (some #(when (= member-k (first %)) %)))
+        type-spec     (last member)
+        maybe-props   (second type-spec)
         has-props?    (map? maybe-props)
         child-members (if has-props?
-                        (rest member)
-                        member)]
-
+                        (nnext type-spec)
+                        (next type-spec))]
     {:properties maybe-props
      :members    child-members}))

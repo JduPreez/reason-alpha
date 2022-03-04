@@ -5,7 +5,7 @@
 (def-model Symbol
   :model/symbol
   [:map
-   [:symbol/ticker [:string {:min 1}]]
+   [:symbol/ticker {:min 1} string?]
    [:symbol/instrument-id {:optional true} uuid?]
    [:symbol/provider
     [:enum {:enum/titles {:yahoo-finance "Yahoo! Finance"
@@ -53,16 +53,15 @@
                                           [(keyword "symbol" (name p))
                                            {:title        t
                                             :optional     true
-                                            :command-path [:instrument/symbols [[:symbol/ticker]
+                                            :command-path [:instrument/symbols [:symbol/ticker
                                                                                 {:symbol/provider p}]]}
                                            string?])]
-  ;; HOW TO HANDLE `:symbol/provider` that's actually a constant?
   (def-model InstrumentDao
     :model/instrument-dao
     (into
      [:map
-      [:instrument-id {:command-path [:instrument/id]
-                       :optional     true}
+      [:instrument-id {:optional     true
+                       :command-path [:instrument/id]}
        uuid?]
       [:instrument-creation-id {:command-path [:instrument/creation-id]}
        uuid?]
@@ -71,19 +70,35 @@
                          :command-path [:instrument/name]} string?]]
      cat
      [symbols-schema
-      [[:instrument-type {:title    "Type"
-                          :optional true
-                          :ref      :instrument/type} keyword?]]])))
+      [[:instrument-type {:title        "Type"
+                          :optional     true
+                          :ref          :instrument/type
+                          :command-path [:instrument/type]} keyword?]]])))
 
 (comment
-  (let [{{ptitles :enum/titles} :properties
-         providers              :members} (model.utils/get-model-members-of
-                                           Symbol
-                                           :symbol/provider)
-        providers-schema                  (for [p    providers
-                                                :let [t (get ptitles p)]]
-                                            [p {:title    t
-                                                :optional true} keyword?])]
+  (letfn [(get-model-members-of [schema member-k]
+            (let [member        (->> schema
+                                     rest
+                                     (some #(when (= member-k (first %)) %)))
+                  type-spec     (last member)
+                  maybe-props   (second type-spec)
+                  has-props?    (map? maybe-props)
+                  child-members (if has-props?
+                                  (nnext type-spec)
+                                  (next type-spec))]
+              {:properties maybe-props
+               :members    child-members}))]
+    (get-model-members-of
+     Symbol
+     :symbol/provider)
+    #_(let [{{ptitles :enum/titles} :properties
+             providers              :members} (get-model-members-of
+                                               Symbol
+                                               :symbol/provider)
+            providers-schema                  (for [p    providers
+                                                    :let [t (get ptitles p)]]
+                                                [p {:title    t
+                                                    :optional true} keyword?])]
       (into
        [:map
         [:instrument-name {:title    "Instrument"
@@ -91,6 +106,6 @@
        cat
        [providers-schema
         [[:instrument-type {:title    "Type"
-                            :optional true} keyword?]]]))
+                            :optional true} keyword?]]])))
 
   )
