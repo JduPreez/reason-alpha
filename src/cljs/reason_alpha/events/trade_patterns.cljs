@@ -32,10 +32,10 @@
 (rf/reg-event-fx
  :trade-pattern.command/create
  (fn [_ [_ new-trade-pattern]]
-   {:dispatch [:trade-pattern.command/save!
-               (assoc new-trade-pattern
-                      :trade-pattern/creation-id
-                      (utils/new-uuid))]}))
+   #_{:dispatch [:trade-pattern.command/save!
+                 (assoc new-trade-pattern
+                        :trade-pattern/creation-id
+                        (utils/new-uuid))]}))
 
 (rf/reg-event-fx
  :trade-pattern.command/save!

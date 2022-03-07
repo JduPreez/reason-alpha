@@ -7,7 +7,10 @@
    :title             "Instruments"
    :data-subscription [:instrument/list]
    :id-field          :instrument-creation-id
-   :can-sort          true})
+   :can-sort          true
+   :create-dispatch   [:instrument.command/create]
+   :update-dispatch   [:instrument.command/save!]
+   :default-values    {}})
 
 (defn view []
   (let [*schema (rf/subscribe [:model :model/instrument-dao])

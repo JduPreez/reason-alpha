@@ -1,5 +1,6 @@
 (ns reason-alpha.data
-  (:require [reason-alpha.model.utils :as model.utils]))
+  (:require [reason-alpha.model.utils :as model.utils]
+            [reason-alpha.web.api-client :as api-client]))
 
 (def ^:const selected [:selected])
 
@@ -12,6 +13,9 @@
 (def ^:const holdings [:data :holding])
 
 (def ^:const models [:data :model])
+
+(defn model [model-k]
+  (conj models model-k))
 
 (def ^:const instruments [:data :instrument])
 
@@ -61,7 +65,7 @@
     type        :model-type
     {:keys [result]
      :as   new} :data}]
-  (let [current     (get-in db (data/entity-data type))
+  (let [current     (get-in db (entity-data type))
         new-val     (or result new)
         new-coll    (cond
                       (and (coll? new-val)

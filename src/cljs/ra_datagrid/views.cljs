@@ -272,7 +272,7 @@
           [:input.form-control {:type      "number"
                                 :value     v
                                 :on-change #(rf/dispatch [:datagrid/update-edited-record id pk
-                                                          (:name field) (.-target.value %)])}]]]))))
+                                                          (:name field) (.-target.value ^js %)])}]]]))))
 
 (defmethod edit-cell :custom
   [id field pk]
@@ -296,7 +296,7 @@
            [:select.form-control
             {:value     (if v "true" "false")
              :on-change #(rf/dispatch [:datagrid/update-edited-record id pk
-                                      (:name field) (= "true" (.-target.value %))])}
+                                      (:name field) (= "true" (.-target.value ^js %))])}
             [:option {:value "true"}  "ja"]
             [:option {:value "false"} "nee"]]]]]))))
 
@@ -328,7 +328,7 @@
           [:input.form-control {:type      "text"
                                 :value     v
                                 :on-change #(rf/dispatch [:datagrid/update-edited-record id pk
-                                                          (:name field) (.-target.value %)])}]]]))))
+                                                          (:name field) (.-target.value ^js %)])}]]]))))
 
 (defn create-row
   [id]

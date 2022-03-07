@@ -29,8 +29,9 @@
                          *selected-val nil
                          [:td {:key       name
                                :className "editing"}
-                          [:select.list.form-control.select2-show-search #_{:style {:width            "100%"
-                                                                                    :background-color "rgb(43, 57, 93)"}}]])))))
+                          [:select.list.form-control.select2-show-search
+                           {:on-change #(js/log (.-target.value ^js %)) #_#(rf/dispatch [:datagrid/update-edited-record id pk
+                                                                                         (:name field) (.-target.value ^js %)])}]])))))
 
 (comment
   ;; [:div.fg-line

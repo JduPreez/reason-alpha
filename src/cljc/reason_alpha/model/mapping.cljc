@@ -146,7 +146,7 @@
                                  :instrument-creation-id (utils/new-uuid)
                                  :instrument-type        :share
                                  :saxo-dma               "00700:xhkg"
-                                 :yahoo-finance          "0700.HK"}
+                                 :yahoo-finance          "0700.hk"}
           #_#_upd1              (mv-assoc-in {} [:instrument/symbols 0 :symbol/ticker] "tikr-1")
           #_#_upd2              (mv-assoc-in upd1 [:instrument/symbols 0] {:symbol/provider :saxo-dma
                                                                            :symbol/ticker   "tikr-2"})

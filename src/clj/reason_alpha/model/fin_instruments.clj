@@ -50,11 +50,10 @@
                                          :symbol/provider)
       symbols-schema                    (for [p    providers
                                               :let [t (get ptitles p)]]
-                                          [(keyword "symbol" (name p))
-                                           {:title        t
-                                            :optional     true
-                                            :command-path [:instrument/symbols [:symbol/ticker
-                                                                                {:symbol/provider p}]]}
+                                          [p {:title        t
+                                              :optional     true
+                                              :pivot        :symbol/provider
+                                              :command-path [:instrument/symbols 0 :symbol/ticker]}
                                            string?])]
   (def-model InstrumentDao
     :model/instrument-dao

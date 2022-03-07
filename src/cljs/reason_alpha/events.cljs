@@ -109,7 +109,9 @@
 
 (rf/reg-event-fx
  :add
- action-event)
+ (fn [{:keys [db]} _]
+   (let [{:keys [view]} (get-in db data/active-view-model)]
+     {:dispatch [:datagrid/create-new-record view]})))
 
 (rf/reg-event-fx
  :cancel

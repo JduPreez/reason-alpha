@@ -3,16 +3,13 @@
             [reason-alpha.model.core :as mdl]))
 
 (defn getn [fn-get-ctx model-ks]
-  (let [{:keys [send-message]
-         :as   ctx} (fn-get-ctx model-ks)
-        models      (mdl/get-defs model-ks)
-        malli-edn   (medn/write-string [:schema {:registry models}
-                                        (first model-ks)])]
-    (clojure.pprint/pprint {::getn malli-edn})
-
+  (let [{:keys [send-message]} (fn-get-ctx model-ks)
+        models                 (mdl/get-defs model-ks)
+        malli-edn              (medn/write-string [:schema {:registry models}
+                                                   (first model-ks)])]
     (send-message
-     [:model.query/getn-response {:result malli-edn
-                                  :type   :success}])))
+     [:model.query/getn-result {:result malli-edn
+                                :type   :success}])))
 
 
 (comment

@@ -16,6 +16,5 @@
 (rf/reg-sub
  :instrument/list
  (fn [db _]
-   (cljs.pprint/pprint {::list (get-in db data/instruments)})
    (sort-by :instrument-name
             (get-in db data/instruments))))

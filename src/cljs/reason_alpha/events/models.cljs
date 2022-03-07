@@ -9,14 +9,15 @@
             [malli.core :as m]))
 
 (rf/reg-event-db
- :model.query/getn-response
+ :model.query/getn-result
  (fn [db [_ {:keys [result]}]]
-   (cljs.pprint/pprint :model.query/getn-response)
    (let [models                   (get-in db data/models {})
          [_ {:keys [registry]} _] (-> result
                                       medn/read-string
-                                      m/form)]
-     (assoc-in db data/models (merge models registry)))))
+                                      m/form)
+         db                       (assoc-in db data/models (merge models registry))]
+     (cljs.pprint/pprint {:model.query/getn-result (get-in db (data/model :model/instrument-dao))})
+    db)))
 
 (rf/reg-fx
  :model.query/getn-fx
@@ -28,7 +29,7 @@
  :model.query/getn
  (fn [{:keys [db]} [_ model-ks]]
    (let [models   (get-in db data/models {})
-         model-ks (remove #(contains? models model-ks) model-ks)]
+         model-ks (remove #(contains? models %) model-ks)]
      (cljs.pprint/pprint {:model.query/getn model-ks})
      {:model.query/getn-fx model-ks})))
 

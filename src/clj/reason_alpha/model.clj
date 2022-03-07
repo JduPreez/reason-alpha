@@ -70,7 +70,9 @@
    :instrument
    {:commands {:save! (as-> db d
                         (partial repo.instrument/save! d)
-                        (partial svc.instrument/save! d fn-get-account))}
+                        (partial svc.instrument/save! d
+                                 fn-get-account
+                                 common/get-context))}
     :queries  {:getn (as-> db d
                        (partial repo.instrument/getn d))}}
    :model
