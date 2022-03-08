@@ -49,6 +49,7 @@
                  [prismatic/schema "1.1.6"]
                  [re-frame "1.2.0"]
                  [reagent "1.1.0"]
+                 [re-com "2.13.2"]
                  [ring "1.9.1"]
                  [ring-cors "0.1.13"]
                  [ring-webjars "0.2.0"]

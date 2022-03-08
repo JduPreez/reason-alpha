@@ -9,9 +9,9 @@
  (fn [{{:keys [enum/titles]} :properties
        mbrs                  :members
        :as                   instr-types} _]
-   (into {} (for [m    mbrs
-                  :let [t (get titles m)]]
-              [(utils/keyword->str m) t]))))
+   (for [m    mbrs
+         :let [t (get titles m)]]
+     {:id (utils/keyword->str m) :label t})))
 
 (rf/reg-sub
  :instrument/list

@@ -53,8 +53,8 @@
      [:li.nav-item
       [:a.nav-link {:href "#"}
        [:i.fas.fa-undo-alt] [:span "CANCEL"]]]]]
-   [:div.container>div.hor-content
-    [:div.row {:style {:margin-top "10px"}}
+   [:div.container.full-height>div.hor-content.full-height
+    [:div.row.full-height {:style {:margin-top "10px"}}
      [child-view]
      #_[:div.card
       [:div.card-header.bg-gradient-indigo.br-tr-3.br-tl-3

@@ -1448,42 +1448,7 @@ pre code {
 	transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
 	color: #f1f2f3!important;
 }
-.select2-container--default .select2-selection--single {
-    /*background-color:  #243253 !important;*/
-  background-color: rgb(43, 57, 93) !important;
-	border: 1px solid rgba(255, 255, 255, 0.12) !important;
-	border-radius: 4px;
-}
-.select2-container--default.select2-container--focus .select2-selection--multiple {
-	color: #ced4da;
-	background-color: #243253 !important;
-	border-color: #0072ff;
-	outline: 0;
-	box-shadow: 0 0 0 2px rgba(70, 127, 207, 0.25);
-}
-.select2-container--default .select2-selection--multiple {
-    background-color: #243253 !important;
-    border: 1px solid #aaa;
-    border-radius: 4px;
-    cursor: text;
-}
-.select2-container--default .select2-selection--multiple {
-    background-color: white;
-    border: 1px solid rgba(255, 255, 255, 0.12) !important;
-    border-radius: 4px;
-    cursor: text;
-}
-.select2-container--default .select2-search--dropdown .select2-search__field {
-    border: 1px solid rgba(255, 255, 255, 0.12) !important;
-}
-.select2-container--default .select2-selection--multiple .select2-selection__choice {
-    background-color: #3f4759 !important;
-    border: 1px solid rgba(255, 255, 255, 0.0612) !important;
-}
-.select2-container--default .select2-selection--single .select2-selection__rendered {
-    color: #ced4da !important;
-    line-height: 28px;
-}
+
 @media screen and (prefers-reduced-motion: reduce) {
 	.form-control {
 		transition: none;
@@ -1525,16 +1490,6 @@ select.form-control:not([size]):not([multiple]) {
 	height: 2.375rem;
 }
 
-.select2-container .select2-selection--single {
-	height: 2.375rem !important;
-}
-.select2-container--default .select2-selection--single .select2-selection__rendered {
-	color: #444;
-	line-height: 35px !important;
-}
-.select2-container--default .select2-selection--single .select2-selection__arrow {
-	height: 2.375rem !important;
-}
 select.form-control:focus::-ms-value {
 	color: #495057;
 	background-color: #fff;
@@ -2966,6 +2921,7 @@ input[type="submit"].btn-block, input[type="reset"].btn-block, input[type="butto
 .table-responsive {
 	display: block;
 	width: 100%;
+	height: 100%;
 	overflow-x: auto;
 	-webkit-overflow-scrolling: touch;
 	-ms-overflow-style: -ms-autohiding-scrollbar;
@@ -20528,3 +20484,14 @@ svg {
 	background-image: linear-gradient(110deg,#04A8FB 1%,#871faf 100%);
 }
 
+.full-height {
+	height: 96% !important;
+}
+
+.table-responsive .full-height {
+	height: 100% !important;
+}
+
+.commands {
+	text-align: right;
+}

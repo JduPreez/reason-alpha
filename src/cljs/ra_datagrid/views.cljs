@@ -582,7 +582,7 @@
             (rf/dispatch [:datagrid/update-options id options]))
           (when (not= fields @current-fields)
             (rf/dispatch [:datagrid/update-fields id fields]))
-          [:div
+          [:div.full-height
            (when @show-sure?
              [are-you-sure-modal id])
            [:div.table-responsive
