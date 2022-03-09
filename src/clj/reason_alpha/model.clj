@@ -43,7 +43,7 @@
   xtdb/db)
 
 (defmethod ig/init-key ::fn-get-account [_ _]
-  #(svc.account/get-account common/get-context repo.account/get-by-user-id))
+  #(svc.account/get-account common/get-context repo.account/get-by-user-id %))
 
 (defmethod ig/halt-key! ::db [_ _]
   (data.model/disconnect xtdb/db))

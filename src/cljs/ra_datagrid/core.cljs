@@ -4,6 +4,6 @@
             [ra-datagrid.schema]
             [ra-datagrid.subs]
             [ra-datagrid.views]
-            [ra-datagrid.views.edit-cells]
+            [ra-datagrid.views.fields]
             [re-frame.core :as re-frame]
             [reagent.core :as reagent]))

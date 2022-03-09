@@ -42,7 +42,7 @@
                       :share :etf :currency :crypto]]
    [:instrument/currency-instrument-id uuid?]
    [:instrument/prices {:optional true} [:sequential Price]]
-   [:instrument/account-id uuid?]])
+   [:instrument/account-id {:optional true} uuid?]])
 
 (let [{{ptitles :enum/titles} :properties
        providers              :members} (model.utils/get-model-members-of

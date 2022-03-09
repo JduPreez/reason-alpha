@@ -10,9 +10,14 @@
    :can-sort          true
    :create-dispatch   [:instrument.command/create]
    :update-dispatch   [:instrument.command/save!]
-   :default-values    {}})
+   :default-values    {:instrument-type :share}})
 
 (defn view []
-  (let [*schema (rf/subscribe [:model :model/instrument-dao])
-        flds    (datagrid/model->fields @*schema)]
+  (let [*schema            (rf/subscribe [:model :model/instrument-dao])
+        *instr-type-titles (rf/subscribe [:instrument/type-titles])
+        flds               (datagrid/model->fields
+                            @*schema
+                            {:fields-opts
+                             {:instrument-type
+                              {:enum-titles @*instr-type-titles}}})]
     [datagrid/view flds options]))

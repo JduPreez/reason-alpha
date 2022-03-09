@@ -11,8 +11,8 @@
              fin-instruments/Instrument])
 
 (defn save!
-  [db position]
-  (data.model/save! db position))
+  [db instr]
+  (data.model/save! db instr))
 
 (defn getn [db account-id]
   (let [instruments (data.model/query
@@ -21,3 +21,10 @@
                               :where [[p :instrument/account-id account-id]]
                               :in    [account-id]}})]
     instruments))
+
+(defn get1 [db account-id id]
+  (data.model/any db {:spec '{:find  [(pull i [*])]
+                              :where [[i :instrument/id id]
+                                      [i :instrument/account-id account-id]]
+                              :in    [[account-id id]]}
+                      :args [account-id id]}))

@@ -121,4 +121,5 @@
    ;;we'll base it on SheetJS cljsjs package: https://github.com/cljsjs/packages/tree/master/xlsx
    (s/optional-key :excel-formatter)              s/Any
    (s/optional-key :menu)                         s/Any
-   (s/optional-key :data-subscription)            s/Any})
+   (s/optional-key :data-subscription)            s/Any
+   (s/optional-key :enum-titles)                  s/Any})

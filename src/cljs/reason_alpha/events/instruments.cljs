@@ -8,11 +8,6 @@
             [reason-alpha.web.api-client :as api-client]))
 
 (rf/reg-event-fx
- :instrument/success
- (fn-traced [_ [_ result]]
-            #_{:dispatch [:save-local :instrument result]}))
-
-(rf/reg-event-fx
  :instrument/load
  (fn [{:keys [db]}]
    (cljs.pprint/pprint :instrument/load)
@@ -21,12 +16,23 @@
                             [:model/instrument :model/symbol
                              :model/instrument-dao]]}))
 
+
+
 (rf/reg-fx
  :instrument.query/getn
  (fn [_]
    (cljs.pprint/pprint :instrument.query/getn)
    (api-client/chsk-send! [:instrument.query/getn]
                           {:on-success [:instrument/success]})))
+
+(rf/reg-event-db
+ :instrument/get1-result
+ (fn [db [_ {:keys [result type]}]]
+   (if (= :success type)
+     (data/save-local! {:db         db
+                        :model-type :instrument
+                        :data       result})
+     db)))
 
 (rf/reg-fx
  :instrument.query/get1
@@ -44,20 +50,19 @@
                            data/instruments
                            #(conj % new-instr))})))
 
-(rf/reg-event-db
+(rf/reg-event-fx
  :model.command/save!-result
- (fn [db [_ result]]
-   (data/save-local! {:db         db
-                      :model-type :instrument
-                      :data       result})))
+ (fn [_ [evt {:keys [type result] :as r}]]
+   (utils/log evt r)
+   (when (= :success type)
+     {:instrument.query/get1 (:instrument/id result)})))
 
 (rf/reg-fx
  :instrument.command/save!
  (fn [instr]
-   (cljs.pprint/pprint {:instrument.command/save! instr})
-   #_(data/save-remote! {:command       :instrument.command/save!
-                         :data          instr
-                         :success-event [:instrument/save-success]})))
+   (utils/log :instrument.command/save! instr)
+   (data/save-remote! {:command :instrument.command/save!
+                       :data    instr})))
 
 (rf/reg-event-fx
  :instrument.command/create
@@ -72,13 +77,6 @@
                                             :db         db})]
      {:db                       db
       :instrument.command/save! cmd-instr})))
-
-(rf/reg-event-fx
- :instrument/save-success
- (fn [_ [evt {:keys [type] :as result}]]
-   (if (= type :success)
-     ;;(data/save-local! result)
-     (utils/log evt result))))
 
 ;; (rf/reg-event-fx
 ;;  :instrument.command/save!

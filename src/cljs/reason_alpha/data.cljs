@@ -79,8 +79,8 @@
         (assoc-in [:data type] (or merged-coll new-val))
         (assoc :saved new-val))))
 
-(defn save-remote! [{:keys [command entity success-event]}]
-  (api-client/chsk-send! [command entity] {:on-success success-event}))
+(defn save-remote! [{:keys [command data success-event]}]
+  (api-client/chsk-send! [command data] {:on-success success-event}))
 
 (defn save-event-fn [type success]
   (fn [_ [_ entity]]

@@ -131,13 +131,13 @@
                               (or t :default)))
 
 (defmethod default-formatter :default
-  [_]
+  [_v _r]
   identity)
 
 (defmethod default-formatter :yesno
   [_]
   (fn [v r]
-    (if v "ja" "nee")))
+    (if v "yes" "no")))
 
 (defmethod default-formatter :date
   [_]

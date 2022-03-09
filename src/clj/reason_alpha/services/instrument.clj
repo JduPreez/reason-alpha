@@ -3,7 +3,8 @@
             [reason-alpha.model.common :as common]
             [reason-alpha.model.fin-instruments :as fin-instruments]
             [reason-alpha.model.account :as account]
-            [taoensso.timbre :as timbre :refer (errorf)]))
+            [taoensso.timbre :as timbre :refer (errorf)]
+            [reason-alpha.utils :as utils]))
 
 (m/=> save! [:=>
              [:cat
@@ -24,7 +25,13 @@
 
 (defn save!
   [fn-repo-save! fn-get-account fn-get-ctx instr]
-  (let [{:keys [account/id]}   (fn-get-account instr)
+  (clojure.pprint/pprint {::save! {:FRS fn-repo-save!
+                                   :FGA fn-get-account
+                                   :FGC fn-get-ctx
+                                   :I   instr}})
+  ;; TODO: Fix getting account details from DB
+  (let [;;{:keys [account/id]}   (fn-get-account instr)
+        id                     (utils/new-uuid)
         {:keys [send-message]} (fn-get-ctx instr)]
     (try
       (if id
@@ -49,3 +56,10 @@
             {:error       (ex-data e)
              :description (str err-msg ": " (ex-message e))
              :type        :error}]))))))
+
+(defn get1 [fn-repo-get1 fn-get-ctx {:keys [instrument-id] :as arg}]
+  (let [{:keys [send-message]} (fn-get-ctx arg)
+        instr                  (fn-repo-get1 instrument-id)]
+    (send-message
+     [:model.query/getn-result {:result instr
+                                :type   :success}])))

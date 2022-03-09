@@ -41,8 +41,8 @@
              [(keyword k) v])))
 
 #?(:cljs
-   (defn log [location {:keys [location type description error] :as log}]
-     (let [l (assoc log :location location)]
+   (defn log [location {:keys [type description error] :as log}]
+     (let [l {location log}]
        (case type
          :error
          , (do (errorf "%s %s" location description)

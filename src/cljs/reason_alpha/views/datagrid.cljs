@@ -62,8 +62,9 @@
                                 :padding-bottom 0}}
         [ra-datagrid/datagrid (merge default-opts options) fields]]])))
 
-(defn model-member->field [[member-nm & schema] & [{:keys [ref-suffix]
-                                                    :as   field-opts}]]
+(defn model-member->field
+  [[member-nm & schema] & [{:keys [ref-suffix enum-titles]
+                            :as   field-opts}]]
   (let [id-member           (-> member-nm
                                 name
                                 (str/ends-with? "-id"))
@@ -90,24 +91,26 @@
            (not ref)) nil
 
       (and ref-ns
-           ref)       (merge
-                       {:title             title
-                        :name              member-nm
-                        :type              :select
-                        :data-subscription [(keyword ref-ns (str ref-nm "-" ref-suffix))]}
-                       fo)
+           ref) (merge
+                 (cond-> {:title             title
+                          :name              member-nm
+                          :type              :select
+                          :data-subscription [(keyword ref-ns (str ref-nm "-" ref-suffix))]}
+                   (= type keyword?) (assoc :enum-titles enum-titles))
+                 fo)
 
-      ref             (merge
-                       {:title             title
-                        :name              member-nm
-                        :type              :select
-                        :data-subscription [(keyword ref-nm ref-suffix)]}
-                       fo)
+      ref (merge
+           (cond-> {:title             title
+                    :name              member-nm
+                    :type              :select
+                    :data-subscription [(keyword ref-nm ref-suffix)]}
+             (= type keyword?) (assoc :enum-titles enum-titles))
+           fo)
 
-      :default        (merge
-                       {:title title
-                        :name  member-nm}
-                       fo))))
+      :default (merge
+                {:title title
+                 :name  member-nm}
+                fo))))
 
 (defn model->fields [[_ & members] & [{fields-opts :fields-opts
                                        ref-suffix  :ref-suffix

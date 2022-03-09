@@ -14,6 +14,12 @@
      {:id (utils/keyword->str m) :label t})))
 
 (rf/reg-sub
+ :instrument/type-titles
+ :<- [:models/members-of :model/instrument :instrument/type]
+ (fn [{{:keys [enum/titles]} :properties} _]
+   titles))
+
+(rf/reg-sub
  :instrument/list
  (fn [db _]
    (sort-by :instrument-name
