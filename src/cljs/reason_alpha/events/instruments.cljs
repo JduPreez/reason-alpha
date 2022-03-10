@@ -51,7 +51,7 @@
                            #(conj % new-instr))})))
 
 (rf/reg-event-fx
- :model.command/save!-result
+ :instrument.command/save!-result
  (fn [_ [evt {:keys [type result] :as r}]]
    (utils/log evt r)
    (when (= :success type)
