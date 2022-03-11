@@ -11,7 +11,7 @@
             [reason-alpha.infrastructure.auth :as auth]
             [reason-alpha.infrastructure.server]
             [reason-alpha.infrastructure.server :as server]
-            [reason-alpha.model.account :as account]
+            [reason-alpha.model.accounts :as accounts]
             [reason-alpha.model.common :as common]
             [reason-alpha.services.account :as svc.account]
             [reason-alpha.services.instrument :as svc.instrument]
@@ -42,8 +42,12 @@
   (data.model/connect xtdb/db)
   xtdb/db)
 
-(defmethod ig/init-key ::fn-get-account [_ _]
-  #(svc.account/get-account common/get-context repo.account/get-by-user-id %))
+(defmethod ig/init-key ::account-svc [_ {:keys [db]}]
+  {:fn-get-account   #(svc.account/get-account
+                       common/get-context
+                       (partial repo.account/get-by-user-id db)
+                       %)
+   :fn-save-account! #(repo.account/save! db %)})
 
 (defmethod ig/halt-key! ::db [_ _]
   (data.model/disconnect xtdb/db))
@@ -82,9 +86,8 @@
   (pprint/pprint {::aggregates aggregates})
   (handlers aggregates))
 
-(defmethod ig/init-key ::server [_ {:keys [handlers]}]
-  (pprint/pprint {::handlers handlers})
-  (server/start! handlers))
+(defmethod ig/init-key ::server [_ conf]
+  (server/start! conf))
 
 (defmethod ig/halt-key! ::server [_ _]
   (server/stop!))
@@ -100,12 +103,16 @@
 
 (def sys-def
   {::db              nil
-   ::fn-get-account  nil
-   ::aggregates      {:db             (ig/ref ::db)
-                      :fn-get-account (ig/ref ::fn-get-account)}
+   ::account-svc     {:db (ig/ref ::db)}
+   {:db (ig/ref ::db)}
+   ::aggregates      {:db          (ig/ref ::db)
+                      :account-svc (ig/ref ::account-svc)}
    ::handlers        {:aggregates (ig/ref ::aggregates)}
-   ::server          {:handlers (ig/ref ::handlers)}
+   ::server          {:handlers    (ig/ref ::handlers)
+                      :account-svc (ig/ref ::account-svc)
+                      :port        5000}
    ::instrumentation {:nss ['reason-alpha.data.model
+                            'reason-alpha.data.repositories.account
                             'reason-alpha.data.repositories.position
                             'reason-alpha.infrastructure.auth
                             'reason-alpha.services.instrument

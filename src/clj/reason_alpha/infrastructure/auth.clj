@@ -7,7 +7,7 @@
             [clojure.string :as str]
             [malli.core :as m]
             [outpace.config :refer [defconfig]]
-            [reason-alpha.model.account :as account]
+            [reason-alpha.model.accounts :as accounts]
             [reason-alpha.model.common :as common]))
 
 (defconfig tenant-id)
@@ -33,17 +33,17 @@
 
 (m/=> account
       [:=> [:cat :any]
-       account/AccountDto])
+       accounts/Account])
 
 ;; TODO: This must be cached
 (defn account [request]
   (let [{:keys [user-token] :as tokens}              (tokens request)
         {:keys [userUuid email username name image]} (token-data user-token)]
-    {:user-id   userUuid
-     :user-name username
-     :email     email
-     :name      name
-     :image     image}))
+    {:account/user-id   userUuid
+     :account/user-name username
+     :account/profile   {:profile/email email
+                         :profile/name  name
+                         :profile/image image}}))
 
 (comment
 

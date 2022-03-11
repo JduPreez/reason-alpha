@@ -20,7 +20,7 @@
             [xtdb.api :as xt]
             [me.raynes.fs :as fs]
             [outpace.config :refer [defconfig]]
-            [reason-alpha.data.model :refer [DataBase]]
+            [reason-alpha.data.model :as data.model :refer [DataBase]]
             [reason-alpha.model.core :as model]))
 
 (defconfig data-dir) ;; "data"
@@ -118,9 +118,11 @@
     (.close @*db-node))
 
   (connect [_]
+    (println "db-node start " @*db-node)
     (when @*db-node
       (.close @*db-node))
     (reset! *db-node (fn-start-db!))
+    (println "db-node end" @*db-node)
     @*db-node)
 
   (query [_ {:keys [spec args]}]
@@ -148,9 +150,19 @@
 
 (comment
 
-  (require '[reason-alpha.data :refer [add-all! query save! connect delete!]])
 
-  (connect db)
+  (require '[reason-alpha.model.mapping :as mapping]
+           '[reason-alpha.model.fin-instruments :as fin-instruments])
+
+  (data.model/connect db)
+
+  (data.model/disconnect db)
+
+  (let [instruments (data.model/query db
+                                      {:spec '{:find  [(pull e [*])]
+                                               :where [[e :instrument/id]]}})]
+    (mapping/command-ents->query-daos fin-instruments/InstrumentDao
+                                      instruments))
 
   (put-delete-fn! {:node                  (connect db)
                    :only-when-not-exists? false})
@@ -167,10 +179,6 @@
                      :where [[tp :trade-pattern/id id]]
                      :in    [id]}
              :args [#uuid "c7057fa6-f424-4b47-b1f2-de5ae63fb5fb"]})
-
-  (query db
-         {:spec '{:find  [(pull tp [*])]
-                  :where [[tp :trade-pattern/id]]}})
 
   (query db
          {:spec '{:find  [?tp]

@@ -1,19 +1,17 @@
-(ns reason-alpha.model.account
+(ns reason-alpha.model.accounts
   (:require [reason-alpha.model.core :as model :refer [def-model]]))
 
 (def-model Profile
   :model/profile
   [:map
-   [:profile/creation-id uuid?]
    [:profile/id {:optional true} uuid?]
    [:profile/email string?]
-   [:profile/name string?]
+   [:profile/name {:optional true} string?]
    [:profile/image {:optional true} string?]])
 
 (def-model Account
   :model/account
   [:map
-   [:account/creation-id uuid?]
    [:account/id {:optional true} uuid?]
    [:account/user-id string?]
    [:account/user-name string?]
@@ -21,6 +19,7 @@
 
 (def AccountDto
   [:map
+   [:account-id uuid?]
    [:user-id string?]
    [:user-name string?]
    [:email string?]

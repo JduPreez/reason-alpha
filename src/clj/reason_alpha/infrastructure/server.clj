@@ -1,7 +1,7 @@
 (ns reason-alpha.infrastructure.server
   (:require [clojure.core.async :as async  :refer (<! <!! >! >!! put! chan go go-loop)]
             [clojure.pprint :as pprint]
-            [compojure.core :as comp :refer (defroutes GET POST ANY)]
+            [compojure.core :as comp :refer (defroutes routes GET POST ANY)]
             [compojure.route :as route]
             [org.httpkit.server :as http-kit]
             [outpace.config :refer [defconfig]]
@@ -58,27 +58,26 @@
       (infof "Connected uids change: %s" new))))
 
 (defn login-handler
-  [{:keys [request-method] :as request}]
+  [{:keys [fn-save-account!]} {:keys [request-method]
+                               :as   request}]
   (when (not= request-method :options)
     (let [{:keys [is-valid? error userUuid email]} (-> request
                                                        auth/tokens
                                                        :user-token
                                                        auth/token-data)]
+
       (debugf "Verified login of user %s (%s): %b" userUuid email is-valid?)
 
       (if is-valid?
-        {:status 200
-         :body   {:result "Access granted"}}
+        (do
+          (fn-save-account! (auth/account request))
+          {:status 200
+           :body   {:result "Access granted"}})
         (do
           (debugf "Error verifying login %s" error)
           {:status 401
            :body   {:result "Access denied"
                     :reason (when error "Error")}})))))
-
-(defroutes ring-routes
-  (GET  "/chsk"  ring-req (ring-ajax-get-or-ws-handshake ring-req))
-  (POST "/chsk"  ring-req (ring-ajax-post                ring-req))
-  (POST "/login" ring-req (login-handler                 ring-req)))
 
 (defn wrap-cors [handler allow-origin]
   (fn [{:keys [request-method] :as request}]
@@ -91,8 +90,14 @@
                      (#{:options} request-method) (assoc :status 200))]
       response)))
 
-(def main-ring-handler
-  (-> ring-routes
+(defn ring-routes [conf]
+  (routes
+   (GET  "/chsk"  ring-req (ring-ajax-get-or-ws-handshake ring-req))
+   (POST "/chsk"  ring-req (ring-ajax-post                ring-req))
+   (POST "/login" ring-req (login-handler conf            ring-req))))
+
+(defn main-ring-handler [conf]
+  (-> (ring-routes conf)
       (ring-defaults/wrap-defaults ring-defaults/api-defaults)
       ring.middleware.session/wrap-session
       (wrap-cors allowed-origins)))
@@ -154,10 +159,10 @@
 ;;;; Init stuff
 (defonce *web-server (atom nil)) ; (fn stop [])
 (defn stop-web-server! [] (when-let [stop-fn @*web-server] (stop-fn)))
-(defn start-web-server! [& [port]]
+(defn start-web-server! [{:keys [port] :as conf}]
   (stop-web-server!)
-  (let [port         (or port 0) ; 0 => Choose any available port
-        ring-handler (var main-ring-handler)
+  (let [port         (or port 0)              ; 0 => Choose any available port
+        ring-handler (main-ring-handler conf) #_ (var main-ring-handler)
 
         [port stop-fn] (let [stop-fn (http-kit/run-server
                                       ring-handler
@@ -174,9 +179,10 @@
   (stop-router!)
   (stop-web-server!))
 
-(defn start! [handlers]
+(defn start! [{:keys [handlers]
+               :as   conf}]
   (start-router! handlers)
-  (start-web-server! 5000)
+  (start-web-server! conf)
   #_(let [*ws (start-web-server! 5000)]
     (start-example-broadcaster!)
     *ws))

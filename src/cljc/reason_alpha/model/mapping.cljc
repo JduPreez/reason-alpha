@@ -98,35 +98,48 @@
          (into {}))
     [path step]))
 
+(defn command-ent->query-dao [query-model command-ent]
+  (let [all-paths-vals  (flatten-path [] command-ent)
+        member-nm-paths (->> query-model
+                             rest
+                             (map
+                              (fn [[k props]]
+                                [k props])))]
+    (->> all-paths-vals
+         (reduce
+          (fn [{:keys [dao membr-nm-paths] :as dao-paths} [path v]]
+            (let [path-template (mapv #(if (number? %) 0 %) path)
+                  nm-k          (some
+                                 (fn [[k {p   :command-path
+                                          pvt :pivot}]]
+                                   (when (= p path-template)
+                                     (if pvt
+                                       (-> path
+                                           butlast
+                                           vec
+                                           (conj pvt)
+                                           (as-> x (get all-paths-vals x)))
+                                       k)))
+                                 membr-nm-paths)
+                  dao-paths     (if nm-k
+                                  {:dao            (assoc dao nm-k v)
+                                   :membr-nm-paths (remove
+                                                    (fn [[k _]]
+                                                      (= k nm-k))
+                                                    membr-nm-paths)}
+                                  dao-paths)]
+              dao-paths))
+          {:dao            {}
+           :membr-nm-paths member-nm-paths})
+         :dao)))
+
+(defn command-ents->query-daos [query-model command-ents]
+  (map #(command-ent->query-dao query-model %)
+       command-ents))
+
+
 (comment
-  (letfn [(command-ent->query-dao [query-model command-ent]
-            (let [all-paths-vals  (flatten-path [] command-ent)
-                  member-nm-paths (->> query-model
-                                       rest
-                                       (map
-                                        (fn [[k {path  :command-path
-                                                 pivot :pivot}]]
-                                          ;; TODO: Add support for pivots
-                                          [k path])))]
-              (->> all-paths-vals
-                   (reduce
-                    (fn [{:keys [dao membr-nm-paths] :as dao-paths} [path v]]
-                      (let [path-template (mapv #(if (number? %) 0 %) path)
-                            nm-k          (some
-                                           (fn [[k p]]
-                                             (when (= p path-template) k))
-                                           membr-nm-paths)
-                            dao-paths     (if nm-k
-                                            {:dao            (assoc dao nm-k v)
-                                             :membr-nm-paths (remove
-                                                              (fn [[k _]]
-                                                                (= k nm-k))
-                                                              membr-nm-paths)}
-                                            dao-paths)]
-                        dao-paths))
-                    {:dao            {}
-                     :membr-nm-paths member-nm-paths})
-              )))]
+  (letfn []
     (let [query-dao-model [:map
                            [:instrument-id
                             {:optional true, :command-path [:instrument/id]}

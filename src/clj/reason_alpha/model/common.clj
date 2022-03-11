@@ -1,7 +1,7 @@
 (ns reason-alpha.model.common
   (:require [malli.core :as m]
             [reason-alpha.model.core :as model :refer [def-model]]
-            [reason-alpha.model.account :as account]))
+            [reason-alpha.model.accounts :as accounts]))
 
 (defn result-schema [result-schema]
   [:map
@@ -18,7 +18,7 @@
     :any]
    [:map
     [:send-message :any]
-    [:user-account account/AccountDto]]])
+    [:user-account accounts/AccountDto]]])
 
 (defn get-context [data]
   (when data
