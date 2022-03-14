@@ -58,8 +58,8 @@
       (infof "Connected uids change: %s" new))))
 
 (defn login-handler
-  [{:keys [fn-save-account!]} {:keys [request-method]
-                               :as   request}]
+  [{{:keys [fn-save-account!]} :account-svc}
+   {:keys [request-method] :as request}]
   (when (not= request-method :options)
     (let [{:keys [is-valid? error userUuid email]} (-> request
                                                        auth/tokens
@@ -70,7 +70,8 @@
 
       (if is-valid?
         (do
-          (fn-save-account! (auth/account request))
+          (let [acc (auth/account request)]
+            (fn-save-account! acc))
           {:status 200
            :body   {:result "Access granted"}})
         (do
@@ -93,8 +94,8 @@
 (defn ring-routes [conf]
   (routes
    (GET  "/chsk"  ring-req (ring-ajax-get-or-ws-handshake ring-req))
-   (POST "/chsk"  ring-req (ring-ajax-post                ring-req))
-   (POST "/login" ring-req (login-handler conf            ring-req))))
+   (POST "/chsk"  ring-req (ring-ajax-post ring-req))
+   (POST "/login" ring-req (login-handler conf ring-req))))
 
 (defn main-ring-handler [conf]
   (-> (ring-routes conf)
@@ -127,20 +128,25 @@
 
 (defn server-event-msg-handler
   "Wraps `-event-msg-handler` with logging, error catching, etc."
-  [handlers {:as ev-msg :keys [id ?data event ?reply-fn ring-req uid]
-             :or {?data {}}}]
-  (clojure.pprint/pprint {::server-event-msg-handler ev-msg})
+  [handlers {:as ev-msg :keys [id ?data event ?reply-fn ring-req uid]}]
+
+  (when (not= :chsk/ws-ping id)
+    (clojure.pprint/pprint {::server-event-msg-handler ev-msg}))
+
   (let [fun     (get handlers id)
         account (auth/account ring-req)
-        data    (common/set-context ?data {:user-account account
-                                           :send-message #(chsk-send! uid %)})]
+        data    (common/set-context (or ?data {})
+                                    {:user-account account
+                                     :send-message #(chsk-send! uid %)})]
     (if fun
       (let [_      (debugf "Event handler found: %s" id) ;; Log before calling `fun` might throw exception
             result (fun data)]
         (when ?reply-fn
           (?reply-fn result)))
       (do
-        (debugf "Unhandled event: %s" event)
+        (when (not= :chsk/ws-ping id)
+          (debugf "Unhandled event: %s" event))
+
         (when ?reply-fn
           (?reply-fn {:umatched-event-as-echoed-from-server event}))) ))
                                         ; Handle event-msgs on a single thread

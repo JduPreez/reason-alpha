@@ -3,7 +3,7 @@
             [reason-alpha.data.model :as data.model]
             [reason-alpha.model.accounts :as accounts]
             [reason-alpha.model.mapping :as mapping]
-            ))
+            [reason-alpha.utils :as utils]))
 
 (m/=> save! [:=>
              [:cat
@@ -11,14 +11,17 @@
               accounts/Account]
             accounts/Account])
 
-(defn save!
-  [db instr]
-  (data.model/save! db instr))
+(defn save! [db instr]
+  (let [i (if (contains? instr :account/creation-id)
+            instr
+            (assoc instr :account/creation-id (utils/new-uuid)))]
+    (data.model/save! db i)))
 
 (defn get-by-user-id [db user-id]
-  (let [acc (data.model/query
+  (let [acc (data.model/any
              db
-             {:spec '{:find  [(pull a [*])]
-                      :where [[a :account/user-id user-id]]
-                      :in    [user-id]}})]
+             {:spec '{:find  [(pull e [*])]
+                      :where [[e :account/user-id uid]]
+                      :in    [uid]}
+              :args [user-id]})]
     acc))

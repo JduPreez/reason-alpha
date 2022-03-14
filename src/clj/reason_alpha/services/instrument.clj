@@ -25,13 +25,8 @@
 
 (defn save!
   [fn-repo-save! fn-get-account fn-get-ctx instr]
-  (clojure.pprint/pprint {::save!-1 {:FRS fn-repo-save!
-                                     :FGA fn-get-account
-                                     :FGC fn-get-ctx
-                                     :I   instr}})
   (let [{account-id :account/id} (fn-get-account instr)
         {:keys [send-message]}   (fn-get-ctx instr)]
-    (clojure.pprint/pprint {::save!-2 account-id})
     (try
       (if account-id
         (send-message
@@ -61,5 +56,16 @@
         {:keys [send-message]}    (fn-get-ctx args)
         instr                     (fn-repo-get1 user-id instrument-id)]
     (send-message
-     [:model.query/getn-result {:result instr
-                                :type   :success}])))
+     [:instrument.query/get1-result {:result instr
+                                     :type   :success}])))
+
+(defn getn [fn-repo-getn fn-get-account fn-get-ctx args]
+  (let [{:keys [account/user-id]} (fn-get-account args)
+        {:keys [send-message]}    (fn-get-ctx args)
+        instr                     (fn-repo-getn user-id)]
+    (clojure.pprint/pprint {::getn {:UID user-id
+                                    :SM  send-message
+                                    :I   instr}})
+    (send-message
+     [:instrument.query/getn-result {:result instr
+                                     :type   :success}])))

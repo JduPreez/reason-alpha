@@ -158,6 +158,17 @@
 
   (data.model/disconnect db)
 
+  (data.model/query db
+                    {:spec '{:find  [(pull e [*])]
+                             :where [[e :account/id]]}})
+  (let [uid "a681c638-7509-4ef3-a816-3ffb42f036a0"]
+    (data.model/any
+     db
+     {:spec '{:find  [(pull a [*])]
+              :where [[a :account/user-id user-id]]
+              :in    [user-id]}
+      :args [uid]}))
+
   (let [instruments (data.model/query db
                                       {:spec '{:find  [(pull e [*])]
                                                :where [[e :instrument/id]]}})]

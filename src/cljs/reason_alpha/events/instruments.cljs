@@ -22,12 +22,22 @@
  :instrument.query/getn
  (fn [_]
    (cljs.pprint/pprint :instrument.query/getn)
-   (api-client/chsk-send! [:instrument.query/getn]
-                          {:on-success [:instrument/success]})))
+   (api-client/chsk-send! [:instrument.query/getn])))
+
+(rf/reg-event-db
+ :instrument/getn-result
+ (fn [db [evt {:keys [result type] :as r}]]
+   (utils/log evt r)
+   (if (= :success type)
+     (data/save-local! {:db         db
+                        :model-type :instrument
+                        :data       result})
+     db)))
 
 (rf/reg-event-db
  :instrument/get1-result
- (fn [db [_ {:keys [result type]}]]
+ (fn [db [evt {:keys [result type] :as r}]]
+   (utils/log evt r)
    (if (= :success type)
      (data/save-local! {:db         db
                         :model-type :instrument
@@ -37,6 +47,7 @@
 (rf/reg-fx
  :instrument.query/get1
  (fn [instr-id]
+   (cljs.pprint/pprint {:instrument.query/get1 instr-id})
    (api-client/chsk-send! [:instrument.query/get1 {:instrument-id instr-id}])))
 
 #_(rf/reg-event-fx

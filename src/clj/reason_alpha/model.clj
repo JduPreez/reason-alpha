@@ -9,7 +9,6 @@
             [reason-alpha.data.repositories.trade-pattern :as repo.trade-pattern]
             [reason-alpha.data.xtdb :as xtdb]
             [reason-alpha.infrastructure.auth :as auth]
-            [reason-alpha.infrastructure.server]
             [reason-alpha.infrastructure.server :as server]
             [reason-alpha.model.accounts :as accounts]
             [reason-alpha.model.common :as common]
@@ -43,11 +42,12 @@
   xtdb/db)
 
 (defmethod ig/init-key ::account-svc [_ {:keys [db]}]
-  {:fn-get-account   #(svc.account/get-account
-                       common/get-context
-                       (partial repo.account/get-by-user-id db)
-                       %)
-   :fn-save-account! #(repo.account/save! db %)})
+  (let [fn-repo-save!      #(repo.account/save! db %)
+        fn-repo-get-by-uid #(repo.account/get-by-user-id db %)]
+    {:fn-get-account   #(svc.account/get-account common/get-context
+                                                 fn-repo-get-by-uid %)
+     :fn-save-account! #(svc.account/save! fn-repo-get-by-uid
+                                           fn-repo-save! %)}))
 
 (defmethod ig/halt-key! ::db [_ _]
   (data.model/disconnect xtdb/db))
@@ -55,7 +55,8 @@
 
 ;; https://stackoverflow.com/questions/26116277/getting-argument-type-hints-of-a-function-in-clojure
 ;; Tag context arg un function & inject from the server messaging
-(defmethod ig/init-key ::aggregates [_ {:keys [db fn-get-account]}]
+(defmethod ig/init-key ::aggregates [_ {db                       :db
+                                        {:keys [fn-get-account]} :account-svc}]
   {:trade-pattern
    {:commands {:save! (as-> db d
                         (partial repo.trade-pattern/save! d)
@@ -78,7 +79,15 @@
                                  fn-get-account
                                  common/get-context))}
     :queries  {:getn (as-> db d
-                       (partial repo.instrument/getn d))}}
+                       (partial repo.instrument/getn d)
+                       (partial svc.instrument/getn d
+                                fn-get-account
+                                common/get-context))
+               :get1 (as-> db d
+                       (partial repo.instrument/get1 d)
+                       (partial svc.instrument/get1 d
+                                fn-get-account
+                                common/get-context))}}
    :model
    {:queries {:getn #(svc.model/getn common/get-context %)}}})
 
@@ -104,7 +113,6 @@
 (def sys-def
   {::db              nil
    ::account-svc     {:db (ig/ref ::db)}
-   {:db (ig/ref ::db)}
    ::aggregates      {:db          (ig/ref ::db)
                       :account-svc (ig/ref ::account-svc)}
    ::handlers        {:aggregates (ig/ref ::aggregates)}
