@@ -7,11 +7,6 @@
         models                 (mdl/get-defs model-ks)
         malli-edn              (medn/write-string [:schema {:registry models}
                                                    (first model-ks)])]
-    (clojure.pprint/pprint {::getn {:FGC fn-get-ctx
-                                    :MK  model-ks
-                                    :SM  send-message
-                                    :M   models
-                                    :ME  malli-edn}})
     (send-message
      [:model.query/getn-result {:result malli-edn
                                 :type   :success}])))

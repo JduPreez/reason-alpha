@@ -131,12 +131,11 @@
 (rf/reg-event-fx
  :edit
  (fn [{:keys [db]} [_ entities]]
-   (let [{:keys [view]} (get-in db data/active-view-model)
-         edit-evts      (mapv
-                         #(let [creation-id (->> %
-                                                 model.utils/creation-id-key
-                                                 (get %))]
-                            [:datagrid/start-edit view creation-id %])
-                         entities)]
-     (cljs.pprint/pprint {::edit edit-evts})
+   (let [{:keys [view model]} (get-in db data/active-view-model)
+         edit-evts            (mapv
+                               #(let [creation-id (->> %
+                                                       (model.utils/creation-id-key model)
+                                                       (get %))]
+                                  [:datagrid/start-edit view creation-id %])
+                               entities)]
      {:dispatch-n edit-evts})))

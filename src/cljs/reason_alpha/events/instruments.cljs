@@ -9,14 +9,11 @@
 
 (rf/reg-event-fx
  :instrument/load
- (fn [{:keys [db]}]
-   (cljs.pprint/pprint :instrument/load)
+ (fn [{:keys [db]} _]
    {:instrument.query/getn nil
     :dispatch              [:model.query/getn
                             [:model/instrument :model/symbol
-                             :model/instrument-dao]]}))
-
-
+                             :model/instrument-dto]]}))
 
 (rf/reg-fx
  :instrument.query/getn
@@ -25,7 +22,7 @@
    (api-client/chsk-send! [:instrument.query/getn])))
 
 (rf/reg-event-db
- :instrument/getn-result
+ :instrument.query/getn-result
  (fn [db [evt {:keys [result type] :as r}]]
    (utils/log evt r)
    (if (= :success type)
@@ -35,7 +32,7 @@
      db)))
 
 (rf/reg-event-db
- :instrument/get1-result
+ :instrument.query/get1-result
  (fn [db [evt {:keys [result type] :as r}]]
    (utils/log evt r)
    (if (= :success type)
@@ -49,17 +46,6 @@
  (fn [instr-id]
    (cljs.pprint/pprint {:instrument.query/get1 instr-id})
    (api-client/chsk-send! [:instrument.query/get1 {:instrument-id instr-id}])))
-
-#_(rf/reg-event-fx
- :instrument.command/add
- (fn [{:keys [db]} _]
-   (let [instrs      (get-in db (data/entity-data :instrument))
-         creation-id (utils/new-uuid)
-         new-instr   {:instrument-creation-id creation-id}]
-     {:dispatch [:edit [new-instr]]
-      :db       (update-in db
-                           data/instruments
-                           #(conj % new-instr))})))
 
 (rf/reg-event-fx
  :instrument.command/save!-result
@@ -81,20 +67,21 @@
    (let [new-instr       (if creation-id
                            new-instr
                            (assoc new-instr :instrument-creation-id (utils/new-uuid)))
-         query-dao-model (get-in db (data/model :model/instrument-dao))
-         cmd-instr       (mapping/query-dao->command-ent query-dao-model new-instr)
+         query-dto-model (get-in db (data/model :model/instrument-dto))
+         cmd-instr       (mapping/query-dto->command-ent query-dto-model new-instr)
          db              (data/save-local! {:model-type :instrument
                                             :data       new-instr
                                             :db         db})]
      {:db                       db
       :instrument.command/save! cmd-instr})))
 
-;; (rf/reg-event-fx
-;;  :instrument.command/save!
-;;  (fn [_ [evt instr]]
-;;    (cljs.pprint/pprint {::save! instr})
-;;    (let [fx (data/save-local! {:db         db
-;;                                :model-type :instrument
-;;                                :data       instr})])
-;;    #_(data/save-remote! {:command evt
-;;                          :entity  instr})))
+(rf/reg-event-fx
+ :instrument.command/update
+ (fn [{:keys [db]} [_ {:keys [creation-id] :as instr}]]
+   (let [query-dto-model (get-in db (data/model :model/instrument-dto))
+         cmd-instr       (mapping/query-dto->command-ent query-dto-model instr)
+         db              (data/save-local! {:model-type :instrument
+                                            :data       instr
+                                            :db         db})]
+     {:db                       db
+      :instrument.command/save! cmd-instr})))

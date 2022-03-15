@@ -30,7 +30,7 @@
         del-col        (if (coll? deleted)
                          deleted
                          [deleted])
-        id-k           (model.utils/id-key (first del-col))
+        id-k           (model.utils/id-key type (first del-col))
         entities       (get-in db data-path)
         remaining-ents (remove
                         (fn [e]
@@ -61,19 +61,16 @@
     ids))
 
 (defn save-local!
-  [{db          :db
-    type        :model-type
-    {:keys [result]
-     :as   new} :data}]
+  [{db :db, type :model-type, data :data}]
   (let [current     (get-in db (entity-data type))
-        new-val     (or result new)
+        new-val     (or (:result data) data)
         new-coll    (cond
                       (and (coll? new-val)
                            (not (map? new-val))
                            (map? (first new-val))) new-val
                       (map? new-val)               [new-val])
         merged-coll (when new-coll
-                      (model.utils/merge-by-id current new-coll))]
+                      (model.utils/merge-by-id type current new-coll))]
     (-> db
         (assoc-in [:loading type] false)
         (assoc-in [:data type] (or merged-coll new-val))

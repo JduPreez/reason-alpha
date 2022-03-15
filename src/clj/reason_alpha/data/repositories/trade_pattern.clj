@@ -1,40 +1,29 @@
 (ns reason-alpha.data.repositories.trade-pattern
   (:require [reason-alpha.data.model :as data.model]
-            [reason-alpha.data-structures :as data-structs]
-            [clojure.pprint :as pprint]))
+            [reason-alpha.model.mapping :as mapping]
+            [reason-alpha.model.portfolio-management :as portfolio-management]))
 
-(defn getn [db]
-  (let [trade-patrns (data.model/query
-                      db
-                      {:spec '{:find  [(pull tp [*])]
-                               :where [[tp :trade-pattern/id]]}})]
-    trade-patrns))
+(defn getn [db account-id]
+  (->> {:spec '{:find  [(pull e [*])]
+                :where [[e :trade-pattern/account-id account-id]]
+                :in    [account-id]}
+        :args [account-id]}
+       (data.model/query db)
+       (mapping/command-ents->query-dtos portfolio-management/TradePatternDto)))
 
-(defn get1 [db id]
-  (data.model/any db [:trade-pattern/id := id]))
+(defn get1 [db account-id id]
+  (->> {:spec '{:find  [(pull e [*])]
+                :where [[e :trade-pattern/id id]
+                        [e :trade-pattern/account-id account-id]]
+                :in    [[account-id id]]}
+        :args [account-id id]}
+       (data.model/any db)
+       (mapping/command-ent->query-dto portfolio-management/TradePatternDto)))
 
 (defn save! [db {:keys [trade-pattern/parent-id
                         trade-pattern/id]
                  :as   trade-pattern}]
-  (let [tp          (data.model/save! db trade-pattern)
-        #_#_parent-tp   (when parent-id
-                      (data.model/any db {:spec '{:find  [(pull tp [*])]
-                                                  :where [[tp :trade-pattern/id id]]
-                                                  :in    [id]}
-                                          :args [parent-id]}))
-        #_#_children-tp (when id
-                      (data.model/query db {:spec '{:find  [(pull tp [*])]
-                                                    :where [[tp :trade-pattern/parent-id id]]
-                                                    :in    [id]}
-                                            :args [id]}))
-        #_#_tps         (data-structs/conj-ancestors-path (cond-> [tp]
-                                                        parent-tp         (conj parent-tp)
-                                                        (seq children-tp) (into children-tp))
-                                                      :trade-pattern/parent-id
-                                                      :trade-pattern/name
-                                                      :trade-pattern/id
-                                                      :trade-pattern/ancestors-path)]
-    #_tps
+  (let [tp (data.model/save! db trade-pattern)]
     tp))
 
 (defn delete! [db trade-pattern-ids]

@@ -3,8 +3,10 @@
             [reason-alpha.data :as data]))
 
 (rf/reg-sub
- :trade-patterns
+ :trade-pattern/list
  (fn [db _]
+   (cljs.pprint/pprint {:trade-pattern/list (sort-by :trade-pattern/name
+                                                     (get-in db data/trade-patterns))})
    (sort-by :trade-pattern/name
             (get-in db data/trade-patterns))))
 

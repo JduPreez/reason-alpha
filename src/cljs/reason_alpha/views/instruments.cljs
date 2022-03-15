@@ -7,13 +7,12 @@
    :title             "Instruments"
    :data-subscription [:instrument/list]
    :id-field          :instrument-creation-id
-   :can-sort          true
    :create-dispatch   [:instrument.command/create]
-   :update-dispatch   [:instrument.command/save!]
+   :update-dispatch   [:instrument.command/update]
    :default-values    {:instrument-type :share}})
 
 (defn view []
-  (let [*schema            (rf/subscribe [:model :model/instrument-dao])
+  (let [*schema            (rf/subscribe [:model :model/instrument-dto])
         *instr-type-titles (rf/subscribe [:instrument/type-titles])
         flds               (datagrid/model->fields
                             @*schema

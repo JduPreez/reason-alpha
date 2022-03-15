@@ -16,21 +16,18 @@
   (data.model/save! db instr))
 
 (defn getn [db account-id]
-  (let [instruments (data.model/query
-                     db
-                     {:spec '{:find  [(pull p [*])]
-                              :where [[p :instrument/account-id account-id]]
-                              :in    [account-id]}})]
-    (mapping/command-ents->query-daos fin-instruments/InstrumentDao
-                                      instruments)))
+  (->> {:spec '{:find  [(pull e [*])]
+                :where [[e :instrument/account-id account-id]]
+                :in    [account-id]}
+        :args [account-id]}
+       (data.model/query db)
+       (mapping/command-ents->query-dtos fin-instruments/InstrumentDto)))
 
 (defn get1 [db account-id id]
-  (let [x (->> {:spec '{:find  [(pull i [*])]
-                        :where [[i :instrument/id id]
-                                [i :instrument/account-id account-id]]
-                        :in    [[account-id id]]}
-                :args [account-id id]}
-               (data.model/any db)
-               (mapping/command-ent->query-dao fin-instruments/InstrumentDao))]
-    (clojure.pprint/pprint {::get1 x})
-    x))
+  (->> {:spec '{:find  [(pull e [*])]
+                :where [[e :instrument/id id]
+                        [e :instrument/account-id account-id]]
+                :in    [[account-id id]]}
+        :args [account-id id]}
+       (data.model/any db)
+       (mapping/command-ent->query-dto fin-instruments/InstrumentDto)))

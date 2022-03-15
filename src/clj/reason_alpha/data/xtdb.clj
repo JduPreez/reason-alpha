@@ -160,7 +160,8 @@
 
   (data.model/query db
                     {:spec '{:find  [(pull e [*])]
-                             :where [[e :account/id]]}})
+                             :where [[e :instrument/id]]}})
+
   (let [uid "a681c638-7509-4ef3-a816-3ffb42f036a0"]
     (data.model/any
      db
@@ -169,10 +170,14 @@
               :in    [user-id]}
       :args [uid]}))
 
-  (let [instruments (data.model/query db
-                                      {:spec '{:find  [(pull e [*])]
-                                               :where [[e :instrument/id]]}})]
-    (mapping/command-ents->query-daos fin-instruments/InstrumentDao
+  (let [acc-id      #uuid "017f87dc-59d1-7beb-9e1d-7a2a354e5a49"
+        instruments (data.model/query
+                     db
+                     {:spec '{:find  [(pull p [*])]
+                              :where [[p :instrument/account-id account-id]]
+                              :in    [account-id]}
+                      :args [acc-id]})]
+    (mapping/command-ents->query-dtos fin-instruments/InstrumentDto
                                       instruments))
 
   (put-delete-fn! {:node                  (connect db)

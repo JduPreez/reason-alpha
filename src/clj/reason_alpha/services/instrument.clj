@@ -52,20 +52,20 @@
              :type        :error}]))))))
 
 (defn get1 [fn-repo-get1 fn-get-account fn-get-ctx {:keys [instrument-id] :as args}]
-  (let [{:keys [account/user-id]} (fn-get-account args)
-        {:keys [send-message]}    (fn-get-ctx args)
-        instr                     (fn-repo-get1 user-id instrument-id)]
+  (let [{acc-id :account/id}   (fn-get-account args)
+        {:keys [send-message]} (fn-get-ctx args)
+        instr                  (fn-repo-get1 acc-id instrument-id)]
     (send-message
      [:instrument.query/get1-result {:result instr
                                      :type   :success}])))
 
 (defn getn [fn-repo-getn fn-get-account fn-get-ctx args]
-  (let [{:keys [account/user-id]} (fn-get-account args)
-        {:keys [send-message]}    (fn-get-ctx args)
-        instr                     (fn-repo-getn user-id)]
-    (clojure.pprint/pprint {::getn {:UID user-id
+  (let [{acc-id :account/id}   (fn-get-account args)
+        {:keys [send-message]} (fn-get-ctx args)
+        instrs                 (fn-repo-getn acc-id)]
+    (clojure.pprint/pprint {::getn {:UID acc-id
                                     :SM  send-message
-                                    :I   instr}})
+                                    :I   instrs}})
     (send-message
-     [:instrument.query/getn-result {:result instr
+     [:instrument.query/getn-result {:result instrs
                                      :type   :success}])))

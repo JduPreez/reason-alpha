@@ -8,8 +8,30 @@
   [:map
    [:trade-pattern/creation-id uuid?]
    [:trade-pattern/id {:optional true} uuid?]
-   [:trade-pattern/name [:string {:min 1}]]
-   [:trade-pattern/description {:optional true} [:string {:min 1}]]])
+   [:trade-pattern/parent-id {:optional true} uuid?]
+   [:trade-pattern/name [string? {:min 1}]]
+   [:trade-pattern/description {:optional true} [string? {:min 1}]]
+   [:trade-pattern/account-id {:optional true} uuid?]])
+
+(def-model TradePatternDto
+  :model/trade-pattern-dto
+  [:map
+   [:trade-pattern-creation-id {:command-path [:trade-pattern/creation-id]}
+    uuid?]
+   [:trade-pattern-id {:optional     true
+                       :command-path [:trade-pattern/parent-id]}
+    uuid?]
+   [:trade-pattern-parent-id {:optional     true
+                              :command-path [:trade-pattern/parent-id]}
+    uuid?]
+   [:trade-pattern-name {:command-path [:trade-pattern/name]}
+    [string? {:min 1}]]
+   [:trade-pattern-description {:optional     true
+                                :command-path [:trade-pattern/description]}
+    [string? {:min 1}]]
+   [:trade-pattern-account-id {:optional     true
+                               :command-path [:trade-pattern/account-id]}
+    uuid?]])
 
 (def Transaction
   [:map
@@ -43,7 +65,8 @@
    [:position/dividend-trade-transactions {:optional true} [:sequential TradeTransaction]]
    [:position/instrument-id {:optional true} uuid?]
    [:position/holding-position-id {:optional true} uuid?]
-   [:position/account-id uuid?]])
+   [:position/account-id uuid?]
+   [:position/trade-pattern-id {:optional true} uuid?]])
 
 (def PositionDto
   [:map

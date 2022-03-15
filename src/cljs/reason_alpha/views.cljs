@@ -33,13 +33,10 @@
         :controllers
         [{:start (fn [& params] (js/console.log "Entering :holdings"))
           :stop  (fn [& params] (js/console.log "Leaving :holdings"))}]}]
-   ["trade-patterns" {:name    ::trade-patterns/view
-                      :view    trade-patterns/view
-                      :model   :trade-pattern
-                      :load-fx :trade-pattern.query/getn
-                      :controllers
-                      [{:start (fn [& params] (cljs.pprint/pprint ["Entering :trade-patterns" params]))
-                        :stop  (fn [& params] (js/console.log "Leaving :trade-patterns"))}]}]
+   ["trade-patterns" {:name       ::trade-patterns/view
+                      :view       trade-patterns/view
+                      :model      :trade-pattern
+                      :load-event [:trade-pattern/load]}]
    ["instruments" {:name       ::instruments/view
                    :view       instruments/view
                    :model      :instrument

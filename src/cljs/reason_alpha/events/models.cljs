@@ -11,7 +11,6 @@
 (rf/reg-event-db
  :model.query/getn-result
  (fn [db [_ {:keys [result]}]]
-   (cljs.pprint/pprint {:model.query/getn result})
    (let [models                   (get-in db data/models {})
          [_ {:keys [registry]} _] (-> result
                                       medn/read-string
@@ -22,7 +21,6 @@
 (rf/reg-fx
  :model.query/getn-fx
  (fn [model-ks]
-   (cljs.pprint/pprint {:model.query/getn-fx model-ks})
    (api-client/chsk-send! [:model.query/getn model-ks])))
 
 (rf/reg-event-fx
@@ -30,7 +28,6 @@
  (fn [{:keys [db]} [_ model-ks]]
    (let [models   (get-in db data/models {})
          model-ks (remove #(contains? models %) model-ks)]
-     (cljs.pprint/pprint {:model.query/getn model-ks})
      {:model.query/getn-fx model-ks})))
 
 (comment

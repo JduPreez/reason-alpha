@@ -55,8 +55,8 @@
                                               :pivot        :symbol/provider
                                               :command-path [:instrument/symbols 0 :symbol/ticker]}
                                            string?])]
-  (def-model InstrumentDao
-    :model/instrument-dao
+  (def-model InstrumentDto
+    :model/instrument-dto
     (into
      [:map
       [:instrument-id {:optional     true

@@ -6,6 +6,31 @@
             [reason-alpha.events :as events]))
 
 (rf/reg-event-fx
+ :trade-pattern/load
+ (fn [{:keys [db]} _]
+   {:trade-pattern.query/getn nil
+    :dispatch                 [:model.query/getn
+                               [:model/trade-pattern
+                                :model/trade-pattern-dto]]}))
+
+(rf/reg-fx
+ :trade-pattern.query/getn
+ (fn [_]
+   (cljs.pprint/pprint :trade-pattern.query/getn)
+   (api-client/chsk-send! [:trade-pattern.query/getn]
+                          {:on-success [:trade-pattern/getn-result]})))
+
+(rf/reg-event-db
+ :trade-pattern/getn-result
+ (fn [db [evt {:keys [result type] :as r}]]
+   (utils/log evt r)
+   (if (= :success type)
+     (data/save-local! {:db         db
+                        :model-type :trade-pattern
+                        :data       r})
+     db)))
+
+(rf/reg-event-fx
  :trade-pattern.command/add
  (fn [{:keys [db]} _]
    (let [trd-patrns     (get-in db (data/entity-data :trade-pattern))
@@ -53,15 +78,6 @@
  :trade-pattern/delete-success
  data/delete-local!)
 
-(rf/reg-event-fx
- :trade-pattern/success
- (fn [_ [_ result]]
-   (cljs.pprint/pprint {:trade-pattern/success result})
-   {:dispatch [:save-local :trade-pattern result]}))
 
-(rf/reg-fx
- :trade-pattern.query/getn
- (fn [_]
-   (cljs.pprint/pprint {:trade-pattern.query/getn _})
-   (api-client/chsk-send! [:trade-pattern.query/getn]
-                          {:on-success [:trade-pattern/success]})))
+
+

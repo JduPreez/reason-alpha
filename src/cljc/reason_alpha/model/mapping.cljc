@@ -2,46 +2,6 @@
   (:require [malli.util :as mu]
             [reason-alpha.utils :as utils]))
 
-(def full-model [:map
-                       [:instrument-id
-                        {:optional true, :command-path [:instrument/id]}
-                        uuid?]
-                       [:instrument-creation-id
-                        {:command-path [:instrument/creation-id]}
-                        uuid?]
-                       [:instrument-name
-                        {:title        "Instrument",
-                         :optional     true,
-                         :command-path [:instrument/name]}
-                        string?]
-                       [:symbol/yahoo-finance
-                        {:title    "Yahoo! Finance",
-                         :optional true,
-                         :command-path
-                         [:instrument/symbols
-                          [:symbol/ticker #:symbol{:provider :yahoo-finance}]]}
-                        string?]
-                       [:symbol/saxo-dma
-                        {:title    "Saxo/DMA",
-                         :optional true,
-                         :command-path
-                         [:instrument/symbols
-                          [:symbol/ticker #:symbol{:provider :saxo-dma}]]}
-                        string?]
-                       [:symbol/easy-equities
-                        {:title    "Easy Equities",
-                         :optional true,
-                         :command-path
-                         [:instrument/symbols
-                          [:symbol/ticker #:symbol{:provider :easy-equities}]]}
-                        string?]
-                       [:instrument-type
-                        {:title        "Type",
-                         :optional     true,
-                         :ref          :instrument/type,
-                         :command-path [:instrument/type]}
-                        keyword?]])
-
 (defn mv-assoc-in
   "A version of `assoc-in` (`mv-` = map & vector) that creates nested maps & collections."
   [obj [k & ks] v]
@@ -69,14 +29,14 @@
            (not (map? obj)))
       , (conj obj v))))
 
-(defn query-dao->command-ent [query-model query-dao]
+(defn query-dto->command-ent [query-model query-dto]
   (->> query-model
        rest
        seq
        (reduce
         (fn [cmd-ent [k {path  :command-path
                          pivot :pivot} & _tail]]
-          (let [v          (k query-dao)
+          (let [v          (k query-dto)
                 pivot-path (butlast path)]
             (if (and path v)
               (if pivot
@@ -98,7 +58,7 @@
          (into {}))
     [path step]))
 
-(defn command-ent->query-dao [query-model command-ent]
+(defn command-ent->query-dto [query-model command-ent]
   (let [all-paths-vals  (flatten-path [] command-ent)
         member-nm-paths (->> query-model
                              rest
@@ -107,7 +67,7 @@
                                 [k props])))]
     (->> all-paths-vals
          (reduce
-          (fn [{:keys [dao membr-nm-paths] :as dao-paths} [path v]]
+          (fn [{:keys [dto membr-nm-paths] :as dto-paths} [path v]]
             (let [path-template (mapv #(if (number? %) 0 %) path)
                   nm-k          (some
                                  (fn [[k {p   :command-path
@@ -121,26 +81,26 @@
                                            (as-> x (get all-paths-vals x)))
                                        k)))
                                  membr-nm-paths)
-                  dao-paths     (if nm-k
-                                  {:dao            (assoc dao nm-k v)
+                  dto-paths     (if nm-k
+                                  {:dto            (assoc dto nm-k v)
                                    :membr-nm-paths (remove
                                                     (fn [[k _]]
                                                       (= k nm-k))
                                                     membr-nm-paths)}
-                                  dao-paths)]
-              dao-paths))
-          {:dao            {}
+                                  dto-paths)]
+              dto-paths))
+          {:dto            {}
            :membr-nm-paths member-nm-paths})
-         :dao)))
+         :dto)))
 
-(defn command-ents->query-daos [query-model command-ents]
-  (map #(command-ent->query-dao query-model %)
+(defn command-ents->query-dtos [query-model command-ents]
+  (map #(command-ent->query-dto query-model %)
        command-ents))
 
 
 (comment
   (letfn []
-    (let [query-dao-model [:map
+    (let [query-dto-model [:map
                            [:instrument-id
                             {:optional true, :command-path [:instrument/id]}
                             uuid?]
@@ -170,7 +130,7 @@
                              :pivot        :symbol/provider,
                              :command-path [:instrument/symbols 0 :symbol/ticker]}
                             string?]]
-          query-dao       {:instrument-id          (utils/new-uuid)
+          query-dto       {:instrument-id          (utils/new-uuid)
                            :instrument-creation-id (utils/new-uuid)
                            :instrument-type        :share
                            :saxo-dma               "00700:xhkg"
@@ -189,7 +149,7 @@
           #_#_upd2        (mv-assoc-in upd1 [:instrument/symbols 0] {:symbol/provider :saxo-dma
                                                                      :symbol/ticker   "tikr-2"})
           #_#_upd3        (mv-assoc-in upd2 [:instrument/id] (utils/new-uuid))]
-      (command-ent->query-dao query-dao-model command-ent)))
+      (command-ent->query-dto query-dto-model command-ent)))
 
 
   (update-in {:instrument/symbols [{:symbol/ticker "---"}]} [:instrument/symbols 0 :symbol/ticker] (constantly "dddd"))

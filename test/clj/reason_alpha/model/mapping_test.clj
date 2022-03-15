@@ -5,7 +5,7 @@
 
 (def currency-acc-path [:instrument/currency-instrument :instrument/account :account/user-name])
 
-(def query-dao-model [:map
+(def query-dto-model [:map
                       [:instrument-id
                        {:optional true, :command-path [:instrument/id]}
                        uuid?]
@@ -40,7 +40,7 @@
                         :optional     true
                         :command-path currency-acc-path}]])
 
-(deftest mapping-query-dao->command-ent
+(deftest mapping-query-dto->command-ent
   (let [{:keys [instrument-id
                 instrument-creation-id
                 instrument-type
@@ -48,7 +48,7 @@
                 saxo-dma
                 yahoo-finance
                 currency-account]
-         :as   query-dao} {:instrument-id          (utils/new-uuid)
+         :as   query-dto} {:instrument-id          (utils/new-uuid)
                            :instrument-creation-id (utils/new-uuid)
                            :instrument-type        :share
                            :instrument-name        "Tencent"
@@ -60,15 +60,15 @@
                 instrument/type
                 instrument/name
                 instrument/symbols]
-         :as   cmd-ent}   (mapping/query-dao->command-ent query-dao-model query-dao)]
-    (testing "`query-dao->command-ent` should map non-nested path"
+         :as   cmd-ent}   (mapping/query-dto->command-ent query-dto-model query-dto)]
+    (testing "`query-dto->command-ent` should map non-nested path"
       (is (= id instrument-id))
       (is (= creation-id instrument-creation-id))
       (is (= type instrument-type))
       (is (= name instrument-name)))
-    (testing "`query-dao->command-ent` should map nested path without vec"
+    (testing "`query-dto->command-ent` should map nested path without vec"
       (is (= currency-account (get-in cmd-ent currency-acc-path))))
-    (testing "`query-dao->command-ent` should map nested path with vec"
+    (testing "`query-dto->command-ent` should map nested path with vec"
       (is (= saxo-dma (some
                        (fn [{:keys [symbol/ticker
                                     symbol/provider]}]
