@@ -17,7 +17,8 @@
                [:cat
                 :any]
                accounts/Account]
-              common/getContext]
+              common/getContext
+              fin-instruments/Instrument]
              (common/result-schema
               [:map
                [:instrument/creation-id uuid?]
@@ -43,7 +44,7 @@
            :type        :error}]))
 
       (catch Exception e
-        (let [err-msg "Error saving Position"]
+        (let [err-msg "Error saving Instrument"]
           (errorf e err-msg)
           (send-message
            [:instrument.command/save!-result
@@ -63,9 +64,6 @@
   (let [{acc-id :account/id}   (fn-get-account args)
         {:keys [send-message]} (fn-get-ctx args)
         instrs                 (fn-repo-getn acc-id)]
-    (clojure.pprint/pprint {::getn {:UID acc-id
-                                    :SM  send-message
-                                    :I   instrs}})
     (send-message
      [:instrument.query/getn-result {:result instrs
                                      :type   :success}])))

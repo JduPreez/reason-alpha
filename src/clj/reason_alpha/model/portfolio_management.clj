@@ -19,7 +19,7 @@
    [:trade-pattern-creation-id {:command-path [:trade-pattern/creation-id]}
     uuid?]
    [:trade-pattern-id {:optional     true
-                       :command-path [:trade-pattern/parent-id]}
+                       :command-path [:trade-pattern/id]}
     uuid?]
    [:trade-pattern-parent-id {:optional     true
                               :command-path [:trade-pattern/parent-id]}

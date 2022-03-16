@@ -22,7 +22,7 @@
     :custom-element-edit-renderer (fn [_field {id        :trade-pattern-id
                                                parent-id :trade-pattern-parent-id
                                                :as       _record} fn-dispatch _val]
-                                    (let [tps              @(rf/subscribe [:trade-patterns])
+                                    (let [tps              @(rf/subscribe [:trade-pattern/list])
                                           eligible-parents (->> tps
                                                                 (remove #(or (nil? (:trade-pattern-id %)) ;; If not saved to back-end
                                                                              (= (:trade-pattern-id %) id) ;; If option is this record
@@ -32,6 +32,8 @@
                                                                                           (= (:trade-pattern-parent-id tp) id)))
                                                                                    tps)))
                                                                 (sort-by :trade-pattern-name))]
+                                      (cljs.pprint/pprint {::edit-render {:T  tps
+                                                                          :EP eligible-parents}})
                                       [:select.form-control {:value     (or parent-id "")
                                                              :on-change #(let [v (as-> % v
                                                                                    (.-target v)

@@ -58,13 +58,22 @@
 (defmethod ig/init-key ::aggregates [_ {db                       :db
                                         {:keys [fn-get-account]} :account-svc}]
   {:trade-pattern
-   {:commands {:save! (as-> db d
-                        (partial repo.trade-pattern/save! d)
-                        (partial svc.trade-pattern/save! d))}
+   {:commands {:save!   (as-> db d
+                          (partial repo.trade-pattern/save! d)
+                          (partial svc.trade-pattern/save! d
+                                   fn-get-account))
+               :delete! (as-> db d
+                          (partial repo.trade-pattern/delete! d)
+                          (partial svc.trade-pattern/delete! d
+                                   fn-get-account))}
     :queries  {:getn (as-> db d
                        (partial repo.trade-pattern/getn d)
-                       (partial svc.trade-pattern/getn d))
-               :get1 svc.trade-pattern/get1}}
+                       (partial svc.trade-pattern/getn d
+                                fn-get-account))
+               :get1 (as-> db d
+                       (partial repo.trade-pattern/get1 d)
+                       (partial svc.trade-pattern/get1 d
+                                fn-get-account))}}
    :position
    {:commands {:save! (as-> db d
                         (partial repo.position/save! d)

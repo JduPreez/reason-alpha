@@ -23,10 +23,12 @@
   [:data type])
 
 (defn delete-local!
-  [{:keys [db]} [_ type {{:keys [deleted-items]} :result
-                         :as                     deleted}]]
+  [{db              :db
+    type            :model-type
+    {:keys [result]
+     :as   deleted} :data}]
   (let [data-path      (entity-data type)
-        deleted        (or deleted-items deleted)
+        deleted        (or (:deleted-items result) deleted)
         del-col        (if (coll? deleted)
                          deleted
                          [deleted])

@@ -5,21 +5,19 @@
 (rf/reg-sub
  :trade-pattern/list
  (fn [db _]
-   (cljs.pprint/pprint {:trade-pattern/list (sort-by :trade-pattern/name
-                                                     (get-in db data/trade-patterns))})
-   (sort-by :trade-pattern/name
+   (sort-by :trade-pattern-name
             (get-in db data/trade-patterns))))
 
 (rf/reg-sub
  :trade-pattern
- :<- [:trade-patterns]
+ :<- [:trade-pattern/list]
  (fn [trade-patterns [_ id]]
-   (some #(when (= id (:trade-pattern/id %)) %)
+   (some #(when (= id (:trade-pattern-id %)) %)
          trade-patterns)))
 
 (rf/reg-sub
- :trade-patterns/ref-data
- :<- [:trade-patterns]
+ :trade-pattern/ref-list
+ :<- [:trade-pattern/list]
  (fn [trade-patterns]
    (let [ref-data (->> trade-patterns
                        (filter (fn [{:keys [trade-pattern/parent-id]
