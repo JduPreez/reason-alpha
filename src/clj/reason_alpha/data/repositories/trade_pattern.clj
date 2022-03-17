@@ -24,17 +24,19 @@
   (data.model/save! db tpattern))
 
 (defn delete! [db account-id trade-pattern-ids]
+  (clojure.pprint/pprint {::delete! [account-id
+                                     trade-pattern-ids]})
   (let [children   (data.model/query db {:spec '{:find  [(pull e [*])]
                                                  :where [[e :trade-pattern/parent-id id]
                                                          [e :trade-pattern/account-id acc-id]]
-                                                 :in    [[acc-id [id ...]]]}
+                                                 :in    [acc-id [id ...]]}
                                          :args [account-id trade-pattern-ids]})
         del-result (data.model/delete! db {:spec '{:find  [e]
                                                    :where [(or (and [e :trade-pattern/id id]
                                                                     [e :trade-pattern/account-id acc-id])
                                                                (and [e :trade-pattern/parent-id id]
                                                                     [e :trade-pattern/account-id acc-id]))]
-                                                   :in    [[acc-id [id ...]]]}
+                                                   :in    [acc-id [id ...]]}
                                            :args [account-id trade-pattern-ids]})]
     (-> children
         (as-> cdn (map #(select-keys % [:trade-pattern/id]) cdn))

@@ -4,7 +4,7 @@
 (defn creation-id-key-by-type [type]
   (-> type
       name
-      (str "/creation-id")
+      (str "-creation-id")
       keyword))
 
 (defn entity-ns [m]
@@ -15,7 +15,7 @@
 (defn id-key-by-type [type]
   (-> type
       name
-      (str "/id")
+      (str "-id")
       keyword))
 
 (defn- -id-key [model-type key-nm m]
