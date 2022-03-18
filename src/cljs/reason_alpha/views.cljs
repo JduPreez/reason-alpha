@@ -31,8 +31,8 @@
         :model   :position
         :load-fx :position.query/getn
         :controllers
-        [{:start (fn [& params] (js/console.log "Entering :holdings"))
-          :stop  (fn [& params] (js/console.log "Leaving :holdings"))}]}]
+        [{:start (fn [& params] (js/console.log "Entering :positions"))
+          :stop  (fn [& params] (js/console.log "Leaving :positions"))}]}]
    ["trade-patterns" {:name       ::trade-patterns/view
                       :view       trade-patterns/view
                       :model      :trade-pattern

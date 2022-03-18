@@ -85,3 +85,17 @@
                                             :db         db})]
      {:db                       db
       :instrument.command/save! cmd-instr})))
+
+(rf/reg-event-fx
+ :instrument.command/delete!-result
+ (fn [{:keys [db]} [evt result]]
+   (utils/log evt result)
+   (data/delete-local! {:db         db
+                        :model-type :instrument
+                        :data       result})))
+
+(rf/reg-fx
+ :instrument.command/delete!
+ (fn [db]
+   (let [del-ids (data/get-selected-ids :instrument db)]
+     (api-client/chsk-send! [:instrument.command/delete! del-ids]))))

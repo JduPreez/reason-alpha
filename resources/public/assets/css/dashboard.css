@@ -2506,6 +2506,7 @@ input[type="submit"].btn-block, input[type="reset"].btn-block, input[type="butto
 .dropdown-menu.show {
 	display: block;
 	margin: 0;
+	top: -1px !important;
 }
 .nav-item.show .dropdown-menu.dropdown-menu-arrow.show{
 	top:-1px !important;
@@ -6555,7 +6556,7 @@ ul.dropdown-menu li.dropdown ul.dropdown-menu {
 	float: left;
 	min-width: 160px;
 	padding: 5px 0;
-	margin: 2px 0 0;
+	margin: 0px 0 0;
 	list-style: none;
 	font-size: 14px;
 	background-color: #243253!important;

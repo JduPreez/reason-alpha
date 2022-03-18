@@ -52,16 +52,14 @@
                                          [:option {:value ep-id} ep-name])]))}])
 
 (def options
-  {:grid-id             ::view
-   :title               "Trade Patterns"
-   :data-subscription   [:trade-pattern/list]
-   :id-field            :trade-pattern-creation-id
-   :group-by            {:group-key  :trade-pattern-id
-                         :member-key :trade-pattern-parent-id}
-   :checkbox-select     true
-   :on-selection-change #(rf/dispatch [:select %1])
-   :create-dispatch     [:trade-pattern.command/create]
-   :update-dispatch     [:trade-pattern.command/update]})
+  {:grid-id           ::view
+   :title             "Trade Patterns"
+   :data-subscription [:trade-pattern/list]
+   :id-field          :trade-pattern-creation-id
+   :group-by          {:group-key  :trade-pattern-id
+                       :member-key :trade-pattern-parent-id}
+   :create-dispatch   [:trade-pattern.command/create]
+   :update-dispatch   [:trade-pattern.command/update]})
 
 (defn view []
   (fn []

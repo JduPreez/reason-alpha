@@ -23,6 +23,7 @@
                                load-fx]
                         :as   d} :data
                        :as       new-match}]]
+   (cljs.pprint/pprint {::navigated new-match})
    (let [old-match   (:current-route db)
          controllers (rfe-ctrls/apply-controllers (:controllers old-match) new-match)
          updated-db  (-> db
@@ -44,31 +45,6 @@
  :push-state
  (fn [_ [_ & route]]
    {:push-state! route}))
-
-;; (defn-traced save-local
-;;   [db [_ type {:keys [result] :as new}]]
-;;   (let [current     (get-in db (data/entity-data type))
-;;         new-val     (or result new)
-;;         new-coll    (cond
-;;                       (and (coll? new-val)
-;;                            (not (map? new-val))
-;;                            (map? (first new-val))) new-val
-;;                       (map? new-val)               [new-val])
-;;         merged-coll (when new-coll
-;;                       (model.utils/merge-by-id current new-coll))]
-;;     (-> db
-;;         (assoc-in [:loading type] false)
-;;         (assoc-in [:data type] (or merged-coll new-val))
-;;         (assoc :saved new-val))))
-
-;; (rf/reg-event-db
-;;  :save-local
-;;  (defn-traced [db [_ type result]]
-;;    (data/save-local! {:db db, :model-type type, :result result})))
-
-;; (rf/reg-fx
-;;  :save-remote
-;;  save-remote)
 
 (defn entity-event-or-fx-key [db action]
   (let [{:keys [model]} (get-in db data/active-view-model)]

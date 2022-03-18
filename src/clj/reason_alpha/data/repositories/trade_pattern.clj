@@ -24,8 +24,6 @@
   (data.model/save! db tpattern))
 
 (defn delete! [db account-id trade-pattern-ids]
-  (clojure.pprint/pprint {::delete! [account-id
-                                     trade-pattern-ids]})
   (let [children   (data.model/query db {:spec '{:find  [(pull e [*])]
                                                  :where [[e :trade-pattern/parent-id id]
                                                          [e :trade-pattern/account-id acc-id]]

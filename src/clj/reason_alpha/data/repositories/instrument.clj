@@ -31,3 +31,15 @@
         :args [account-id id]}
        (data.model/any db)
        (mapping/command-ent->query-dto fin-instruments/InstrumentDto)))
+
+(defn delete! [db account-id ids]
+  (let [del-result (data.model/delete!
+                    db
+                    {:spec '{:find  [e]
+                             :where [[e :instrument/id id]
+                                     [e :instrument/account-id acc-id]]
+                             :in    [acc-id [id ...]]}
+                     :args [account-id ids]})]
+    (->> ids
+         (mapv (fn [id] {:instrument/id id}))
+         (assoc del-result :deleted-items))))

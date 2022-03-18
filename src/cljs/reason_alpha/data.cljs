@@ -32,15 +32,19 @@
         del-col        (if (coll? deleted)
                          deleted
                          [deleted])
-        id-k           (model.utils/id-key type (first del-col))
-        entities       (get-in db data-path)
-        remaining-ents (remove
-                        (fn [e]
-                          (let [id-v (get e id-k)]
-                            (some #(let [del-id-v (get % id-k)]
+        cmd-id-k       (model.utils/id-key type (first del-col))
+        qry-id-k       (-> cmd-id-k
+                           namespace
+                           (str  "-" (name cmd-id-k))
+                           keyword)
+        dtos           (get-in db data-path)
+        remaining-dtos (remove
+                        (fn [d]
+                          (let [id-v (get d qry-id-k)]
+                            (some #(let [del-id-v (get % cmd-id-k)]
                                      (= del-id-v id-v)) deleted)))
-                        entities)]
-    {:db       (assoc-in db data-path remaining-ents)
+                        dtos)]
+    {:db       (assoc-in db data-path remaining-dtos)
      :dispatch [:select nil]}))
 
 (defn get-selected-ids [type db]

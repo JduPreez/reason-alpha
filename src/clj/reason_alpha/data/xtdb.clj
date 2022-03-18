@@ -101,7 +101,7 @@
                                                            %)
                                               (vary-meta % (fn [_] nil))
                                               %) a)))
-        {:keys [xt/tx-id]
+        {:keys [xtdb.api/tx-id]
          :as   tx-details} (cond
                              spec
                              , (xt/submit-tx @*db-node
@@ -274,4 +274,110 @@
                         :args
                         [#uuid "017f87dc-59d1-7beb-9e1d-7a2a354e5a49"
                          '(#uuid "017f92a5-ff38-70db-a7c9-0bc5c0fbc95b")]})
-  )
+  (let [uid "a681c638-7509-4ef3-a816-3ffb42f036a0"]
+    (data.model/any
+     db
+     {:spec '{:find  [(pull a [*])]
+              :where [[a :account/user-id user-id]]
+              :in    [user-id]}
+      :args [uid]}))
+
+  (let [acc-id      #uuid "017f87dc-59d1-7beb-9e1d-7a2a354e5a49"
+        instruments (data.model/query
+                     db
+                     {:spec '{:find  [(pull p [*])]
+                              :where [[p :instrument/account-id account-id]]
+                              :in    [account-id]}
+                      :args [acc-id]})]
+  (mapping/command-ents->query-dtos fin-instruments/InstrumentDto
+                                    instruments))
+
+  (put-delete-fn! {:node                  (connect db)
+                   :only-when-not-exists? false})
+
+  (delete! db {:spec '{:find  [?tp]
+                       :where [[?tp :trade-pattern/id ?id]]}}
+           #_{:spec '{:find  [(pull tp [:trade-pattern/id])]
+                      :where [[tp :trade-pattern/id]
+                              #_[tp :trade-pattern/name "Breakout"]]}})
+
+(delete! db [[:xtdb.tx/delete #uuid "c7057fa6-f424-4b47-b1f2-de5ae63fb5fb"]])
+
+(query db {:spec '{:find  [(pull tp [*])]
+                   :where [[tp :trade-pattern/id id]]
+                   :in    [id]}
+           :args [#uuid "c7057fa6-f424-4b47-b1f2-de5ae63fb5fb"]})
+
+(query db
+       {:spec '{:find  [?tp]
+                :where [[?tp :trade-pattern/id ?id]]}})
+
+(query db
+       {:spec '{:find  [(pull tp [*])]
+                :where [[tp :trade-pattern/id]
+                        #_[tp :trade-pattern/name "Breakout"]]}})
+
+(drop-db! "dev")
+
+(concat {:a 1 :title "ddd"} {:b 2 :title "qwerrt"})
+
+(let [entities [{:fin-security/id          #uuid "017b4ed0-c816-b7bc-dc85-2c4f5d5dd7f0"
+                 :fin-security/creation-id #uuid "017b4ed4-393f-27d4-24ab-a62973c4098c"
+                 :fin-security/amount      6.33
+                 :fin-security/ticker      "MO"}
+                {:fin-security/id          #uuid "017b4ed6-7627-debb-7369-b4607e5c77c5"
+                 :fin-security/creation-id #uuid "017b4ed4-393f-27d4-24ab-a62973c4098c"
+                 :fin-security/amount      33.77
+                 :fin-security/ticker      "DM"}
+                {:fin-security/creation-id #uuid "017b4ed4-393f-27d4-24ab-a62973c4098c"
+                 :fin-security/amount      17834.88
+                 :fin-security/ticker      "BICO"}]]
+  (add-all! db entities)
+  #_(crux/submit-tx @crux-node (crux-puts entities)))
+
+(save! db {:trade-pattern/creation-id #uuid "c7057fa6-f424-4b47-b1f2-de5ae63fb5fb",
+           :trade-pattern/name        "Breakout",
+           :trade-pattern/description "dirt",
+           :trade-pattern/user-id     #uuid "8ffd2541-0bbf-4a4b-adee-f3a2bd56d83f",
+           :crux.db/id                #uuid "563ee957-2090-44a0-95ef-db6d57ce0407",
+           :trade-pattern/id          #uuid "563ee957-2090-44a0-95ef-db6d57ce0407"})
+
+(java.util.UUID/randomUUID)
+
+(query db
+       {:spec '{:find  [id cid nm d pid uid]
+                :keys  [trade-pattern/id
+                        trade-pattern/creation-id
+                        trade-pattern/name
+                        trade-pattern/description
+                        trade-pattern/parent-id
+                        trade-pattern/user-id]
+                :where [[tp :trade-pattern/id id]
+                        [tp :trade-pattern/creation-id cid]
+                        [tp :trade-pattern/name nm]
+                        [tp :trade-pattern/description d]
+                        [tp :trade-pattern/user-id uid]
+                        [tp :trade-pattern/parent-id pid]]}})
+
+(query-impl! {:spec     '{:find   [name creation-id]
+                          :where  [[tp :trade-pattern/name name]
+                                   [tp :trade-pattern/creation-id creation-id]]
+                          #_#_:in [name]}
+              #_#_:args ["Breakout"]})
+
+  ;; (xt/entity-history
+  ;;  (xt/db @crux-node)
+  ;;  #uuid "32429cdf-99d6-4893-ae3a-891f8c22aec6"
+  ;;  :asc
+  ;;  {:with-docs? true})
+
+(let [query-spec '{:find  [fin-sec amount]
+                   :where [[fin-sec :fin-security/ticker ticker]
+                           [fin-sec :fin-security/amount amount]]
+                   :in    [ticker]}
+      args       ["DM"]]
+  (-> xt/q
+      (partial (xt/db @crux-node) query-spec)
+      (apply args)))
+
+  :.)

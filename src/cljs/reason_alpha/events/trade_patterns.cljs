@@ -104,10 +104,10 @@
  (fn [db]
    (let [del-ids (data/get-selected-ids :trade-pattern db)]
      (api-client/chsk-send! [:trade-pattern.command/delete! del-ids]
-                            {:on-success [:trade-pattern/delete!-result]}))))
+                            {:on-success [:trade-pattern.command/delete!-result]}))))
 
 (rf/reg-event-fx
- :trade-pattern/delete!-result
+ :trade-pattern.command/delete!-result
  (fn [{:keys [db]} [_ data]]
    (data/delete-local! {:db         db
                         :model-type :trade-pattern

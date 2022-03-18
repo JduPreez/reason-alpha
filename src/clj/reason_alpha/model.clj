@@ -13,6 +13,7 @@
             [reason-alpha.model.accounts :as accounts]
             [reason-alpha.model.common :as common]
             [reason-alpha.services.account :as svc.account]
+            [reason-alpha.services.common :as svc.common]
             [reason-alpha.services.instrument :as svc.instrument]
             [reason-alpha.services.model :as svc.model]
             [reason-alpha.services.position :as svc.position]
@@ -64,8 +65,10 @@
                                    fn-get-account))
                :delete! (as-> db d
                           (partial repo.trade-pattern/delete! d)
-                          (partial svc.trade-pattern/delete! d
-                                   fn-get-account))}
+                          (svc.common/delete-fn
+                           d
+                           fn-get-account
+                           :trade-pattern))}
     :queries  {:getn (as-> db d
                        (partial repo.trade-pattern/getn d)
                        (partial svc.trade-pattern/getn d
@@ -82,11 +85,19 @@
                        (partial repo.position/getn d))}}
 
    :instrument
-   {:commands {:save! (as-> db d
-                        (partial repo.instrument/save! d)
-                        (partial svc.instrument/save! d
-                                 fn-get-account
-                                 common/get-context))}
+   {:commands {:save!   (as-> db d
+                          (partial repo.instrument/save! d)
+                          (partial svc.instrument/save! d
+                                   fn-get-account
+                                   common/get-context))
+               :delete! (as-> db d
+                          (partial repo.instrument/delete! d)
+                          (svc.common/delete-msg-fn
+                           {:fn-repo-delete!    d
+                            :fn-get-account     fn-get-account
+                            :model-type         :instrument
+                            :fn-get-ctx         common/get-context
+                            :response-msg-event :instrument.command/delete!-result}))}
     :queries  {:getn (as-> db d
                        (partial repo.instrument/getn d)
                        (partial svc.instrument/getn d

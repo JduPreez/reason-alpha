@@ -16,7 +16,8 @@
    :can-edit                   true
    ;;:can-reorder                true
    :can-create                 true
-   ;;:checkbox-select            true
+   :checkbox-select            true
+   :on-selection-change        #(rf/dispatch [:select %1])
    ;;:loading-subscription       [:my-loading]
    ;;:sort-dispatch              [:sort]
    ;;:header-filter-dispatch     [:header-filter-dispatch]

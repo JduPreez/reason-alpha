@@ -54,7 +54,7 @@
            :description (str err-msg ": " (ex-message e))
            :type        :error})))))
 
-(defn delete! [fn-repo-delete! fn-get-account ids]
+#_(defn delete! [fn-repo-delete! fn-get-account ids]
   (let [{acc-id :account/id} (fn-get-account ids)]
     (try
       (if acc-id
