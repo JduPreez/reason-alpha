@@ -45,7 +45,44 @@
                          :profile/name  name
                          :profile/image image}}))
 
+(defn authorize [fn-get-account crud role entities]
+  (if (or (not (seq entities))
+          (= :admin role))
+    entities
+    (let [{acc-id :account/id} (fn-get-account)
+          acc-id-k             (->> entities
+                                    first
+                                    keys
+                                    (some #(when (= "account-id" (name %))
+                                             %)))]
+      (if acc-id-k
+        (filterv #(= (acc-id-k %) acc-id) entities)
+        []))))
+
 (comment
+
+  (let [account-id (java.util.UUID/randomUUID)
+        ents       (->> (range 1 11)
+                        (map
+                         (fn [n]
+                           {:position/creation-id         (java.util.UUID/randomUUID)
+                            :position/id                  (java.util.UUID/randomUUID)
+                            :position/status              (if (even? n) :open :closed)
+                            :position/instrument-id       (java.util.UUID/randomUUID)
+                            :position/holding-position-id (java.util.UUID/randomUUID)
+                            :position/trade-pattern-id    (java.util.UUID/randomUUID)
+                            :position/account-id          (if (even? n)
+                                                            account-id
+                                                            (java.util.UUID/randomUUID))})))
+        authz-ents (authorize (constantly {:account/id account-id}) :read :member ents)]
+    authz-ents)
+
+
+  (seq [])
+
+  (not nil)
+
+
 
   {:tenantId    "7n8w5rqb",
    :email       "jacquesdpz@zoho.com",

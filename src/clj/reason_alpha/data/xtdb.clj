@@ -54,7 +54,7 @@
                                         spec)
                                  (map #(let [doc (first %)
                                              id  (if (map? doc)
-                                                   (-> % first vals first)
+                                                   (-> % first vals first) ;; TODO: This probably doesn't work
                                                    doc)]
                                          [::xt/delete id]))
                                  vec))}]]))))
@@ -168,6 +168,14 @@
   (def n (data.model/connect db))
 
   (data.model/disconnect db)
+
+  ;; 1. Change query spec to also take in the `:model-type`
+  ;; 2. On delete, get IDs & for each ID get the [ID `:model-type/account-id`]
+  ;; 3. Remove IDs where the account-id doesn't match the current user's acc id
+  (data.model/query
+   db
+   {:spec '{:find  [e aid]
+            :where [[e :instrument/account-id aid]]}})
 
   (let [account-id        #uuid "017f87dc-59d1-7beb-9e1d-7a2a354e5a49"
         trade-pattern-ids (with-meta [#uuid "017efdef-f2ea-4a0f-494a-df7ef82b8ab2"]

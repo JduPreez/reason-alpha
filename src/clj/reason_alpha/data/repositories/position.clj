@@ -1,6 +1,7 @@
 (ns reason-alpha.data.repositories.position
   (:require [malli.core :as m]
             [reason-alpha.data.model :as data.model]
+            [reason-alpha.model.mapping :as mapping]
             [reason-alpha.model.portfolio-management :as portfolio-management]
             [taoensso.timbre :as timbre :refer (tracef debugf infof warnf errorf)]))
 
