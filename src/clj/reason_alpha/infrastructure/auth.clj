@@ -8,7 +8,8 @@
             [malli.core :as m]
             [outpace.config :refer [defconfig]]
             [reason-alpha.model.accounts :as accounts]
-            [reason-alpha.model.common :as common]))
+            [reason-alpha.model.common :as common]
+            [clojure.set :as set]))
 
 (defconfig tenant-id)
 
@@ -45,19 +46,28 @@
                          :profile/name  name
                          :profile/image image}}))
 
-(defn authorize [fn-get-account crud role entities]
-  (if (or (not (seq entities))
-          (= :admin role))
-    entities
-    (let [{acc-id :account/id} (fn-get-account)
-          acc-id-k             (->> entities
-                                    first
-                                    keys
-                                    (some #(when (= "account-id" (name %))
-                                             %)))]
-      (if acc-id-k
-        (filterv #(= (acc-id-k %) acc-id) entities)
-        []))))
+(defn authorize
+  [{:keys [fn-get-account crud role account-id-key]} entities & [current-ents-owners]]
+    (if (or (not (seq entities))
+            (#{:system :admin} role))
+      entities
+      (let [{acc-id :account/id} (fn-get-account)
+            acc-id-k             (if account-id-key
+                                   account-id-key
+                                   (->> entities
+                                        first
+                                        keys
+                                        (some #(when (= "account-id" (name %))
+                                                 %))))
+            authz-ents           (if acc-id-k
+                                   (filterv #(= (get % acc-id-k) acc-id) entities)
+                                   [])]
+        (clojure.pprint/pprint {::authorize {:ACC-ID         acc-id
+                                             :ENTS           entities
+                                             :AUTHZ-ENTS     authz-ents
+                                             :ACCOUNT-ID-KEY account-id-key
+                                             :ACC-ID-KEY     acc-id-k}})
+        authz-ents)))
 
 (comment
 
@@ -74,7 +84,24 @@
                             :position/account-id          (if (even? n)
                                                             account-id
                                                             (java.util.UUID/randomUUID))})))
-        authz-ents (authorize (constantly {:account/id account-id}) :read :member ents)]
+        authz-ents (authorize {:fn-get-account (constantly {:account/id account-id})
+                               :crud           :read
+                               :role           :member
+                               :entities       ents})]
+    authz-ents)
+
+  (let [account-id (java.util.UUID/randomUUID)
+        ents       (->> (range 1 11)
+                        (map
+                         (fn [n]
+                           (if (even? n)
+                             [account-id]
+                             [(java.util.UUID/randomUUID)]))))
+        authz-ents (authorize {:fn-get-account (constantly {:account/id account-id})
+                               :crud           :read
+                               :role           :member
+                               :entities       ents
+                               :account-id-key 0})]
     authz-ents)
 
 

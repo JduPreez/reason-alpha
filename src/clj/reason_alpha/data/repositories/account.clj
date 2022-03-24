@@ -11,11 +11,11 @@
               accounts/Account]
             accounts/Account])
 
-(defn save! [db instr]
-  (let [i (if (contains? instr :account/creation-id)
-            instr
-            (assoc instr :account/creation-id (utils/new-uuid)))]
-    (data.model/save! db i)))
+(defn save! [db account]
+  (let [acc (if (contains? account :account/creation-id)
+              account
+              (assoc account :account/creation-id (utils/new-uuid)))]
+    (data.model/save! db acc {:role :system})))
 
 (defn get-by-user-id [db user-id]
   (let [acc (data.model/any
@@ -23,5 +23,6 @@
              {:spec '{:find  [(pull e [*])]
                       :where [[e :account/user-id uid]]
                       :in    [uid]}
-              :args [user-id]})]
+              :args [user-id]
+              :role :system})]
     acc))

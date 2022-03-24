@@ -1,8 +1,8 @@
 (ns reason-alpha.services.account
   (:require [medley.core :as medley]))
 
-(defn get-account [fn-get-ctx fn-repo-get-acc-by-uid data]
-  (let [{{:keys [account/user-id]} :user-account} (fn-get-ctx data)]
+(defn get-account [fn-get-ctx fn-repo-get-acc-by-uid]
+  (let [{{:keys [account/user-id]} :user-account} (fn-get-ctx)]
     (when user-id
       (fn-repo-get-acc-by-uid user-id))))
 

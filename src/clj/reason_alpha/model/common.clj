@@ -3,6 +3,8 @@
             [reason-alpha.model.core :as model :refer [def-model]]
             [reason-alpha.model.accounts :as accounts]))
 
+(def ^:dynamic *context* {})
+
 (defn result-schema [result-schema]
   [:map
    [:result {:optional true} result-schema]
@@ -13,20 +15,22 @@
 
 (def-model getContext
   :model/get-context
-  [:=>
-   [:cat
-    :any]
-   [:map
-    [:send-message :any]
-    [:user-account accounts/AccountDto]]])
+  [:=> :cat
+       [:map
+        [:send-message :any]
+        [:user-account accounts/AccountDto]]])
 
-(defn get-context [data]
+(defn get-context []
+  ;;(clojure.pprint/pprint {::get-context *context*})
+  *context*)
+
+#_(defn get-context [data]
   (when data
     (-> data
         meta
         :context)))
 
-(defn set-context [data ctx]
+#_(defn set-context [data ctx]
   (if (and data (instance? clojure.lang.IObj
                            data))
     (with-meta data {:context ctx})

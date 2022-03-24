@@ -38,15 +38,16 @@
            (merge (to-ns-keys {:commands cmds})
                   (to-ns-keys {:queries qries})))))))
 
-(defmethod ig/init-key ::db [_ _opts]
-  (data.model/connect xtdb/db)
-  xtdb/db)
+(defmethod ig/init-key ::db [_ {:keys [fn-authorize fn-get-ctx]}]
+  (let [db (xtdb/db fn-get-ctx fn-authorize)]
+    (data.model/connect db)
+    db))
 
 (defmethod ig/init-key ::account-svc [_ {:keys [db]}]
   (let [fn-repo-save!      #(repo.account/save! db %)
         fn-repo-get-by-uid #(repo.account/get-by-user-id db %)]
     {:fn-get-account   #(svc.account/get-account common/get-context
-                                                 fn-repo-get-by-uid %)
+                                                 fn-repo-get-by-uid)
      :fn-save-account! #(svc.account/save! fn-repo-get-by-uid
                                            fn-repo-save! %)}))
 
@@ -131,7 +132,8 @@
   (malli.instr/unstrument!))
 
 (def sys-def
-  {::db              nil
+  {::db              {:fn-authorize auth/authorize
+                      :fn-get-ctx   common/get-context}
    ::account-svc     {:db (ig/ref ::db)}
    ::aggregates      {:db          (ig/ref ::db)
                       :account-svc (ig/ref ::account-svc)}

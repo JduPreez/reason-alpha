@@ -16,9 +16,9 @@
   (data.model/save! db position))
 
 (defn getn [db account-id]
-  (let [positions (data.model/query
-                   db
-                   {:spec '{:find  [(pull p [*])]
-                            :where [[p :position/account-id account-id]]
-                            :in    [account-id]}})]
-    positions))
+  (->> {:spec '{:find  [(pull e [*])]
+                :where [[e :instrument/account-id account-id]]
+                :in    [account-id]}
+        :args [account-id]}
+       (data.model/query db)
+       (mapping/command-ents->query-dtos portfolio-management/PositionDto)))

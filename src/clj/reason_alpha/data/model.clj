@@ -14,5 +14,5 @@
   (query [_ _query-spec] _)
   (any [_ _query-spec] _)
   (delete! [_ _query-spec] _)
-  (save! [_ _entity] _)
+  (save! [_ _entity & [options]] _)
   (add-all! [_ _entities] _))

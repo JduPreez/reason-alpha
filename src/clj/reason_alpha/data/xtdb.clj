@@ -17,11 +17,12 @@
   `creation-id` key."
   (:import [com.github.f4b6a3.uuid UuidCreator])
   (:require [clojure.java.io :as io]
-            [xtdb.api :as xt]
             [me.raynes.fs :as fs]
             [outpace.config :refer [defconfig]]
             [reason-alpha.data.model :as data.model :refer [DataBase]]
-            [reason-alpha.model.core :as model]))
+            [reason-alpha.model.core :as model]
+            [reason-alpha.utils :as mutils]
+            [xtdb.api :as xt]))
 
 (defconfig data-dir) ;; "data"
 (defconfig db-name) ;; "dev"
@@ -88,12 +89,13 @@
        (map (fn [ent] [::xt/put ent]))
        vec))
 
-(defn xtdb-save! [*db-node entities]
-  (let [ents-with-ids (maybe-add-id entities)]
-    (xt/submit-tx @*db-node (xtdb-puts ents-with-ids))
-    ents-with-ids))
+(defn- xtdb-save! [db-node entities]
+  (when (seq entities)
+    (let [ents-with-ids (maybe-add-id entities)]
+      (xt/submit-tx db-node (xtdb-puts ents-with-ids))
+      ents-with-ids)))
 
-(defn xtdb-delete! [*db-node {:keys [spec] :as del-command}]
+(defn- xtdb-delete! [db-node {:keys [spec] :as del-command}]
   (let [del-cmd            (update del-command
                                    :args
                                    (fn [a]
@@ -104,21 +106,56 @@
         {:keys [xtdb.api/tx-id]
          :as   tx-details} (cond
                              spec
-                             , (xt/submit-tx @*db-node
-                                             [[::xt/fn
-                                               ::delete
-                                               del-cmd]])
+                             , (xt/submit-tx
+                                db-node [[::xt/fn ::delete del-cmd]])
 
                              del-command
-                             , (xt/submit-tx @*db-node
-                                             del-cmd)
+                             , (xt/submit-tx
+                                db-node del-cmd)
 
                              :else {:was-deleted? false})]
     {:tx-details   tx-details
      :was-deleted? (not (nil? tx-id))}))
 
-(deftype XTDB [*db-node fn-save!
-               fn-delete! fn-start-db!]
+(defn- xtdb-query [db-node {:keys [spec args]}]
+  (->> args
+       (mapv #(if (instance? clojure.lang.IObj
+                             %)
+                (vary-meta % (fn [_] nil))
+                %))
+       (apply xt/q (xt/db db-node) spec)
+       (map (fn [[entity :as all]]
+              (if (map? entity)
+                entity
+                all)))))
+
+(defn- get-account-by-user-id [db-node user-id]
+  (let [acc (-> db-node
+                (xtdb-query
+                 {:spec '{:find  [(pull e [*])]
+                          :where [[e :account/user-id uid]]
+                          :in    [uid]}
+                  :args [user-id]})
+                first)]
+    acc))
+
+(defn- get-account [fn-get-ctx db-node]
+  (let [{{:keys [account/user-id]} :user-account} (fn-get-ctx)]
+    (when user-id
+      (get-account-by-user-id db-node user-id))))
+
+(defn- get-entities-owners [db-node entities]
+  (let [ent-id-key (utils/)])
+  (-> db-node
+      (xtdb-query
+       {:spec '{:find  [(pull e [*])]
+                :where [[e :account/user-id uid]]
+                :in    [uid]}
+        :args [user-id]})
+      first))
+
+(deftype XTDB [*db-node fn-query fn-save! fn-delete!
+               fn-start-db! fn-get-ctx fn-authorize]
   DataBase
   (disconnect [_]
     (.close @*db-node))
@@ -131,33 +168,37 @@
     (println "db-node end" @*db-node)
     @*db-node)
 
-  (query [_ {:keys [spec args]}]
-    (->> args
-         (mapv #(if (instance? clojure.lang.IObj
-                               %)
-                  (vary-meta % (fn [_] nil))
-                  %))
-         (apply xt/q (xt/db @*db-node) spec)
-         (map (fn [[entity :as all]]
-                (if (map? entity)
-                  entity
-                  all)))))
+  (query [this {:keys [spec args account-id-key role] :as qry}]
+    (let [fn-get-acc #(get-account fn-get-ctx @*db-node)]
+      (->> qry
+           (fn-query @*db-node)
+           (fn-authorize {:fn-get-account fn-get-acc
+                          :crud           [:read]
+                          :role           (or role :member)
+                          :account-id-key account-id-key}))))
 
   (any [this query-spec]
     (first (.query this query-spec)))
 
   ;; Delete command's spec should only return :crux.db/id
   (delete! [this delete-command]
-    (fn-delete! *db-node delete-command))
+    (fn-delete! @*db-node delete-command))
 
-  (save! [this entity]
-    (first (fn-save! *db-node [entity])))
+  (save! [this entity & [{:keys [role]}]]
+    (let [fn-get-acc #(get-account fn-get-ctx @*db-node)]
+      (->> [entity]
+           (fn-authorize {:fn-get-account fn-get-acc
+                          :crud           [:create :update]
+                          :role           (or role :member)})
+           (fn-save! @*db-node)
+           first)))
 
   (add-all! [this entities]
-    (fn-save! *db-node entities)))
+    (fn-save! @*db-node entities)))
 
-(def db
-  (XTDB. (atom nil) xtdb-save! xtdb-delete! xtdb-start!))
+(defn db [fn-get-ctx fn-authorize]
+  (XTDB. (atom nil) xtdb-query xtdb-save! xtdb-delete!
+         xtdb-start! fn-get-ctx fn-authorize))
 
 (comment
 
@@ -165,6 +206,7 @@
   (require '[reason-alpha.model.mapping :as mapping]
            '[reason-alpha.model.fin-instruments :as fin-instruments])
 
+  
   (def n (data.model/connect db))
 
   (data.model/disconnect db)

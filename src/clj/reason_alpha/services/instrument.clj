@@ -27,7 +27,7 @@
 (defn save!
   [fn-repo-save! fn-get-account fn-get-ctx instr]
   (let [{account-id :account/id} (fn-get-account instr)
-        {:keys [send-message]}   (fn-get-ctx instr)]
+        {:keys [send-message]}   (fn-get-ctx)]
     (try
       (if account-id
         (send-message
@@ -54,15 +54,15 @@
 
 (defn get1 [fn-repo-get1 fn-get-account fn-get-ctx {:keys [instrument-id] :as args}]
   (let [{acc-id :account/id}   (fn-get-account args)
-        {:keys [send-message]} (fn-get-ctx args)
+        {:keys [send-message]} (fn-get-ctx)
         instr                  (fn-repo-get1 acc-id instrument-id)]
     (send-message
      [:instrument.query/get1-result {:result instr
                                      :type   :success}])))
 
-(defn getn [fn-repo-getn fn-get-account fn-get-ctx args]
-  (let [{acc-id :account/id}   (fn-get-account args)
-        {:keys [send-message]} (fn-get-ctx args)
+(defn getn [fn-repo-getn fn-get-account fn-get-ctx _args]
+  (let [{acc-id :account/id}   (fn-get-account)
+        {:keys [send-message]} (fn-get-ctx)
         instrs                 (fn-repo-getn acc-id)]
     (send-message
      [:instrument.query/getn-result {:result instrs

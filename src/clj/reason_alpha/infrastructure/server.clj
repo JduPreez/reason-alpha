@@ -69,9 +69,8 @@
       (debugf "Verified login of user %s (%s): %b" userUuid email is-valid?)
 
       (if is-valid?
-        (do
-          (let [acc (auth/account request)]
-            (fn-save-account! acc))
+        (let [acc (auth/account request)]
+          (fn-save-account! acc)
           {:status 200
            :body   {:result "Access granted"}})
         (do
@@ -135,20 +134,21 @@
 
   (let [fun     (get handlers id)
         account (auth/account ring-req)
-        data    (common/set-context (or ?data {})
-                                    {:user-account account
-                                     :send-message #(chsk-send! uid %)})]
-    (if fun
-      (let [_      (debugf "Event handler found: %s" id) ;; Log before calling `fun` might throw exception
-            result (fun data)]
-        (when ?reply-fn
-          (?reply-fn result)))
-      (do
-        (when (not= :chsk/ws-ping id)
-          (debugf "Unhandled event: %s" event))
+        data    (or ?data {})]
+      ;;future
+        (if fun
+          (binding [common/*context* {:user-account account
+                                      :send-message #(chsk-send! uid %)}]
+            (let [_      (debugf "Event handler found: %s" id) ;; Log before calling `fun` might throw exception
+                  result (fun data)]
+              (when ?reply-fn
+                (?reply-fn result))))
+          (do
+            (when (not= :chsk/ws-ping id)
+              (debugf "Unhandled event: %s" event))
 
-        (when ?reply-fn
-          (?reply-fn {:umatched-event-as-echoed-from-server event}))) ))
+            (when ?reply-fn
+              (?reply-fn {:umatched-event-as-echoed-from-server event})))))
                                         ; Handle event-msgs on a single thread
   ;; (future (-event-msg-handler ev-msg)) ; Handle event-msgs on a thread pool
   )
