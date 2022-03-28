@@ -21,7 +21,6 @@
         [:user-account accounts/AccountDto]]])
 
 (defn get-context []
-  ;;(clojure.pprint/pprint {::get-context *context*})
   *context*)
 
 #_(defn get-context [data]

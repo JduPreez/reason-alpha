@@ -18,6 +18,14 @@
       (str "-id")
       keyword))
 
+(defn some-ns-key [key entities]
+  (let [key-nm (name key)]
+    (->> entities
+         first
+         keys
+         (some #(when (= key-nm (name %))
+                  %)))))
+
 (defn- -id-key [model-type key-nm m]
   (let [mtype-nm (name model-type)
         ent-id-k (keyword mtype-nm key-nm)

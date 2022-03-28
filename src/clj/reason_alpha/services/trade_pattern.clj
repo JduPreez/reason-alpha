@@ -7,13 +7,13 @@
             [taoensso.timbre :as timbre :refer (errorf)]))
 
 (defn getn [fn-repo-getn fn-get-account args]
-  (let [{acc-id :account/id} (fn-get-account args)
+  (let [{acc-id :account/id} (fn-get-account)
         tpatterns            (fn-repo-getn acc-id)]
     {:result tpatterns
      :type   :success}))
 
 (defn get1 [fn-repo-get1 fn-get-account {:keys [trade-pattern-id] :as args}]
-  (let [{acc-id :account/id} (fn-get-account args)
+  (let [{acc-id :account/id} (fn-get-account)
         tpattern             (fn-repo-get1 acc-id trade-pattern-id)]
     {:result tpattern
      :type   :success}))
@@ -35,7 +35,7 @@
 
 (defn save!
   [fn-repo-save! fn-get-account tpattern]
-  (let [{account-id :account/id} (fn-get-account tpattern)]
+  (let [{account-id :account/id} (fn-get-account)]
     (try
       (if account-id
         {:result (-> tpattern
@@ -55,7 +55,7 @@
            :type        :error})))))
 
 #_(defn delete! [fn-repo-delete! fn-get-account ids]
-  (let [{acc-id :account/id} (fn-get-account ids)]
+  (let [{acc-id :account/id} (fn-get-account)]
     (try
       (if acc-id
         {:result (fn-repo-delete! acc-id ids)

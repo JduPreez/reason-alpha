@@ -25,24 +25,22 @@
                [:instrument/id uuid?]])])
 
 (defn save!
-  [fn-repo-save! fn-get-account fn-get-ctx instr]
-  (let [{account-id :account/id} (fn-get-account instr)
-        {:keys [send-message]}   (fn-get-ctx)]
+  [fn-repo-save! fn-get-account fn-get-ctx {acc-id :instrument/account-id
+                                            :as    instrument}]
+  (let [instr                  (if acc-id
+                                 instrument
+                                 (->> (fn-get-account)
+                                      :account/id
+                                      (assoc instrument :instrument/account-id)))
+        {:keys [send-message]} (fn-get-ctx)]
     (try
-      (if account-id
-        (send-message
-         [:instrument.command/save!-result
-          {:result (-> instr
-                       (assoc :instrument/account-id account-id)
-                       fn-repo-save!
-                       (select-keys [:instrument/creation-id
-                                     :instrument/id]))
-           :type   :success}])
-        (send-message
-         [:instrument.command/save!-result
-          {:description "No account found."
-           :type        :error}]))
-
+      (send-message
+       [:instrument.command/save!-result
+        {:result (-> instr
+                     fn-repo-save!
+                     (select-keys [:instrument/creation-id
+                                   :instrument/id]))
+         :type   :success}])
       (catch Exception e
         (let [err-msg "Error saving Instrument"]
           (errorf e err-msg)
@@ -52,10 +50,9 @@
              :description (str err-msg ": " (ex-message e))
              :type        :error}]))))))
 
-(defn get1 [fn-repo-get1 fn-get-account fn-get-ctx {:keys [instrument-id] :as args}]
-  (let [{acc-id :account/id}   (fn-get-account args)
-        {:keys [send-message]} (fn-get-ctx)
-        instr                  (fn-repo-get1 acc-id instrument-id)]
+(defn get1 [fn-repo-get1 fn-get-ctx {:keys [instrument-id] :as args}]
+  (let [{:keys [send-message]} (fn-get-ctx)
+        instr                  (fn-repo-get1 instrument-id)]
     (send-message
      [:instrument.query/get1-result {:result instr
                                      :type   :success}])))

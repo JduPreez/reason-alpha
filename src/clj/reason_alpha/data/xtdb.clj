@@ -21,7 +21,7 @@
             [outpace.config :refer [defconfig]]
             [reason-alpha.data.model :as data.model :refer [DataBase]]
             [reason-alpha.model.core :as model]
-            [reason-alpha.utils :as mutils]
+            [reason-alpha.model.utils :as mutils]
             [xtdb.api :as xt]))
 
 (defconfig data-dir) ;; "data"
@@ -61,7 +61,6 @@
                                  vec))}]]))))
 
 (defn xtdb-start! []
-  (clojure.pprint/pprint ::xtdb-start!)
   (let [fn-kv-store (fn [dir]
                       {:kv-store {:xtdb/module 'xtdb.rocksdb/->kv-store
                                   :db-dir      (-> data-dir
@@ -144,15 +143,20 @@
     (when user-id
       (get-account-by-user-id db-node user-id))))
 
-(defn- get-entities-owners [db-node entities]
-  (let [ent-id-key (utils/)])
-  (-> db-node
-      (xtdb-query
-       {:spec '{:find  [(pull e [*])]
-                :where [[e :account/user-id uid]]
-                :in    [uid]}
-        :args [user-id]})
-      first))
+(defn- entities-owners [db-node entities]
+  (let [id-k        (mutils/some-ns-key :id entities)
+        acc-id-k    (mutils/some-ns-key :account-id entities)
+        ids         (mapv id-k entities)
+        qry         {:spec `{:find  [e aid]
+                             :where [[e ~id-k id]
+                                     [e ~acc-id-k aid]]
+                             :in    [[id ...]]}
+                     :args [ids]}
+        ents-owners (if acc-id-k
+                      (-> db-node
+                          (xtdb-query qry))
+                      [])]
+    ents-owners))
 
 (deftype XTDB [*db-node fn-query fn-save! fn-delete!
                fn-start-db! fn-get-ctx fn-authorize]
@@ -184,14 +188,21 @@
   (delete! [this delete-command]
     (fn-delete! @*db-node delete-command))
 
-  (save! [this entity & [{:keys [role]}]]
-    (let [fn-get-acc #(get-account fn-get-ctx @*db-node)]
-      (->> [entity]
-           (fn-authorize {:fn-get-account fn-get-acc
-                          :crud           [:create :update]
-                          :role           (or role :member)})
+  (save! [this entity {:keys [role]}]
+    (let [ent         [entity]
+          id-k        (mutils/some-ns-key :id ent)
+          fn-get-acc  #(get-account fn-get-ctx @*db-node)
+          ents-owners (when id-k (entities-owners @*db-node ent))]
+      (->> ent
+           (fn-authorize {:fn-get-account  fn-get-acc
+                          :crud            (if id-k [:update] [:create])
+                          :role            role
+                          :entities-owners ents-owners})
            (fn-save! @*db-node)
            first)))
+
+  (save! [this entity]
+    (.save! this entity {:role :member}))
 
   (add-all! [this entities]
     (fn-save! @*db-node entities)))
@@ -207,7 +218,27 @@
            '[reason-alpha.model.fin-instruments :as fin-instruments])
 
   
-  (def n (data.model/connect db))
+  (def db (xtdb-start!))
+
+  (entities-owners
+   db
+   [#:instrument{:id
+                 #uuid "017fb6cc-a299-b5a1-f5db-bf25e5cd3f93",
+                 :creation-id
+                 #uuid "883e2159-7d12-4389-8272-f9137715ebe1",
+                 :name "i-2",
+                 :symbols
+                 [#:symbol{:ticker "I1",
+                           :provider
+                           :yahoo-finance}
+                  #:symbol{:ticker   "i1",
+                           :provider :saxo-dma}
+                  #:symbol{:ticker "i1",
+                           :provider
+                           :easy-equities}],
+                 :type :share,
+                 :account-id
+                 #uuid "017f87dc-59d1-7beb-9e1d-7a2a354e5a49"}])
 
   (data.model/disconnect db)
 

@@ -9,6 +9,7 @@
             [outpace.config :refer [defconfig]]
             [reason-alpha.model.accounts :as accounts]
             [reason-alpha.model.common :as common]
+            [reason-alpha.model.utils :as mutils]
             [clojure.set :as set]))
 
 (defconfig tenant-id)
@@ -47,29 +48,38 @@
                          :profile/image image}}))
 
 (defn authorize
-  [{:keys [fn-get-account crud role account-id-key]} entities & [current-ents-owners]]
-    (if (or (not (seq entities))
-            (#{:system :admin} role))
-      entities
-      (let [{acc-id :account/id} (fn-get-account)
-            acc-id-k             (if account-id-key
-                                   account-id-key
-                                   (->> entities
-                                        first
-                                        keys
-                                        (some #(when (= "account-id" (name %))
-                                                 %))))
-            authz-ents           (if acc-id-k
-                                   (filterv #(= (get % acc-id-k) acc-id) entities)
-                                   [])]
-        (clojure.pprint/pprint {::authorize {:ACC-ID         acc-id
-                                             :ENTS           entities
-                                             :AUTHZ-ENTS     authz-ents
-                                             :ACCOUNT-ID-KEY account-id-key
-                                             :ACC-ID-KEY     acc-id-k}})
-        authz-ents)))
+  [{:keys [fn-get-account crud role account-id-key
+           id-key entities-owners]}
+   entities]
+  (let [{acc-id :account/id} (fn-get-account)
+        crud                 (set crud)
+        id-k                 (or id-key
+                                 (mutils/some-ns-key :id entities))
+        acc-id-k             (or account-id-key
+                                 (mutils/some-ns-key :account-id entities))]
+    (cond
+      (or (not (seq entities))
+          (#{:system :admin} role))
+      , entities
+
+      (not acc-id-k)
+      , []
+
+      (seq (set/intersection crud #{:delete :update}))
+      , (let [idx-cur-ents-owners (into {} entities-owners)]
+          (filterv (fn [e]
+                     (let [id        (get e id-k)
+                           e-acc-id  (get e acc-id-k)
+                           eo-acc-id (get idx-cur-ents-owners id)]
+                       (= acc-id e-acc-id eo-acc-id))) entities))
+
+      :else
+      , (filterv #(= (get % acc-id-k) acc-id) entities))))
 
 (comment
+  
+  (mutils/some-ns-key :id [{:ent/id "dddd"}
+                           {:ent/id "jnmnmd"}])
 
   (let [account-id (java.util.UUID/randomUUID)
         ents       (->> (range 1 11)

@@ -23,23 +23,21 @@
        (data.model/query db)
        (mapping/command-ents->query-dtos fin-instruments/InstrumentDto)))
 
-(defn get1 [db account-id id]
+(defn get1 [db id]
   (->> {:spec '{:find  [(pull e [*])]
-                :where [[e :instrument/id id]
-                        [e :instrument/account-id account-id]]
-                :in    [[account-id id]]}
-        :args [account-id id]}
+                :where [[e :instrument/id id]]
+                :in    [id]}
+        :args [id]}
        (data.model/any db)
        (mapping/command-ent->query-dto fin-instruments/InstrumentDto)))
 
-(defn delete! [db account-id ids]
+(defn delete! [db ids]
   (let [del-result (data.model/delete!
                     db
                     {:spec '{:find  [e]
-                             :where [[e :instrument/id id]
-                                     [e :instrument/account-id acc-id]]
-                             :in    [acc-id [id ...]]}
-                     :args [account-id ids]})]
+                             :where [[e :instrument/id id]]
+                             :in    [[id ...]]}
+                     :args [ids]})]
     (->> ids
          (mapv (fn [id] {:instrument/id id}))
          (assoc del-result :deleted-items))))

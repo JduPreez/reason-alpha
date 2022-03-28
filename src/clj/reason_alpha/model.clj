@@ -68,7 +68,6 @@
                           (partial repo.trade-pattern/delete! d)
                           (svc.common/delete-fn
                            d
-                           fn-get-account
                            :trade-pattern))}
     :queries  {:getn (as-> db d
                        (partial repo.trade-pattern/getn d)
@@ -95,7 +94,6 @@
                           (partial repo.instrument/delete! d)
                           (svc.common/delete-msg-fn
                            {:fn-repo-delete!    d
-                            :fn-get-account     fn-get-account
                             :model-type         :instrument
                             :fn-get-ctx         common/get-context
                             :response-msg-event :instrument.command/delete!-result}))}
@@ -107,7 +105,6 @@
                :get1 (as-> db d
                        (partial repo.instrument/get1 d)
                        (partial svc.instrument/get1 d
-                                fn-get-account
                                 common/get-context))}}
    :model
    {:queries {:getn #(svc.model/getn common/get-context %)}}})

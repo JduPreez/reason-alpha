@@ -1,35 +1,26 @@
 (ns reason-alpha.services.common
   (:require [taoensso.timbre :as timbre :refer (errorf)]))
 
-(defn delete-fn [fn-repo-delete! fn-get-account model-type]
+(defn delete-fn [fn-repo-delete! model-type]
   (fn [ids]
-    (let [{acc-id :account/id} (fn-get-account ids)]
       (try
-        (if acc-id
-          {:result (fn-repo-delete! acc-id ids)
-           :type   :success}
-          {:description "No account found."
-           :type        :error})
+        {:result (fn-repo-delete! ids)
+         :type   :success}
         (catch Exception e
           (let [err-msg (str "Error deleting " model-type)]
             (errorf e err-msg)
             {:error       (ex-data e)
              :description (str err-msg ": " (ex-message e))
-             :type        :error}))))))
+             :type        :error})))))
 
 (defn delete-msg-fn
-  [{:keys [fn-repo-delete! fn-get-account model-type fn-get-ctx response-msg-event]}]
+  [{:keys [fn-repo-delete! model-type fn-get-ctx response-msg-event]}]
   (fn [ids]
-    (let [{acc-id :account/id}   (fn-get-account ids)
-          {:keys [send-message]} (fn-get-ctx ids)]
+    (let [{:keys [send-message]} (fn-get-ctx)]
       (try
-        (if acc-id
           (send-message
-           [response-msg-event {:result (fn-repo-delete! acc-id ids)
+           [response-msg-event {:result (fn-repo-delete! ids)
                                 :type   :success}])
-          (send-message
-           [response-msg-event {:description "No account found."
-                                :type        :error}]))
         (catch Exception e
           (let [err-msg (str "Error deleting " model-type)]
             (errorf e err-msg)

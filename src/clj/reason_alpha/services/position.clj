@@ -16,7 +16,7 @@
 (defn save!
   [fn-repo-save! fn-get-account ent]
   (try
-    (let [{:keys [account/id]} (fn-get-account ent)]
+    (let [{:keys [account/id]} (fn-get-account)]
 
       (if id
         {:result (fn-repo-save! (assoc ent :position/account-id id))
