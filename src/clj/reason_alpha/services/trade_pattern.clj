@@ -6,15 +6,14 @@
             [reason-alpha.model.portfolio-management :as portfolio-management]
             [taoensso.timbre :as timbre :refer (errorf)]))
 
-(defn getn [fn-repo-getn fn-get-account args]
+(defn getn [fn-repo-getn fn-get-account _args]
   (let [{acc-id :account/id} (fn-get-account)
         tpatterns            (fn-repo-getn acc-id)]
     {:result tpatterns
      :type   :success}))
 
-(defn get1 [fn-repo-get1 fn-get-account {:keys [trade-pattern-id] :as args}]
-  (let [{acc-id :account/id} (fn-get-account)
-        tpattern             (fn-repo-get1 acc-id trade-pattern-id)]
+(defn get1 [fn-repo-get1 {:keys [trade-pattern-id]}]
+  (let [tpattern (fn-repo-get1 trade-pattern-id)]
     {:result tpattern
      :type   :success}))
 
@@ -34,36 +33,21 @@
               portfolio-management/TradePatternDto)])
 
 (defn save!
-  [fn-repo-save! fn-get-account tpattern]
-  (let [{account-id :account/id} (fn-get-account)]
+  [fn-repo-save! fn-get-account {acc-id :trade-pattern/account-id
+                                 :as    trade-pattern}]
+  (let [tpattern (if acc-id
+                   trade-pattern
+                   (->> (fn-get-account)
+                        :account/id
+                        (assoc trade-pattern :trade-pattern/account-id)))]
     (try
-      (if account-id
-        {:result (-> tpattern
-                     (assoc :trade-pattern/account-id account-id)
-                     fn-repo-save!
-                     (as-> tp (mapping/command-ent->query-dto
-                               portfolio-management/TradePatternDto tp)))
-         :type   :success}
-        {:description "No account found."
-         :type        :error})
-
+      {:result (-> tpattern
+                   fn-repo-save!
+                   (as-> tp (mapping/command-ent->query-dto
+                             portfolio-management/TradePatternDto tp)))
+       :type   :success}
       (catch Exception e
         (let [err-msg "Error saving Trade Pattern"]
-          (errorf e err-msg)
-          {:error       (ex-data e)
-           :description (str err-msg ": " (ex-message e))
-           :type        :error})))))
-
-#_(defn delete! [fn-repo-delete! fn-get-account ids]
-  (let [{acc-id :account/id} (fn-get-account)]
-    (try
-      (if acc-id
-        {:result (fn-repo-delete! acc-id ids)
-         :type   :success}
-        {:description "No account found."
-         :type        :error})
-      (catch Exception e
-        (let [err-msg "Error deleting Trade Pattern"]
           (errorf e err-msg)
           {:error       (ex-data e)
            :description (str err-msg ": " (ex-message e))

@@ -11,32 +11,30 @@
        (data.model/query db)
        (mapping/command-ents->query-dtos portfolio-management/TradePatternDto)))
 
-(defn get1 [db account-id id]
+(defn get1 [db id]
   (->> {:spec '{:find  [(pull e [*])]
-                :where [[e :trade-pattern/id id]
-                        [e :trade-pattern/account-id account-id]]
-                :in    [[account-id id]]}
-        :args [account-id id]}
+                :where [[e :trade-pattern/id id]]
+                :in    [id]}
+        :args [id]}
        (data.model/any db)
        (mapping/command-ent->query-dto portfolio-management/TradePatternDto)))
 
 (defn save! [db tpattern]
   (data.model/save! db tpattern))
 
-(defn delete! [db account-id trade-pattern-ids]
+(defn delete! [db ids]
   (let [children   (data.model/query db {:spec '{:find  [(pull e [*])]
-                                                 :where [[e :trade-pattern/parent-id id]
-                                                         [e :trade-pattern/account-id acc-id]]
-                                                 :in    [acc-id [id ...]]}
-                                         :args [account-id trade-pattern-ids]})
-        del-result (data.model/delete! db {:spec '{:find  [e]
+                                                 :where [[e :trade-pattern/parent-id id]]
+                                                 :in    [[id ...]]}
+                                         :args [ids]})
+        del-result (data.model/delete! db {:spec '{:find  [e acc-id]
                                                    :where [(or (and [e :trade-pattern/id id]
                                                                     [e :trade-pattern/account-id acc-id])
                                                                (and [e :trade-pattern/parent-id id]
                                                                     [e :trade-pattern/account-id acc-id]))]
-                                                   :in    [acc-id [id ...]]}
-                                           :args [account-id trade-pattern-ids]})]
+                                                   :in    [[id ...]]}
+                                           :args [ids]})]
     (-> children
         (as-> cdn (map #(select-keys % [:trade-pattern/id]) cdn))
-        (into (map (fn [id] {:trade-pattern/id id}) trade-pattern-ids))
+        (into (map (fn [id] {:trade-pattern/id id}) ids))
         (as-> di (assoc del-result :deleted-items di)))))

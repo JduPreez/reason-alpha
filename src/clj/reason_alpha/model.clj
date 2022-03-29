@@ -54,9 +54,6 @@
 (defmethod ig/halt-key! ::db [_ _]
   (data.model/disconnect xtdb/db))
 
-
-;; https://stackoverflow.com/questions/26116277/getting-argument-type-hints-of-a-function-in-clojure
-;; Tag context arg un function & inject from the server messaging
 (defmethod ig/init-key ::aggregates [_ {db                       :db
                                         {:keys [fn-get-account]} :account-svc}]
   {:trade-pattern
@@ -75,8 +72,7 @@
                                 fn-get-account))
                :get1 (as-> db d
                        (partial repo.trade-pattern/get1 d)
-                       (partial svc.trade-pattern/get1 d
-                                fn-get-account))}}
+                       (partial svc.trade-pattern/get1 d))}}
    :position
    {:commands {:save! (as-> db d
                         (partial repo.position/save! d)
@@ -140,7 +136,9 @@
                       :port        5000}
    ::instrumentation {:nss ['reason-alpha.data.model
                             'reason-alpha.data.repositories.account
+                            'reason-alpha.data.repositories.instrument
                             'reason-alpha.data.repositories.position
+                            'reason-alpha.data.repositories.trade-pattern
                             'reason-alpha.infrastructure.auth
                             'reason-alpha.services.instrument
                             'reason-alpha.services.position]}})

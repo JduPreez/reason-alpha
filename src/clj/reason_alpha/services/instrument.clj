@@ -50,7 +50,7 @@
              :description (str err-msg ": " (ex-message e))
              :type        :error}]))))))
 
-(defn get1 [fn-repo-get1 fn-get-ctx {:keys [instrument-id] :as args}]
+(defn get1 [fn-repo-get1 fn-get-ctx {:keys [instrument-id]}]
   (let [{:keys [send-message]} (fn-get-ctx)
         instr                  (fn-repo-get1 instrument-id)]
     (send-message
