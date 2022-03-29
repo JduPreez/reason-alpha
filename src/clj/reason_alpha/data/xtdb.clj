@@ -46,18 +46,17 @@
               (false? only-when-not-exists?))
       (xt/submit-tx node
                     [[::xt/put
-                      {:xt/id ::delete
+                      {:xt/id ::delete ;; TODO: Make this function support map results & not only tuples
                        :xt/fn
-                       , '(fn [ctx {:keys [spec args]}]
+                       , '(fn [ctx {:keys [spec args account-id]}]
                             (->> args
                                  (apply xtdb.api/q
                                         (xtdb.api/db ctx)
                                         spec)
-                                 (map #(let [doc (first %)
-                                             id  (if (map? doc)
-                                                   (-> % first vals first) ;; TODO: This probably doesn't work
-                                                   doc)]
-                                         [::xt/delete id]))
+                                 (map (fn [[id acc-id]]
+                                        (when (= account-id acc-id)
+                                          [::xt/delete id])))
+                                 (remove nil?)
                                  vec))}]]))))
 
 (defn xtdb-start! []
@@ -185,8 +184,10 @@
     (first (.query this query-spec)))
 
   ;; Delete command's spec should only return :crux.db/id
-  (delete! [this delete-command]
-    (fn-delete! @*db-node delete-command))
+  (delete! [this delete-cmd]
+    (let [{acc-id :account/id} (get-account fn-get-ctx @*db-node)
+          del-cmd              (assoc delete-cmd :account-id acc-id)]
+      (fn-delete! @*db-node del-cmd)))
 
   (save! [this entity {:keys [role]}]
     (let [ent         [entity]
@@ -266,12 +267,21 @@
                                         (and [e :trade-pattern/parent-id id]
                                              [e :trade-pattern/account-id acc-id]))]
                             :in    [acc-id [id ...]]}]
-    (xt/submit-tx n [[::xt/fn
-                      ::delete
-                      {:spec '{:find  [e]
-                               :where [[e :trade-pattern/id id]]
-                               :in    [[id ...]]}
-                       :args args}]])
+    (xt/submit-tx db
+                  [[::xt/put
+                    {:xt/id ::delete
+                     :xt/fn
+                     , '(fn [ctx {:keys [spec args account-id]}]
+                          (->> args
+                               (apply xtdb.api/q
+                                      (xtdb.api/db ctx)
+                                      spec)
+                               (map (fn [[id acc-id]]
+                                      (when (= account-id acc-id)
+                                        [::xt/delete id])))
+                               (remove nil?)
+                               vec))}]])
+    
     )
 
   (data.model/query db

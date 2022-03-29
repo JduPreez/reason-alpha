@@ -34,8 +34,9 @@
 (defn delete! [db ids]
   (let [del-result (data.model/delete!
                     db
-                    {:spec '{:find  [e]
-                             :where [[e :instrument/id id]]
+                    {:spec '{:find  [e acc-id]
+                             :where [[e :instrument/id id]
+                                     [e :instrument/account-id acc-id]]
                              :in    [[id ...]]}
                      :args [ids]})]
     (->> ids
