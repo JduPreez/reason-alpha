@@ -72,3 +72,7 @@
    (defn edn-files->clj [dir]
      (->> (list-resource-files dir "edn")
           (map edn-file->clj))))
+
+(defn str->bool [s]
+  (if (= s "true") true
+      false))

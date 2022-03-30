@@ -26,10 +26,10 @@
 
 (def routes
   ["/"
-   ["" {:name    ::positions/view
-        :view    positions/view
-        :model   :position
-        :load-fx :position.query/getn
+   ["" {:name       ::positions/view
+        :view       positions/view
+        :model      :position
+        :load-event [:position/load]
         :controllers
         [{:start (fn [& params] (js/console.log "Entering :positions"))
           :stop  (fn [& params] (js/console.log "Leaving :positions"))}]}]

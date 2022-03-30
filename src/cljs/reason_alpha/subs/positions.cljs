@@ -1,9 +1,11 @@
 (ns reason-alpha.subs.positions
   (:require [re-frame.core :as rf]
-            [reason-alpha.data :as data]))
+            [reason-alpha.data :as data]
+            [reason-alpha.web.api-client :as api-client]
+            [reason-alpha.utils :as utils]))
 
 (rf/reg-sub
- :positions
+ :position/list
  (fn [db _]
-   (sort-by :instrument-name
-            (get-in db data/holdings))))
+   (sort-by (juxt :instrument-name :open-time)
+            (get-in db data/positions))))

@@ -66,24 +66,28 @@
 (defn model-member->field
   [[member-nm & schema] & [{:keys [ref-suffix enum-titles]
                             :as   field-opts}]]
-  (let [id-member           (-> member-nm
-                                name
-                                (str/ends-with? "-id"))
-        fo                  (cond-> field-opts
-                              (not (contains? field-opts :can-sort))
-                              , (assoc :can-sort true)
-                              :default
-                              , (dissoc field-opts :ref-suffix))
-        props-or-type       (first schema)
-        has-props?          (map? props-or-type)
-        {:keys [title ref]} props-or-type
-        ref-nm              (when ref
-                              (name ref))
-        ref-ns              (when ref
-                              (namespace ref))
-        type                (if has-props?
-                              (second schema)
-                              props-or-type)]
+  (let [id-member            (-> member-nm
+                                 name
+                                 (str/ends-with? "-id"))
+        fo                   (cond-> field-opts
+                               (not (contains? field-opts :can-sort))
+                               , (assoc :can-sort true)
+                               :default
+                               , (dissoc field-opts :ref-suffix))
+        props-or-type        (first schema)
+        has-props?           (map? props-or-type)
+        {:keys [title ref]}  props-or-type
+        ref-nm               (when ref
+                               (name ref))
+        ref-ns               (when ref
+                               (namespace ref))
+        type                 (some #(when (not (map? %))
+                                      (if (sequential? %)
+                                        (first %)
+                                        %)) schema)
+        [type tuple-id-type] (if (= type :tuple)
+                               [:tuple (second type)]
+                               [type])]
     (cond
       ;; Id members are either the current entity's `:id` or `:creation-id` fields
       ;; or they should be 'foreign keys' with a `:ref` pointing to another entity
@@ -97,7 +101,7 @@
                           :name              member-nm
                           :type              :select
                           :data-subscription [(keyword ref-ns (str ref-nm "-" ref-suffix))]}
-                   (= type keyword?) (assoc :enum-titles enum-titles))
+                   (= tuple-id-type keyword?) (assoc :enum-titles enum-titles))
                  fo)
 
       ref (merge
@@ -105,7 +109,7 @@
                     :name              member-nm
                     :type              :select
                     :data-subscription [(keyword ref-nm ref-suffix)]}
-             (= type keyword?) (assoc :enum-titles enum-titles))
+             (= tuple-id-type keyword?) (assoc :enum-titles enum-titles))
            fo)
 
       :default (merge
@@ -116,9 +120,10 @@
 (defn model->fields [[_ & members] & [{fields-opts :fields-opts
                                        ref-suffix  :ref-suffix
                                        :or         {ref-suffix "ref-list"}}]]
-  (->> (mapv (fn [[membr-k & _ :as m]]
+  (->> members
+       (mapv (fn [[membr-k & _ :as m]]
                (let [fo (-> fields-opts
                             (get membr-k)
                             (assoc :ref-suffix "ref-list"))]
-                 (model-member->field m fo))) members)
+                 (model-member->field m fo))))
        (remove nil?)))

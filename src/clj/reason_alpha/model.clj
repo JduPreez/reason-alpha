@@ -74,11 +74,34 @@
                        (partial repo.trade-pattern/get1 d)
                        (partial svc.trade-pattern/get1 d))}}
    :position
-   {:commands {:save! (as-> db d
-                        (partial repo.position/save! d)
-                        (partial svc.position/save! d fn-get-account))}
+   {:commands {:save!   (as-> db d
+                          (partial repo.position/save! d)
+                          (svc.common/save-msg-fn
+                           {:model-type         :position
+                            :fn-repo-save!      d
+                            :fn-get-ctx         common/get-context
+                            :fn-get-account     fn-get-account
+                            :response-msg-event :position.command/save!-result}))
+               :delete! (as-> db d
+                          (partial repo.position/delete! d)
+                          (svc.common/delete-msg-fn
+                           {:fn-repo-delete!    d
+                            :model-type         :position
+                            :fn-get-ctx         common/get-context
+                            :response-msg-event :position.command/delete!-result}))}
     :queries  {:getn (as-> db d
-                       (partial repo.position/getn d))}}
+                       (partial repo.position/getn d)
+                       (svc.common/getn-msg-fn
+                        {:fn-repo-getn       d
+                         :fn-get-account     fn-get-account
+                         :fn-get-ctx         common/get-context
+                         :response-msg-event :position.query/getn-result}))
+               :get1 (as-> db d
+                       (partial repo.position/get1 d)
+                       (svc.common/get1-msg-fn
+                        {:fn-repo-get1       d
+                         :fn-get-ctx         common/get-context
+                         :response-msg-event :position.query/get1-result}))}}
 
    :instrument
    {:commands {:save!   (as-> db d

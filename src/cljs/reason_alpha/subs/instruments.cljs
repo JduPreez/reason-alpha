@@ -11,7 +11,7 @@
        :as                   instr-types} _]
    (for [m    mbrs
          :let [t (get titles m)]]
-     {:id (utils/keyword->str m) :label t})))
+     {:id m :label t})))
 
 (rf/reg-sub
  :instrument/type-titles
@@ -24,3 +24,13 @@
  (fn [db _]
    (sort-by :instrument-name
             (get-in db data/instruments))))
+
+(rf/reg-sub
+ :instrument/ref-list
+ :<- [:instrument/list]
+ (fn [instruments _]
+   (map
+    (fn [{:keys [instrument-id instrument-name]}]
+      {:id    (str instrument-id)
+       :label instrument-name})
+    instruments)))

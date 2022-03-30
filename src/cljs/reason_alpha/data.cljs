@@ -10,7 +10,7 @@
 
 (def ^:const trade-patterns [:data :trade-pattern])
 
-(def ^:const holdings [:data :holding])
+(def ^:const positions [:data :position])
 
 (def ^:const models [:data :model])
 

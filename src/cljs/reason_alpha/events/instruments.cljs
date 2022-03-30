@@ -18,7 +18,6 @@
 (rf/reg-fx
  :instrument.query/getn
  (fn [_]
-   (cljs.pprint/pprint :instrument.query/getn)
    (api-client/chsk-send! [:instrument.query/getn])))
 
 (rf/reg-event-db

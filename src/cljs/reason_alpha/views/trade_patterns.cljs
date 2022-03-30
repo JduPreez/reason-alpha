@@ -32,8 +32,6 @@
                                                                                           (= (:trade-pattern-parent-id tp) id)))
                                                                                    tps)))
                                                                 (sort-by :trade-pattern-name))]
-                                      (cljs.pprint/pprint {::edit-render {:T  tps
-                                                                          :EP eligible-parents}})
                                       [:select.form-control {:value     (or parent-id "")
                                                              :on-change #(let [v (as-> % v
                                                                                    (.-target v)

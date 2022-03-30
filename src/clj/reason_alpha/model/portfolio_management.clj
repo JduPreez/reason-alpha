@@ -40,8 +40,8 @@
    [:trade-transaction/type [:enum :buy :sell :dividend :reinvest-divi
                              :corp-action :fee :tax :exchange-fee :stamp-duty]]
    [:trade-transaction/date inst?]
-   [:trade-transaction/quantity decimal?]
-   [:trade-transaction/price decimal?]
+   [:trade-transaction/quantity float?]
+   [:trade-transaction/price float?]
    [:trade-transaction/fee-of-transaction-id {:optional true} uuid?]
    [:trade-transaction/instrument-id uuid?]
    [:trade-transaction/estimated? boolean?]])
@@ -68,17 +68,39 @@
    [:position/account-id uuid?]
    [:position/trade-pattern-id {:optional true} uuid?]])
 
-(def PositionDto
+(def-model PositionDto
+  :model/position-dto
   [:map
-   [:creation-id uuid?]
-   [:id {:optional true} uuid?]
-   [:instrument-id {:ref :instrument} uuid?]
-   [:quantity float?]
-   [:symbols {:optional true} string?]
-   [:open-price float?]
-   [:close-price {:optional true} float?]
-   [:trade-pattern-name {:optional true} string?]
-   [:holding-position-id {:optional true} string?]])
+   [:position-creation-id {:command-path [:position/creation-id]}
+    uuid?]
+   [:position-id {:optional     true
+                  :command-path [:position/id]} uuid?]
+   [:instrument {:title        "Instrument"
+                 :ref          :instrument
+                 :command-path [:position/instrument-id]}
+    [:tuple uuid? string?]]
+   [:quantity {:title        "Quantity"
+               :command-path [:position/open-trade-transaction
+                              :trade-transaction/quantity]}
+    float?]
+   [:open-time {:title        "Open Time"
+                :command-path [:position/open-trade-transaction
+                               :trade-transaction/date]}
+    inst?]
+   #_[:symbols {:optional true} string?]
+   [:open-price {:title        "Open"
+                 :command-path [:position/open-trade-transaction
+                                :trade-transaction/price]}
+    float?]
+   [:close-price {:optional     true
+                  :command-path [:position/close-trade-transaction
+                                 :trade-transaction/price]}
+    float?]
+   [:trade-pattern {:title    "Trade Pattern"
+                    :optional true
+                    :ref      :trade-pattern}
+    [:tuple uuid? string?]]
+   #_[:holding-position-id {:optional true} string?]])
 
 #_(defn position-total-return
   "Also know as the Holding Period Yield"

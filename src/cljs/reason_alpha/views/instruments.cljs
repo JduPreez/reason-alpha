@@ -14,9 +14,9 @@
 (defn view []
   (let [*schema            (rf/subscribe [:model :model/instrument-dto])
         *instr-type-titles (rf/subscribe [:instrument/type-titles])
-        flds               (datagrid/model->fields
+        fields             (datagrid/model->fields
                             @*schema
                             {:fields-opts
                              {:instrument-type
                               {:enum-titles @*instr-type-titles}}})]
-    [datagrid/view flds options]))
+    [datagrid/view fields options]))
