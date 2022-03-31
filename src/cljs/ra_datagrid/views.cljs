@@ -11,7 +11,6 @@
               [schema.core :as s
                :include-macros true]))
 
-
 (defn clean-formatted-keys
   [r]
   (into {}
@@ -19,10 +18,6 @@
          (fn [[k v]]
            (clojure.string/ends-with? (name k) "-formatted" ))
          r)))
-
-
-(def dutch-formatter (fmt/formatter "dd-MM-yyyy HH:mm"))
-(def dutch-formatter-date (fmt/formatter "dd-MM-yyyy"))
 
 (defn is-checked?
   [pkey record selected-records]

@@ -9,9 +9,10 @@
 (rf/reg-event-fx
  :position/load
  (fn [{:keys [db]} _]
-   {:position.query/getn nil
-    :dispatch            [:model.query/getn
-                          [:model/position :model/position-dto]]}))
+   {:position.query/getn   nil
+    :instrument.query/getn nil
+    :dispatch              [:model.query/getn
+                            [:model/position :model/position-dto]]}))
 
 (rf/reg-fx
  :position.query/getn
@@ -31,6 +32,7 @@
 (rf/reg-event-fx
  :position.command/create
  (fn [{:keys [db]} [_ {:keys [creation-id] :as new-pos}]]
+   (cljs.pprint/pprint {:position.command/create new-pos})
    (let [new-pos         (if creation-id
                            new-pos
                            (assoc new-pos
@@ -41,8 +43,8 @@
          db              (data/save-local! {:model-type :position
                                             :data       new-pos
                                             :db         db})]
-     {:db                     db
-      :position.command/save! cmd-pos})))
+     {:db                         db
+      #_#_:position.command/save! cmd-pos})))
 
 (rf/reg-event-fx
  :position.command/update

@@ -92,13 +92,14 @@
                  :command-path [:position/open-trade-transaction
                                 :trade-transaction/price]}
     float?]
-   [:close-price {:optional     true
+   [:close-price {:title        "Close"
+                  :optional     true
                   :command-path [:position/close-trade-transaction
                                  :trade-transaction/price]}
     float?]
-   [:trade-pattern {:title    "Trade Pattern"
-                    :optional true
-                    :ref      :trade-pattern}
+   #_[:trade-pattern {:title    "Trade Pattern"
+                      :optional true
+                      :ref      :trade-pattern}
     [:tuple uuid? string?]]
    #_[:holding-position-id {:optional true} string?]])
 

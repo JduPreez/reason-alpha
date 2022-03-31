@@ -72,7 +72,8 @@
       [[:instrument-type {:title        "Type"
                           :optional     true
                           :ref          :instrument/type
-                          :command-path [:instrument/type]} keyword?]]])))
+                          :command-path [:instrument/type]}
+        [:tuple keyword? string?]]]])))
 
 (comment
   (letfn [(get-model-members-of [schema member-k]

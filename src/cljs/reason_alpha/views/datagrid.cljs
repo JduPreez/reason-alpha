@@ -69,7 +69,7 @@
   (let [id-member            (-> member-nm
                                  name
                                  (str/ends-with? "-id"))
-        fo                   (cond-> field-opts
+        field-def            (cond-> field-opts
                                (not (contains? field-opts :can-sort))
                                , (assoc :can-sort true)
                                :default
@@ -77,45 +77,47 @@
         props-or-type        (first schema)
         has-props?           (map? props-or-type)
         {:keys [title ref]}  props-or-type
+        field-def            (merge field-def {:title title
+                                               :name  member-nm})
         ref-nm               (when ref
                                (name ref))
         ref-ns               (when ref
                                (namespace ref))
-        type                 (some #(when (not (map? %))
+        [type tuple-id-type] (some #(when (not (map? %))
                                       (if (sequential? %)
-                                        (first %)
-                                        %)) schema)
-        [type tuple-id-type] (if (= type :tuple)
-                               [:tuple (second type)]
-                               [type])]
+                                        %
+                                        [%])) schema)]
     (cond
       ;; Id members are either the current entity's `:id` or `:creation-id` fields
       ;; or they should be 'foreign keys' with a `:ref` pointing to another entity
       ;; using an `<select>`
       (and id-member
-           (not ref)) nil
+           (not ref))
+      , nil
 
       (and ref-ns
-           ref) (merge
-                 (cond-> {:title             title
-                          :name              member-nm
-                          :type              :select
-                          :data-subscription [(keyword ref-ns (str ref-nm "-" ref-suffix))]}
-                   (= tuple-id-type keyword?) (assoc :enum-titles enum-titles))
-                 fo)
+           ref)
+      , (merge
+         (cond-> {:type              :select
+                  :data-subscription [(keyword ref-ns (str ref-nm "-" ref-suffix))]}
+           (= tuple-id-type keyword?) (assoc :enum-titles enum-titles))
+         field-def)
 
-      ref (merge
-           (cond-> {:title             title
-                    :name              member-nm
-                    :type              :select
-                    :data-subscription [(keyword ref-nm ref-suffix)]}
-             (= tuple-id-type keyword?) (assoc :enum-titles enum-titles))
-           fo)
+      ref
+      , (merge
+         (cond-> {:type              :select
+                  :data-subscription [(keyword ref-nm ref-suffix)]}
+           (= tuple-id-type keyword?) (assoc :enum-titles enum-titles))
+         field-def)
 
-      :default (merge
-                {:title title
-                 :name  member-nm}
-                fo))))
+      (= type (-> #'float? meta :name))
+      , (merge field-def {:type :number})
+
+      (= type (-> #'inst? meta :name))
+      , (merge field-def {:type :date})
+
+      :default
+      , field-def)))
 
 (defn model->fields [[_ & members] & [{fields-opts :fields-opts
                                        ref-suffix  :ref-suffix

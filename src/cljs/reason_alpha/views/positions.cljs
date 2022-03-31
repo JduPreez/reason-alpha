@@ -4,7 +4,7 @@
             [reason-alpha.views.instruments :as views.instruments]
             [reason-alpha.views.trade-patterns :as views.trade-patterns]))
 
-(def fields
+#_(def fields
   [{:title    "Instrument"
     :name     :instrument-name
     :can-sort true
@@ -44,11 +44,10 @@
         fields  (datagrid/model->fields
                  @*schema
                  {:fields-opts
-                  {:instrument-id
+                  {:instrument
                    {:menu [{:title "Edit"
                             :view  ::views.instruments/view}]}
-                   :trade-pattern-id
+                   :trade-pattern
                    {:menu [{:title "Edit"
                             :view  ::views.instruments/view}]}}})]
-    (cljs.pprint/pprint {::view fields})
     [datagrid/view fields options]))

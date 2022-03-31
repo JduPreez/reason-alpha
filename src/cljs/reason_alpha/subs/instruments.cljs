@@ -29,6 +29,7 @@
  :instrument/ref-list
  :<- [:instrument/list]
  (fn [instruments _]
+   (cljs.pprint/pprint {:instrument/list instruments})
    (map
     (fn [{:keys [instrument-id instrument-name]}]
       {:id    (str instrument-id)
