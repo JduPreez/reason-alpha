@@ -752,7 +752,7 @@ fieldset[disabled] .btn {
 .rc-datepicker-dropdown-wrapper .input-group-addon {
   width: fit-content;
   height: 36px;
-  margin-bottom: 9px;
+  margin-bottom: 0px;
   text-align: center;
   vertical-align: middle;
   padding: 6px 0px 0px !important;
@@ -766,12 +766,20 @@ fieldset[disabled] .btn {
 
 .dropdown-button.activator {
     width: 40px;
-    color: #777;
-    background-color: #F7F7F7
+    color: rgb(255, 255, 255);
+    background-color: #7b41d8;
 }
 
 .rc-datepicker-nav .rc-line {
   background-color: #597bc9 !important;
+}
+
+.rc-datepicker-dropdown-wrapper .display-inline-flex {
+  display: unset;
+}
+
+.rc-datepicker-dropdown-wrapper .form-control {
+  margin-bottom: 0px;
 }
 
 /*----------------------------------------------------------------------------------------

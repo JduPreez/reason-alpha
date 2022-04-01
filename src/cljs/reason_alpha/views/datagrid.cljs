@@ -114,7 +114,8 @@
       , (merge field-def {:type :number})
 
       (= type (-> #'inst? meta :name))
-      , (merge field-def {:type :date})
+      , (merge field-def {:type  :date
+                          :width "227px"})
 
       :default
       , field-def)))

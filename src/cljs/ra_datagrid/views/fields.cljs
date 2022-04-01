@@ -1,5 +1,6 @@
 (ns ra-datagrid.views.fields
-  (:require [cljs-time.format :as fmt]
+  (:require [cljs-time.coerce :as coerce]
+            [cljs-time.format :as fmt]
             [cljs-uuid-utils.core :as uuid]
             [medley.core :as medley]
             [ra-datagrid.config :as conf]
@@ -95,8 +96,10 @@
 (defmethod edit-cell :date
   [id field pk]
   (let [*r             (rf/subscribe [:datagrid/edited-record-by-pk id pk])
+        dte            (->> field :name (get @*r))
         *selected-date (reagent/atom
-                        (->> field :name (get @*r)))]
+                        (when dte
+                          (coerce/to-date-time dte)))]
     (fn [id field pk]
       [:td {:key       (:name field)
             :className "editing"}
@@ -108,5 +111,8 @@
         :start-of-week 0
         :placeholder   "Select a date"
         :format        conf/date-format
-        :width         "100%"
-        :on-change     #(reset! *selected-date %)]])))
+        :width         "227px"
+        :on-change     #(do
+                          (reset! *selected-date %)
+                          (rf/dispatch [:datagrid/update-edited-record id pk
+                                        (:name field) (coerce/to-date %)]))]])))

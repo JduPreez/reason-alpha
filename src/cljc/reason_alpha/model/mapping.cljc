@@ -12,7 +12,7 @@
                                        (if (keyword? (first ks))
                                          {} []))
                                   ks v))
-      (and (coll? obj)
+      (and (sequential? obj)
            (not (map? obj)))
       , (conj obj (mv-assoc-in (get obj k
                                     (if (keyword? (first ks))
@@ -25,7 +25,7 @@
       (map? obj)
       , (assoc obj k v)
 
-      (and (coll? obj)
+      (and (sequential? obj)
            (not (map? obj)))
       , (conj obj v))))
 
@@ -35,8 +35,15 @@
        seq
        (reduce
         (fn [cmd-ent [k {path  :command-path
-                         pivot :pivot} & _tail]]
+                         pivot :pivot} type & _tail]]
           (let [v          (k query-dto)
+                v          (if (and (vector? type)
+                                    (= (count type) 3)
+                                    (= (-> #'string? meta :name str)
+                                       (-> type (nth 2) str))
+                                    (= (first type) :tuple))
+                             (first v)
+                             v)
                 pivot-path (butlast path)]
             (if (and path v)
               (if pivot
@@ -99,56 +106,108 @@
 
 
 (comment
-  (letfn []
-    (let [query-dto-model [:map
-                           [:instrument-id
-                            {:optional true, :command-path [:instrument/id]}
-                            uuid?]
-                           [:instrument-creation-id
-                            {:command-path [:instrument/creation-id]}
-                            uuid?]
-                           [:instrument-name
-                            {:title        "Instrument",
-                             :optional     true,
-                             :command-path [:instrument/name]}
-                            string?]
-                           [:instrument-type
-                            {:title        "Type",
-                             :optional     true,
-                             :ref          :instrument/type,
-                             :command-path [:instrument/type]}
-                            keyword?]
-                           [:yahoo-finance
-                            {:title        "Yahoo! Finance",
-                             :optional     true,
-                             :pivot        :symbol/provider,
-                             :command-path [:instrument/symbols 0 :symbol/ticker]}
-                            string?]
-                           [:saxo-dma
-                            {:title        "Saxo/DMA",
-                             :optional     true,
-                             :pivot        :symbol/provider,
-                             :command-path [:instrument/symbols 0 :symbol/ticker]}
-                            string?]]
-          query-dto       {:instrument-id          (utils/new-uuid)
-                           :instrument-creation-id (utils/new-uuid)
-                           :instrument-type        :share
-                           :saxo-dma               "00700:xhkg"
-                           :yahoo-finance          "0700.hk"}
-          command-ent     {:instrument/id
-                           #uuid "c16bb005-3d13-45da-9a5c-3e024c1445bf"
-                           :instrument/creation-id
-                           #uuid "74147a7a-07e8-4947-98b0-293f2d9766e2",
-                           :instrument/name "jkjkjkj",
-                           :instrument/symbols
-                           [{:symbol/ticker "YF", :symbol/provider :yahoo-finance}
-                            {:symbol/ticker "SDMA", :symbol/provider :saxo-dma}
-                            {:symbol/ticker "EE", :symbol/provider :easy-equities}],
-                           :instrument/type :crypto}
-          #_#_upd1        (mv-assoc-in {} [:instrument/symbols 0 :symbol/ticker] "tikr-1")
-          #_#_upd2        (mv-assoc-in upd1 [:instrument/symbols 0] {:symbol/provider :saxo-dma
-                                                                     :symbol/ticker   "tikr-2"})
-          #_#_upd3        (mv-assoc-in upd2 [:instrument/id] (utils/new-uuid))]
+  (let [qry-dto-model [:map
+                       [:position-creation-id {:command-path [:position/creation-id]}
+                        uuid?]
+                       [:position-id {:optional     true
+                                      :command-path [:position/id]} uuid?]
+                       [:instrument {:title        "Instrument"
+                                     :ref          :instrument
+                                     :command-path [:position/instrument-id]}
+                        [:tuple uuid? string?]]
+                       [:quantity {:title        "Quantity"
+                                   :command-path [:position/open-trade-transaction
+                                                  :trade-transaction/quantity]}
+                        float?]
+                       [:open-time {:title        "Open Time"
+                                    :command-path [:position/open-trade-transaction
+                                                   :trade-transaction/date]}
+                        inst?]
+                       #_[:symbols {:optional true} string?]
+                       [:open-price {:title        "Open"
+                                     :command-path [:position/open-trade-transaction
+                                                    :trade-transaction/price]}
+                        float?]
+                       [:close-price {:title        "Close"
+                                      :optional     true
+                                      :command-path [:position/close-trade-transaction
+                                                     :trade-transaction/price]}
+                        float?]
+                       [:trade-pattern {:title        "Trade Pattern"
+                                        :optional     true
+                                        :ref          :trade-pattern
+                                        :command-path [:position/trade-pattern-id]}
+                        [:tuple uuid? string?]]]
+        qry-dto       {:position-id          #uuid "017fe4f2-b562-236b-f34e-88e227dcf280"
+                       :instrument           [#uuid "017fd139-a0bd-d2b4-11f2-222a61e7edfc" "111111"],
+                       :quantity             "778",
+                       :open-time            #inst "2022-04-02T00:00:00.000-00:00",
+                       :open-price           "89789",
+                       :close-price          "89789",
+                       :position-creation-id #uuid "5851072d-4014-48a1-8b5d-507d10a6239b"
+                       :trade-pattern        [#uuid "017fd139-a0bd-d2b4-11f2-222a61e7edfc" "Breakout"]}
+        cmd-ent       #:position{:creation-id             #uuid "5851072d-4014-48a1-8b5d-507d10a6239b",
+                                 :id                      #uuid "017fe4f2-b562-236b-f34e-88e227dcf280",
+                                 :instrument-id           #uuid "017fd139-a0bd-d2b4-11f2-222a61e7edfc",
+                                 :open-trade-transaction
+                                 #:trade-transaction{:quantity "778",
+                                                     :date     #inst "2022-04-02T00:00:00.000-00:00",
+                                                     :price    "89789"},
+                                 :close-trade-transaction #:trade-transaction{:price "89789"},
+                                 :trade-pattern-id        #uuid "017fd139-a0bd-d2b4-11f2-222a61e7edfc"}]
+    (query-dto->command-ent qry-dto-model qry-dto))
+
+
+  #_(letfn []
+      (let [query-dto-model [:map
+                             [:instrument-id
+                              {:optional true, :command-path [:instrument/id]}
+                              uuid?]
+                             [:instrument-creation-id
+                              {:command-path [:instrument/creation-id]}
+                              uuid?]
+                             [:instrument-name
+                              {:title        "Instrument",
+                               :optional     true,
+                               :command-path [:instrument/name]}
+                              string?]
+                             [:instrument-type
+                              {:title        "Type",
+                               :optional     true,
+                               :ref          :instrument/type,
+                               :command-path [:instrument/type]}
+                              keyword?]
+                             [:yahoo-finance
+                              {:title        "Yahoo! Finance",
+                               :optional     true,
+                               :pivot        :symbol/provider,
+                               :command-path [:instrument/symbols 0 :symbol/ticker]}
+                              string?]
+                             [:saxo-dma
+                              {:title        "Saxo/DMA",
+                               :optional     true,
+                               :pivot        :symbol/provider,
+                               :command-path [:instrument/symbols 0 :symbol/ticker]}
+                              string?]]
+            query-dto       {:instrument-id          (utils/new-uuid)
+                             :instrument-creation-id (utils/new-uuid)
+                             :instrument-type        :share
+                             :saxo-dma               "00700:xhkg"
+                             :yahoo-finance          "0700.hk"}
+            command-ent     {:instrument/id
+                             #uuid "c16bb005-3d13-45da-9a5c-3e024c1445bf"
+                             :instrument/creation-id
+                             #uuid "74147a7a-07e8-4947-98b0-293f2d9766e2",
+                             :instrument/name "jkjkjkj",
+                             :instrument/symbols
+                             [{:symbol/ticker "YF", :symbol/provider :yahoo-finance}
+                              {:symbol/ticker "SDMA", :symbol/provider :saxo-dma}
+                              {:symbol/ticker "EE", :symbol/provider :easy-equities}],
+                             :instrument/type :crypto}
+            #_#_upd1        (mv-assoc-in {} [:instrument/symbols 0 :symbol/ticker] "tikr-1")
+            #_#_upd2        (mv-assoc-in upd1 [:instrument/symbols 0] {:symbol/provider :saxo-dma
+                                                                       :symbol/ticker   "tikr-2"})
+            #_#_upd3        (mv-assoc-in upd2 [:instrument/id] (utils/new-uuid))]
       (command-ent->query-dto query-dto-model command-ent)))
 
 

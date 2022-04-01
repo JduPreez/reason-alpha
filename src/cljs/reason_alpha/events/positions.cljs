@@ -32,7 +32,6 @@
 (rf/reg-event-fx
  :position.command/create
  (fn [{:keys [db]} [_ {:keys [creation-id] :as new-pos}]]
-   (cljs.pprint/pprint {:position.command/create new-pos})
    (let [new-pos         (if creation-id
                            new-pos
                            (assoc new-pos
@@ -43,19 +42,23 @@
          db              (data/save-local! {:model-type :position
                                             :data       new-pos
                                             :db         db})]
-     {:db                         db
-      #_#_:position.command/save! cmd-pos})))
+     (cljs.pprint/pprint {:position.command/create {:M  query-dto-model
+                                                    :NP new-pos
+                                                    :CP cmd-pos}})
+     {:db                     db
+      :position.command/save! cmd-pos})))
 
 (rf/reg-event-fx
  :position.command/update
  (fn [{:keys [db]} [_ {:keys [creation-id] :as pos}]]
    (let [query-dto-model (get-in db (data/model :model/instrument-dto))
          cmd-pos         (mapping/query-dto->command-ent query-dto-model pos)
-         db              (data/save-local! {:model-type :instrument
+         db              (data/save-local! {:model-type :position
                                             :data       pos
                                             :db         db})]
-     {:db                       db
-      :instrument.command/save! cmd-pos})))
+     (cljs.pprint/pprint {:position.command/update cmd-pos})
+     {:db                         db
+      #_#_:position.command/save! cmd-pos})))
 
 (rf/reg-event-fx
  :position.command/save!-result
