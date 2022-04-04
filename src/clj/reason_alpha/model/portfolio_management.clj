@@ -77,7 +77,8 @@
                   :command-path [:position/id]} uuid?]
    [:instrument {:title        "Instrument"
                  :ref          :instrument
-                 :command-path [:position/instrument-id]}
+                 :command-path [[:position/instrument-id]
+                                [:instrument :instrument/name]]}
     [:tuple uuid? string?]]
    [:quantity {:title        "Quantity"
                :command-path [:position/open-trade-transaction
