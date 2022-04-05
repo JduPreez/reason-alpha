@@ -18,11 +18,12 @@
     (data.model/save! db acc {:role :system})))
 
 (defn get-by-user-id [db user-id]
-  (let [acc (data.model/any
-             db
-             {:spec '{:find  [(pull e [*])]
-                      :where [[e :account/user-id uid]]
-                      :in    [uid]}
-              :args [user-id]
-              :role :system})]
+  (let [acc (-> (data.model/any
+                 db
+                 {:spec '{:find  [(pull e [*])]
+                          :where [[e :account/user-id uid]]
+                          :in    [uid]}
+                  :args [user-id]
+                  :role :system})
+                first)]
     acc))

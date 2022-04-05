@@ -53,10 +53,11 @@
    entities]
   (let [{acc-id :account/id} (fn-get-account)
         crud                 (set crud)
+        root-ents            (map #(first %) entities)
         id-k                 (or id-key
-                                 (mutils/some-ns-key :id entities))
+                                 (mutils/some-ns-key :id root-ents))
         acc-id-k             (or account-id-key
-                                 (mutils/some-ns-key :account-id entities))]
+                                 (mutils/some-ns-key :account-id root-ents))]
     (cond
       (or (not (seq entities))
           (#{:system :admin} role))
@@ -68,13 +69,22 @@
       (seq (set/intersection crud #{:delete :update}))
       , (let [idx-cur-ents-owners (into {} entities-owners)]
           (filterv (fn [e]
-                     (let [id        (get e id-k)
+                     (let [e         (if (map? (first e))
+                                       (first e)
+                                       e)
+                           id        (get e id-k)
                            e-acc-id  (get e acc-id-k)
                            eo-acc-id (get idx-cur-ents-owners id)]
-                       (= acc-id e-acc-id eo-acc-id))) entities))
+                       (= acc-id e-acc-id eo-acc-id)))
+                   entities))
 
       :else
-      , (filterv #(= (get % acc-id-k) acc-id) entities))))
+      , (filterv (fn [e]
+                   (let [e (if (map? (first e))
+                             (first e)
+                             e)]
+                     (= (get e acc-id-k) acc-id)))
+                 entities))))
 
 (comment
   
@@ -85,19 +95,19 @@
         ents       (->> (range 1 11)
                         (map
                          (fn [n]
-                           {:position/creation-id         (java.util.UUID/randomUUID)
-                            :position/id                  (java.util.UUID/randomUUID)
-                            :position/status              (if (even? n) :open :closed)
-                            :position/instrument-id       (java.util.UUID/randomUUID)
-                            :position/holding-position-id (java.util.UUID/randomUUID)
-                            :position/trade-pattern-id    (java.util.UUID/randomUUID)
-                            :position/account-id          (if (even? n)
-                                                            account-id
-                                                            (java.util.UUID/randomUUID))})))
+                           [{:position/creation-id         (java.util.UUID/randomUUID)
+                             :position/id                  (java.util.UUID/randomUUID)
+                             :position/status              (if (even? n) :open :closed)
+                             :position/instrument-id       (java.util.UUID/randomUUID)
+                             :position/holding-position-id (java.util.UUID/randomUUID)
+                             :position/trade-pattern-id    (java.util.UUID/randomUUID)
+                             :position/account-id          (if (even? n)
+                                                             account-id
+                                                             (java.util.UUID/randomUUID))}])))
         authz-ents (authorize {:fn-get-account (constantly {:account/id account-id})
-                               :crud           :read
-                               :role           :member
-                               :entities       ents})]
+                               :crud           [:read]
+                               :role           :member}
+                              ents)]
     authz-ents)
 
   (let [account-id (java.util.UUID/randomUUID)

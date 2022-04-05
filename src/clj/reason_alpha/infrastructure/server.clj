@@ -130,7 +130,11 @@
   [handlers {:as ev-msg :keys [id ?data event ?reply-fn ring-req uid]}]
 
   (when (not= :chsk/ws-ping id)
-    (clojure.pprint/pprint {::server-event-msg-handler ev-msg}))
+    (clojure.pprint/pprint {::server-event-msg-handler
+                            {:event   event
+                             :request (select-keys ring-req
+                                                   [:compojure/route :params
+                                                    :uri :request-method :scheme])}}))
 
   (let [fun     (get handlers id)
         account (auth/account ring-req)

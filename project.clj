@@ -93,7 +93,8 @@
                             :plugins        [[jonase/eastwood "0.3.5"]]
                             :source-paths   ["env/dev/clj" "env/dev/cljs" "test/cljs"]
                             :resource-paths ["env/dev/resources"]
-                            :repl-options   {:init-ns user}}
+                            :repl-options   {:init-ns user}
+                            :jvm-opts       ["-XX:-OmitStackTraceInFastThrow"]}
              :project/prod {:env          {:production true}
                             :source-paths ["env/prod/clj" "env/prod/cljs"]}
              :project/test {:jvm-opts       ["-Dconf=test-config.edn"]

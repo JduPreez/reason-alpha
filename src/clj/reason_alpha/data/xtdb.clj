@@ -75,12 +75,14 @@
 
 (defn- maybe-add-id [entities]
   (->> entities
-       (map #(let [id-key (model/entity-id-key %)]
-               (-> %
-                   id-key
-                   (or (UuidCreator/getLexicalOrderGuid))
-                   (as-> idv (assoc % :xt/id idv))
-                   (as-> ent (assoc ent id-key (:xt/id ent))))))))
+       (map
+        (fn [[ent]]
+          (let [id-key (model/entity-id-key ent)]
+            (-> ent
+                id-key
+                (or (UuidCreator/getLexicalOrderGuid))
+                (as-> idv (assoc ent :xt/id idv))
+                (as-> ent (assoc ent id-key (:xt/id ent)))))))))
 
 (defn- xtdb-puts [entities]
   (->> entities
@@ -117,12 +119,11 @@
 
 (defn- xtdb-query [db-node {:keys [spec args]}]
   (->> args
-       (mapv #(if (instance? clojure.lang.IObj
-                             %)
+       (mapv #(if (instance? clojure.lang.IObj %)
                 (vary-meta % (fn [_] nil))
                 %))
        (apply xt/q (xt/db db-node) spec)
-       (map (fn [[entity :as all]]
+       #_(map (fn [[entity :as all]]
               (if (map? entity)
                 entity
                 all)))))
@@ -134,13 +135,20 @@
                           :where [[e :account/user-id uid]]
                           :in    [uid]}
                   :args [user-id]})
-                first)]
+                ffirst)]
     acc))
 
 (defn- get-account [fn-get-ctx db-node]
   (let [{{:keys [account/user-id]} :user-account} (fn-get-ctx)]
     (when user-id
       (get-account-by-user-id db-node user-id))))
+
+(defn- maybe-only-root-ent [query-result]
+  (map (fn [[entity :as all]]
+         (if (map? entity)
+           entity
+           all))
+       query-result))
 
 (defn- entities-owners [db-node entities]
   (let [id-k        (mutils/some-ns-key :id entities)
@@ -153,7 +161,8 @@
                      :args [ids]}
         ents-owners (if acc-id-k
                       (-> db-node
-                          (xtdb-query qry))
+                          (xtdb-query qry)
+                          maybe-only-root-ent)
                       [])]
     ents-owners))
 
@@ -194,7 +203,7 @@
           id-k        (mutils/some-ns-key :id ent)
           fn-get-acc  #(get-account fn-get-ctx @*db-node)
           ents-owners (when id-k (entities-owners @*db-node ent))]
-      (->> ent
+      (->> [ent]
            (fn-authorize {:fn-get-account  fn-get-acc
                           :crud            (if id-k [:update] [:create])
                           :role            role
@@ -218,8 +227,16 @@
   (require '[reason-alpha.model.mapping :as mapping]
            '[reason-alpha.model.fin-instruments :as fin-instruments])
 
-  
   (def db (xtdb-start!))
+
+  (xt/q (xt/db db)
+        '{:find  [(pull pos [*]) (pull instr [*])]
+          :where [[pos :position/id id]
+                  [pos :position/instrument-id instr]
+                  [instr :instrument/name instr-nm]]
+          :in    [id]}
+        #uuid "017ff387-c800-fad0-b481-43f1fcbb4e39")
+
 
   (entities-owners
    db
@@ -281,7 +298,6 @@
                                         [::xt/delete id])))
                                (remove nil?)
                                vec))}]])
-    
     )
 
   (data.model/query db
@@ -304,15 +320,6 @@
                                              doc)]
                                    [::xt/delete id]))
                            vec))}]])
- 
-(xt/q (xt/db n) '{:find  [fun]
-                  :where [[del-tx-fn :xt/fn fun]
-                          [del-tx-fn :xt/id ::delete]]})
-
-
-  
-
-
 
   (xt/submit-tx n
                 [[::xt/put
@@ -342,8 +349,6 @@
                                              doc)]
                                    [::xt/delete id]))
                            vec))}]])
-
-  
 
   (data.model/delete! db #uuid "017f92a5-ff38-70db-a7c9-0bc5c0fbc95b" #_{:spec '{:find  [e]
                                                                                  :where [(or (and [e :trade-pattern/id id]

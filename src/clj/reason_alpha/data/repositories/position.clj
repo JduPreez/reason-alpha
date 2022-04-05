@@ -16,16 +16,20 @@
   (data.model/save! db position))
 
 (defn getn [db account-id]
-  (->> {:spec '{:find  [(pull e [*])]
-                :where [[e :position/account-id account-id]]
+  (->> {:spec '{:find  [(pull pos [*]) (pull instr [*])]
+                :where [[pos :position/account-id account-id]
+                        [pos :position/instrument-id instr]
+                        [instr :instrument/name instr-nm]]
                 :in    [account-id]}
         :args [account-id]}
        (data.model/query db)
        (mapping/command-ents->query-dtos portfolio-management/PositionDto)))
 
 (defn get1 [db id]
-  (->> {:spec '{:find  [(pull e [*])]
-                :where [[e :position/id id]]
+  (->> {:spec '{:find  [(pull pos [*]) (pull instr [*])]
+                :where [[pos :position/id id]
+                        [pos :position/instrument-id instr]
+                        [instr :instrument/name instr-nm]]
                 :in    [id]}
         :args [id]}
        (data.model/any db)

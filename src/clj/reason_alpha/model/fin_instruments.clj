@@ -72,7 +72,8 @@
       [[:instrument-type {:title        "Type"
                           :optional     true
                           :ref          :instrument/type
-                          :command-path [:instrument/type]}
+                          :command-path [[:instrument/type]
+                                         [:instrument/type-name]]}
         [:tuple keyword? string?]]]])))
 
 (comment
