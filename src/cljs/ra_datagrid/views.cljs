@@ -550,6 +550,7 @@
   "Creates a datagrid"
   [options :- ds/GridConfiguration
    fields  :- [ds/GridField]]
+  (cljs.pprint/pprint ::datagrid)
   (let [id              (:grid-id options)
         data-sub        (:data-subscription options)
         loading-sub     (:loading-subscription options)

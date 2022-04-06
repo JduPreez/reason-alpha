@@ -24,10 +24,21 @@
        (mapping/command-ents->query-dtos fin-instruments/InstrumentDto)))
 
 (defn get1 [db id]
-  (->> {:spec '{:find  [(pull e [*])]
-                :where [[e :instrument/id id]]
-                :in    [id]}
-        :args [id]}
+  (let [m fin-instruments/InstrumentDto
+        x (->> {:spec '{:find  [(pull e [*])]
+                        :where [[e :instrument/id id]]
+                        :in    [id]}
+                :args [id]}
+               (data.model/any db))
+        y (mapping/command-ent->query-dto fin-instruments/InstrumentDto x)]
+    (clojure.pprint/pprint {::get1 {:M m
+                                    :X x
+                                    :Y y}})
+    y)
+  #_(->> {:spec '{:find  [(pull e [*])]
+                  :where [[e :instrument/id id]]
+                  :in    [id]}
+          :args [id]}
        (data.model/any db)
        (mapping/command-ent->query-dto fin-instruments/InstrumentDto)))
 

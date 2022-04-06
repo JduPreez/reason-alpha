@@ -9,7 +9,7 @@
    :id-field          :instrument-creation-id
    :create-dispatch   [:instrument.command/create]
    :update-dispatch   [:instrument.command/update]
-   :default-values    {:instrument-type :share}})
+   :default-values    {:instrument-type [:share ""]}})
 
 (defn view []
   (let [*schema            (rf/subscribe [:model :model/instrument-dto])

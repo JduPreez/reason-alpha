@@ -21,8 +21,9 @@
                        {:title        "Type",
                         :optional     true,
                         :ref          :instrument/type,
-                        :command-path [:instrument/type]}
-                       keyword?]
+                        :command-path [[:instrument/type]
+                                       [:instrument/type-name]]}
+                       [:tuple keyword string?]]
                       [:yahoo-finance
                        {:title        "Yahoo! Finance",
                         :optional     true,
@@ -50,7 +51,7 @@
                 currency-account]
          :as   query-dto} {:instrument-id          (utils/new-uuid)
                            :instrument-creation-id (utils/new-uuid)
-                           :instrument-type        :share
+                           :instrument-type        [:share ""]
                            :instrument-name        "Tencent"
                            :saxo-dma               "00700:xhkg"
                            :yahoo-finance          "0700.hk"
@@ -64,7 +65,7 @@
     (testing "`query-dto->command-ent` should map non-nested path"
       (is (= id instrument-id))
       (is (= creation-id instrument-creation-id))
-      (is (= type instrument-type))
+      (is (= type (first instrument-type)))
       (is (= name instrument-name)))
     (testing "`query-dto->command-ent` should map nested path without vec"
       (is (= currency-account (get-in cmd-ent currency-acc-path))))
@@ -79,6 +80,32 @@
                                          symbol/provider]}]
                               (when (= provider :yahoo-finance)
                                 ticker)) symbols))))))
+
+(deftest mapping-command-ents->query-dtos
+  (let [symbol-yahoo-ticker     "SBUX"
+        symbol-ee-ticker        "SBUX.NY"
+        {:keys [instrument/id
+                instrument/creation-id]
+         iname :instrument/name
+         :as   ent}             {:instrument/id   #uuid "017fd139-a0bd-d2b4-11f2-222a61e7edfc",
+                                 :instrument/creation-id
+                                 #uuid "ea669a4e-e815-4100-8cf3-da7d7fa50a17",
+                                 :instrument/name "Starbucks",
+                                 :instrument/symbols
+                                 [{:symbol/ticker   symbol-yahoo-ticker
+                                   :symbol/provider :yahoo-finance}
+                                  {:symbol/ticker   symbol-ee-ticker
+                                   :symbol/provider :easy-equities}],
+                                 :instrument/type :share}
+        {:keys [instrument-id instrument-creation-id
+                instrument-name yahoo-finance
+                easy-equities]} (first (sut/command-ents->query-dtos query-dto-model [[ent]]))]
+    (testing "`command-ents->query-dtos` should map non-pivot fields"
+      (is (= id instrument-id))
+      (is (= creation-id instrument-creation-id))
+      (is (= iname instrument-name))
+      (is (= yahoo-finance symbol-yahoo-ticker))
+      (is (= easy-equities symbol-ee-ticker)))))
 
 (deftest mapping-tuple-query-dto<->command-ent
   (let [tptrn-id                             #uuid "017fd139-a0bd-d2b4-11f2-222a61e7edfc"

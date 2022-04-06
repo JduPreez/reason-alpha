@@ -29,6 +29,22 @@
                         :data       result})
      db)))
 
+(rf/reg-fx
+ :position.query/get1
+ (fn [pos-id]
+   (cljs.pprint/pprint {:position.query/get1 pos-id})
+   (api-client/chsk-send! [:position.query/get1 pos-id])))
+
+(rf/reg-event-db
+ :position.query/get1-result
+ (fn [db [evt {:keys [result type] :as r}]]
+   (utils/log evt r)
+   (if (= :success type)
+     (data/save-local! {:db         db
+                        :model-type :position
+                        :data       result})
+     db)))
+
 (rf/reg-event-fx
  :position.command/create
  (fn [{:keys [db]} [_ {:keys [creation-id] :as new-pos}]]
@@ -51,20 +67,19 @@
 (rf/reg-event-fx
  :position.command/update
  (fn [{:keys [db]} [_ {:keys [creation-id] :as pos}]]
-   (let [query-dto-model (get-in db (data/model :model/instrument-dto))
+   (let [query-dto-model (get-in db (data/model :model/position-dto))
          cmd-pos         (mapping/query-dto->command-ent query-dto-model pos)
          db              (data/save-local! {:model-type :position
                                             :data       pos
                                             :db         db})]
-     (cljs.pprint/pprint {:position.command/update cmd-pos})
-     {:db                         db
-      #_#_:position.command/save! cmd-pos})))
+     {:db                     db
+      :position.command/save! cmd-pos})))
 
 (rf/reg-event-fx
  :position.command/save!-result
  (fn [_ [evt {:keys [type result] :as r}]]
    (utils/log evt r)
-   #_(when (= :success type)
+   (when (= :success type)
      {:position.query/get1 (:position/id result)})))
 
 (rf/reg-fx

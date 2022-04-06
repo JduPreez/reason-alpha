@@ -33,6 +33,7 @@
                                       :account/id
                                       (assoc instrument :instrument/account-id)))
         {:keys [send-message]} (fn-get-ctx)]
+    (clojure.pprint/pprint {::save! instr})
     (try
       (send-message
        [:instrument.command/save!-result

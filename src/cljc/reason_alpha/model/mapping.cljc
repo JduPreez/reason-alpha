@@ -81,8 +81,7 @@
     (->> step
          to-indexed-seqs
          (map (fn [[k v]]
-                (let [k (if (number? k) 0 k)]
-                  (flatten-path (conj path k) v))))
+                (flatten-path (conj path k) v)))
          (into {}))
     [path step]))
 
@@ -96,18 +95,18 @@
                                  (map
                                   (fn [[k props type]]
                                     [k props type])))]
-    ref-ents-paths-vals
     (->> all-paths-vals
          (reduce
           (fn [{:keys [dto membr-nm-paths] :as dto-paths} [path v]]
-            (let [[nm-k
+            (let [path-template (mapv #(if (number? %) 0 %) path)
+                  [nm-k
                    tuple-lbl-v] (some
                                  (fn [[k {p   :command-path
                                           pvt :pivot} type]]
                                    (let [id-lbl-tuple?   (id-label-tuple? type)
                                          [p tuple-lbl-p] (if id-lbl-tuple?
                                                            p [p])]
-                                     (when (= p path)
+                                     (when (= p path-template)
                                        (cond
                                          pvt
                                          , (-> path
@@ -176,9 +175,10 @@
                         {:title        "Type",
                          :optional     true,
                          :ref          :instrument/type,
-                         :command-path [[:instrument/type] [:instrument/type-name]]}
+                         :command-path [[:instrument/type]
+                                        [:instrument/type-name]]}
                         [:tuple
-                         keyword?
+                         keyword
                          string?]]]
         qry-dto       {:position-id          #uuid "017fe4f2-b562-236b-f34e-88e227dcf280"
                        :instrument           [#uuid "017fd139-a0bd-d2b4-11f2-222a61e7edfc" "111111"],
@@ -188,28 +188,16 @@
                        :close-price          "89789",
                        :position-creation-id #uuid "5851072d-4014-48a1-8b5d-507d10a6239b"
                        :trade-pattern        [#uuid "017fd139-a0bd-d2b4-11f2-222a61e7edfc" "Breakout"]}
-        cmd-ents      [[{:instrument/creation-id #uuid "ea669a4e-e815-4100-8cf3-da7d7fa50a17",
-                         :instrument/name        "111111",
+        cmd-ents      [[{:instrument/id   #uuid "017fd139-a0bd-d2b4-11f2-222a61e7edfc",
+                         :instrument/creation-id
+                         #uuid "ea669a4e-e815-4100-8cf3-da7d7fa50a17",
+                         :instrument/name "Starbucks",
                          :instrument/symbols
-                         [#:symbol{:ticker
-                                   "4444",
-                                   :provider
-                                   :yahoo-finance}
-                          #:symbol{:ticker
-                                   "444",
-                                   :provider
-                                   :saxo-dma}
-                          #:symbol{:ticker "4",
-                                   :provider
-                                   :easy-equities}],
-                         :instrument/type        :share,
-                         :instrument/account-id  #uuid "017f87dc-59d1-7beb-9e1d-7a2a354e5a49",
-                         :instrument/id          #uuid "017fd139-a0bd-d2b4-11f2-222a61e7edfc",
-                         :xt/id                  #uuid "017fd139-a0bd-d2b4-11f2-222a61e7edfc"}]]
+                         [{:symbol/ticker "hjhjhjh", :symbol/provider :yahoo-finance}
+                          {:symbol/ticker "4", :symbol/provider :easy-equities}],
+                         :instrument/type :share}]]
         type          [:tuple uuid? string?]]
-    (command-ents->query-dtos qry-dto-model cmd-ents)
-    #_(command-ent->query-dto qry-dto-model cmd-ent)
-    #_(query-dto->command-ent qry-dto-model qry-dto))
+    (command-ents->query-dtos qry-dto-model cmd-ents))
 
 
   )
