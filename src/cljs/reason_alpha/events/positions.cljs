@@ -88,3 +88,17 @@
    (utils/log :position.command/save! pos)
    (data/save-remote! {:command :position.command/save!
                        :data    pos})))
+
+(rf/reg-event-fx
+ :position.command/delete!-result
+ (fn [{:keys [db]} [evt result]]
+   (utils/log evt result)
+   (data/delete-local! {:db         db
+                        :model-type :position
+                        :data       result})))
+
+(rf/reg-fx
+ :position.command/delete!
+ (fn [db]
+   (let [del-ids (data/get-selected-ids :position db)]
+     (api-client/chsk-send! [:position.command/delete! del-ids]))))
