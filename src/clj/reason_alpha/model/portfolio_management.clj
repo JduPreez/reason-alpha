@@ -1,15 +1,37 @@
 (ns reason-alpha.model.portfolio-management
-  (:require [reason-alpha.model.core :as model :refer [def-model]]
-            [malli.instrument :as malli.instr]
+  (:require [malli.instrument :as malli.instr]
+            [reason-alpha.model.core :as model :refer [def-model]]
             [reason-alpha.model.fin-instruments :as model.fin-instruments]))
 
 (def-model TradePattern
-  ^:trade-pattern
+  :model/trade-pattern
   [:map
    [:trade-pattern/creation-id uuid?]
    [:trade-pattern/id {:optional true} uuid?]
-   [:trade-pattern/name [:string {:min 1}]]
-   [:trade-pattern/description {:optional true} [:string {:min 1}]]])
+   [:trade-pattern/parent-id {:optional true} uuid?]
+   [:trade-pattern/name [string? {:min 1}]]
+   [:trade-pattern/description {:optional true} [string? {:min 1}]]
+   [:trade-pattern/account-id {:optional true} uuid?]])
+
+(def-model TradePatternDto
+  :model/trade-pattern-dto
+  [:map
+   [:trade-pattern-creation-id {:command-path [:trade-pattern/creation-id]}
+    uuid?]
+   [:trade-pattern-id {:optional     true
+                       :command-path [:trade-pattern/id]}
+    uuid?]
+   [:trade-pattern-parent-id {:optional     true
+                              :command-path [:trade-pattern/parent-id]}
+    uuid?]
+   [:trade-pattern-name {:command-path [:trade-pattern/name]}
+    [string? {:min 1}]]
+   [:trade-pattern-description {:optional     true
+                                :command-path [:trade-pattern/description]}
+    [string? {:min 1}]]
+   [:trade-pattern-account-id {:optional     true
+                               :command-path [:trade-pattern/account-id]}
+    uuid?]])
 
 (def Transaction
   [:map
@@ -17,9 +39,9 @@
    [:trade-transaction/id {:optional true} uuid?]
    [:trade-transaction/type [:enum :buy :sell :dividend :reinvest-divi
                              :corp-action :fee :tax :exchange-fee :stamp-duty]]
-   [:trade-transaction/time inst?]
-   [:trade-transaction/quantity decimal?]
-   [:trade-transaction/price decimal?]
+   [:trade-transaction/date inst?]
+   [:trade-transaction/quantity float?]
+   [:trade-transaction/price float?]
    [:trade-transaction/fee-of-transaction-id {:optional true} uuid?]
    [:trade-transaction/instrument-id uuid?]
    [:trade-transaction/estimated? boolean?]])
@@ -27,22 +49,62 @@
 ;; We have to define entity schemas like this because function schemas
 ;; don't support recursive references
 (def-model TradeTransaction
-  ^:trade-transaction
+  :model/trade-transaction
   (conj Transaction
         [:trade-transaction/fee-transactions {:optional true}
          [:sequential Transaction]]))
 
 (def-model Position
-  ^:position
+  :model/position
   [:map
    [:position/creation-id uuid?]
    [:position/id {:optional true} uuid?]
-   [:position/open-trade-transaction {:optional true} TradeTransaction]
+   [:position/status [:enum :open :closed]]
+   [:position/open-trade-transaction TradeTransaction]
    [:position/close-trade-transaction {:optional true} TradeTransaction]
    [:position/dividend-trade-transactions {:optional true} [:sequential TradeTransaction]]
-   [:position/instrument-id {:optional true} uuid?]])
+   [:position/instrument-id {:optional true} uuid?]
+   [:position/holding-position-id {:optional true} uuid?]
+   [:position/account-id uuid?]
+   [:position/trade-pattern-id {:optional true} uuid?]])
 
-(defn position-total-return
+(def-model PositionDto
+  :model/position-dto
+  [:map
+   [:position-creation-id {:command-path [:position/creation-id]}
+    uuid?]
+   [:position-id {:optional     true
+                  :command-path [:position/id]} uuid?]
+   [:instrument {:title        "Instrument"
+                 :ref          :instrument
+                 :command-path [[:position/instrument-id]
+                                [:instrument/name]]}
+    [:tuple uuid? string?]]
+   [:quantity {:title        "Quantity"
+               :command-path [:position/open-trade-transaction
+                              :trade-transaction/quantity]}
+    float?]
+   [:open-time {:title        "Open Time"
+                :command-path [:position/open-trade-transaction
+                               :trade-transaction/date]}
+    inst?]
+   #_[:symbols {:optional true} string?]
+   [:open-price {:title        "Open"
+                 :command-path [:position/open-trade-transaction
+                                :trade-transaction/price]}
+    float?]
+   [:close-price {:title        "Close"
+                  :optional     true
+                  :command-path [:position/close-trade-transaction
+                                 :trade-transaction/price]}
+    float?]
+   #_[:trade-pattern {:title    "Trade Pattern"
+                      :optional true
+                      :ref      :trade-pattern}
+    [:tuple uuid? string?]]
+   #_[:holding-position-id {:optional true} string?]])
+
+#_(defn position-total-return
   "Also know as the Holding Period Yield"
   {:malli/schema
    [:=>

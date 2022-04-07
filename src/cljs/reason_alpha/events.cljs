@@ -2,6 +2,8 @@
   (:require [day8.re-frame.tracing :refer-macros [fn-traced defn-traced]]
             [re-frame.core :as rf]
             [reason-alpha.data :as data]
+            [reason-alpha.data :as data]
+            [reason-alpha.model.utils :as model.utils]
             [reason-alpha.utils :as utils]
             [reason-alpha.web.api-client :as api-client]
             [reitit.frontend.controllers :as rfe-ctrls]
@@ -17,16 +19,22 @@
 (rf/reg-event-fx
  :navigated
  (fn [{:keys [db]} [_ {{:keys [name model
-                               data-subscription]} :data
-                       :as                         new-match}]]
+                               load-event
+                               load-fx]
+                        :as   d} :data
+                       :as       new-match}]]
+   (cljs.pprint/pprint {::navigated new-match})
    (let [old-match   (:current-route db)
          controllers (rfe-ctrls/apply-controllers (:controllers old-match) new-match)
          updated-db  (-> db
                          (assoc :current-route (assoc new-match :controllers controllers))
-                         (assoc-in data/active-view-model))]
-     (cond-> {:db       updated-db
-              :dispatch [:datagrid/update-history name]}
-       data-subscription (assoc data-subscription [])))))
+                         (assoc-in data/active-view-model {:view  name
+                                                           :model model}))]
+     (cond-> {:db updated-db}
+       load-fx          (assoc load-fx [])
+       load-event       (assoc :dispatch-n [[:datagrid/update-history name]
+                                            load-event])
+       (not load-event) (assoc :dispatch [:datagrid/update-history name])))))
 
 (rf/reg-fx
  :push-state!
@@ -38,45 +46,8 @@
  (fn [_ [_ & route]]
    {:push-state! route}))
 
-(defn-traced save-local
-  [db [_ type {:keys [result] :as new}]]
-  (let [current     (get-in db (data/entity-data type))
-        new-val     (or result new)
-        new-coll    (cond
-                      (and (coll? new-val)
-                           (not (map? new-val))
-                           (map? (first new-val))) new-val
-                      (map? new-val)               [new-val])
-        merged-coll (when new-coll
-                      (utils/merge-by-id current new-coll))]
-    (-> db
-        (assoc-in [:loading type] false)
-        (assoc-in [:data type] (or merged-coll new-val))
-        (assoc :saved new-val))))
-
-(rf/reg-event-db
- :save-local
- save-local)
-
-(defn save-remote [[command entity success]]
-  (api-client/chsk-send! [command entity] {:on-success success}))
-
-(rf/reg-fx
- :save-remote
- save-remote)
-
-;; TODO: Maybe rename & move to `data` ns?
-(defn fn-save [type success]
-  (fn [_ [_ entity]]
-    (let [cmd (-> type
-                  name
-                  (str ".command/save!")
-                  keyword)]
-      {:save-remote [cmd entity success]
-       :dispatch    [:save-local type entity]})))
-
 (defn entity-event-or-fx-key [db action]
-  (let [model (get-in db data/active-view-model)]
+  (let [{:keys [model]} (get-in db data/active-view-model)]
     (when model
       (-> model
           name
@@ -89,10 +60,11 @@
   active model, and dispatches it."
   [{:keys [db]} [action]]
   (let [{:keys [model]} (get-in db data/active-view-model)
+        _               (cljs.pprint/pprint {::action-event-1 model})
         event           [(keyword (str (name model)
-                                       ".command/"
-                                       (name action)))]]
-    (cljs.pprint/pprint {::action-event [action event]})
+                             ".command/"
+                             (name action)))]]
+    (cljs.pprint/pprint {::action-event-2 [action event]})
     (if model
       {:dispatch event}
       {})))
@@ -113,7 +85,9 @@
 
 (rf/reg-event-fx
  :add
- action-event)
+ (fn [{:keys [db]} _]
+   (let [{:keys [view]} (get-in db data/active-view-model)]
+     {:dispatch [:datagrid/create-new-record view]})))
 
 (rf/reg-event-fx
  :cancel
@@ -133,9 +107,11 @@
 (rf/reg-event-fx
  :edit
  (fn [{:keys [db]} [_ entities]]
-   (let [{:keys [view-id]} (get-in db data/active-view-model)]
-     {:dispatch-n (mapv #(let [creation-id (->> %
-                                                utils/creation-id-key
-                                                (get %))]
-                           [:datagrid/start-edit view-id creation-id %])
-                        entities)})))
+   (let [{:keys [view model]} (get-in db data/active-view-model)
+         edit-evts            (mapv
+                               #(let [creation-id (->> %
+                                                       (model.utils/creation-id-key model)
+                                                       (get %))]
+                                  [:datagrid/start-edit view creation-id %])
+                               entities)]
+     {:dispatch-n edit-evts})))

@@ -11,7 +11,6 @@
               [schema.core :as s
                :include-macros true]))
 
-
 (defn clean-formatted-keys
   [r]
   (into {}
@@ -19,10 +18,6 @@
          (fn [[k v]]
            (clojure.string/ends-with? (name k) "-formatted" ))
          r)))
-
-
-(def dutch-formatter (fmt/formatter "dd-MM-yyyy HH:mm"))
-(def dutch-formatter-date (fmt/formatter "dd-MM-yyyy"))
 
 (defn is-checked?
   [pkey record selected-records]
@@ -272,7 +267,7 @@
           [:input.form-control {:type      "number"
                                 :value     v
                                 :on-change #(rf/dispatch [:datagrid/update-edited-record id pk
-                                                          (:name field) (.-target.value %)])}]]]))))
+                                                          (:name field) (.-target.value ^js %)])}]]]))))
 
 (defmethod edit-cell :custom
   [id field pk]
@@ -296,7 +291,7 @@
            [:select.form-control
             {:value     (if v "true" "false")
              :on-change #(rf/dispatch [:datagrid/update-edited-record id pk
-                                      (:name field) (= "true" (.-target.value %))])}
+                                      (:name field) (= "true" (.-target.value ^js %))])}
             [:option {:value "true"}  "ja"]
             [:option {:value "false"} "nee"]]]]]))))
 
@@ -328,7 +323,7 @@
           [:input.form-control {:type      "text"
                                 :value     v
                                 :on-change #(rf/dispatch [:datagrid/update-edited-record id pk
-                                                          (:name field) (.-target.value %)])}]]]))))
+                                                          (:name field) (.-target.value ^js %)])}]]]))))
 
 (defn create-row
   [id]
@@ -555,6 +550,7 @@
   "Creates a datagrid"
   [options :- ds/GridConfiguration
    fields  :- [ds/GridField]]
+  (cljs.pprint/pprint ::datagrid)
   (let [id              (:grid-id options)
         data-sub        (:data-subscription options)
         loading-sub     (:loading-subscription options)
@@ -582,7 +578,7 @@
             (rf/dispatch [:datagrid/update-options id options]))
           (when (not= fields @current-fields)
             (rf/dispatch [:datagrid/update-fields id fields]))
-          [:div
+          [:div.full-height
            (when @show-sure?
              [are-you-sure-modal id])
            [:div.table-responsive

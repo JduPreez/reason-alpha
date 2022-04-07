@@ -2,10 +2,11 @@
   (:require [accountant.core :as accountant]
             [re-frame.core :as rf]
             [reagent.dom :as r.dom]
-            [reason-alpha.views.main :as main]
-            [reason-alpha.views.trade-patterns :as trade-patterns]
-            [reason-alpha.views.trades :as trades]
             [reason-alpha.views.datagrid :as datagrid]
+            [reason-alpha.views.instruments :as instruments]
+            [reason-alpha.views.main :as main]
+            [reason-alpha.views.positions :as positions]
+            [reason-alpha.views.trade-patterns :as trade-patterns]
             [reitit.coercion.spec :as rss]
             [reitit.core :as r]
             [reitit.frontend :as rfe]
@@ -25,19 +26,21 @@
 
 (def routes
   ["/"
-   ["" {:name  ::trades/view
-        :view  trades/view
-        :model :trade
+   ["" {:name       ::positions/view
+        :view       positions/view
+        :model      :position
+        :load-event [:position/load]
         :controllers
-        [{:start (fn [& params] (js/console.log "Entering :trades"))
-          :stop  (fn [& params] (js/console.log "Leaving :trades"))}]}]
-   ["trade-patterns" {:name              ::trade-patterns/view
-                      :view              trade-patterns/view
-                      :model             :trade-pattern
-                      :data-subscription :trade-pattern.query/get
-                      :controllers
-                      [{:start (fn [& params] (cljs.pprint/pprint ["Entering :trade-patterns" params]))
-                        :stop  (fn [& params] (js/console.log "Leaving :trade-patterns"))}]}]])
+        [{:start (fn [& params] (js/console.log "Entering :positions"))
+          :stop  (fn [& params] (js/console.log "Leaving :positions"))}]}]
+   ["trade-patterns" {:name       ::trade-patterns/view
+                      :view       trade-patterns/view
+                      :model      :trade-pattern
+                      :load-event [:trade-pattern/load]}]
+   ["instruments" {:name       ::instruments/view
+                   :view       instruments/view
+                   :model      :instrument
+                   :load-event [:instrument/load]}]])
 
 (defn on-navigate [new-match]
   (when new-match

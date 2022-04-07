@@ -1,23 +1,54 @@
 (ns reason-alpha.services.trade-pattern
-  (:require  [clojure.pprint :as pprint]))
+  (:require [malli.core :as m]
+            [reason-alpha.model.accounts :as accounts]
+            [reason-alpha.model.common :as common]
+            [reason-alpha.model.mapping :as mapping]
+            [reason-alpha.model.portfolio-management :as portfolio-management]
+            [taoensso.timbre :as timbre :refer (errorf)]))
 
-; TODO: Improve error handling
-(defn getn [fn-repo-getn _qry]
-  (pprint/pprint {::get-trade-patterns _qry})
-  {:result (fn-repo-getn)}) ;; (choose db [:trade-pattern/*])
+(defn getn [fn-repo-getn fn-get-account _args]
+  (let [{acc-id :account/id} (fn-get-account)
+        tpatterns            (fn-repo-getn acc-id)]
+    {:result tpatterns
+     :type   :success}))
 
-(defn get1 [fn-repo-get1 id]
-  {:result (fn-repo-get1 id)})
+(defn get1 [fn-repo-get1 {:keys [trade-pattern-id]}]
+  (let [tpattern (fn-repo-get1 trade-pattern-id)]
+    {:result tpattern
+     :type   :success}))
 
-(defn save! [fn-repo-save! ent]
-  {:result (fn-repo-save! ent)})
+(m/=> save! [:=>
+             [:cat
+              [:=>
+               [:cat
+                :any
+                portfolio-management/TradePattern]
+               portfolio-management/TradePattern]
+              [:=>
+               [:cat
+                :any]
+               accounts/Account]
+              portfolio-management/TradePattern]
+             (common/result-schema
+              portfolio-management/TradePatternDto)])
 
-(defn delete! [fn-repo-delete! ids]
-  {:result (fn-repo-delete! ids)})
-
-#_(defmethod server/event-msg-handler
-  :trade-pattern.query/get
-  [{:keys [?reply-fn] :as event}]
-  (pprint/pprint {:trade-pattern.query/get event})
-  (when ?reply-fn
-    (?reply-fn (get-trade-patterns))))
+(defn save!
+  [fn-repo-save! fn-get-account {acc-id :trade-pattern/account-id
+                                 :as    trade-pattern}]
+  (let [tpattern (if acc-id
+                   trade-pattern
+                   (->> (fn-get-account)
+                        :account/id
+                        (assoc trade-pattern :trade-pattern/account-id)))]
+    (try
+      {:result (-> tpattern
+                   fn-repo-save!
+                   (as-> tp (mapping/command-ent->query-dto
+                             portfolio-management/TradePatternDto tp)))
+       :type   :success}
+      (catch Exception e
+        (let [err-msg "Error saving Trade Pattern"]
+          (errorf e err-msg)
+          {:error       (ex-data e)
+           :description (str err-msg ": " (ex-message e))
+           :type        :error})))))

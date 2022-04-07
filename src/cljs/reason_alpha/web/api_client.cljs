@@ -20,15 +20,17 @@
              :port     5000})
 
 (defn chsk-send! [event & [{:keys [on-success on-failure]}]]
-  (@*chsk-send! event 60000
-   (fn [reply]
-     (let [cb-success? (sente/cb-success? reply)]
-       (cond
-         (and cb-success? on-success)
-         , (rf/dispatch (conj on-success reply))
+  (if (or on-success on-failure)
+    (@*chsk-send! event 60000
+     (fn [reply]
+       (let [cb-success? (sente/cb-success? reply)]
+         (cond
+           (and cb-success? on-success)
+           , (rf/dispatch (conj on-success reply))
 
-         (and (not cb-success?) on-failure)
-         , (rf/dispatch (conj on-failure)))))))
+           (and (not cb-success?) on-failure)
+           , (rf/dispatch (conj on-failure))))))
+    (@*chsk-send! event 60000)))
 
 (defn state-watcher [_key _atom _old-state new-state]
   (.warn js/console "New state" new-state))

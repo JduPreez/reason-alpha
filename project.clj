@@ -23,8 +23,7 @@
                  [functionalbytes/mount-lite "2.1.1"]
                  [http-kit "2.5.3"]
                  [integrant "0.8.0"]
-                 ;;[juxt/crux-core "21.06-1.17.1-beta"]
-                 ;;[juxt/crux-rocksdb "21.06-1.17.1-beta"]
+                 [cljsjs/jquery "3.2.1-0"]
                  [com.xtdb/xtdb-core "1.20.0"]
                  [com.xtdb/xtdb-rocksdb "1.20.0"]
                  [markdown-clj "1.10.0"]
@@ -50,6 +49,7 @@
                  [prismatic/schema "1.1.6"]
                  [re-frame "1.2.0"]
                  [reagent "1.1.0"]
+                 [re-com "2.13.2"]
                  [ring "1.9.1"]
                  [ring-cors "0.1.13"]
                  [ring-webjars "0.2.0"]
@@ -93,7 +93,8 @@
                             :plugins        [[jonase/eastwood "0.3.5"]]
                             :source-paths   ["env/dev/clj" "env/dev/cljs" "test/cljs"]
                             :resource-paths ["env/dev/resources"]
-                            :repl-options   {:init-ns user}}
+                            :repl-options   {:init-ns user}
+                            :jvm-opts       ["-XX:-OmitStackTraceInFastThrow"]}
              :project/prod {:env          {:production true}
                             :source-paths ["env/prod/clj" "env/prod/cljs"]}
              :project/test {:jvm-opts       ["-Dconf=test-config.edn"]

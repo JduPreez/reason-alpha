@@ -9,15 +9,10 @@
       [:a.nav-link {:data-toggle   "dropdown"
                     :href          "#"
                     :aria-expanded "true"}
-       [:i.fas.fa-cog]
+       [:i.fas.fa-cog {:style {:height       "18px"
+                               :margin-right "0"}}]
        [:span " "]]
-      [:div.dropdown-menu.dropdown-menu-right.dropdown-menu-arrow
-       {;:x-placement "bottom-end"
-        :style {:position    "absolute"
-                :transform   "translate3d(-32px, 46px, 0px)"
-                :top         "0px"
-                :left        "0px"
-                :will-change "transform"}}
+      [:div.dropdown-menu ;;.dropdown-menu-right.dropdown-menu-arrow
        [:a.dropdown-item {:href "#"}
         [:i.dropdown-icon.mdi.mdi-account-outline] " Profile"]
        [:a.dropdown-item {:href "#"}
@@ -43,17 +38,19 @@
        [:i.fas.fa-file-import] [:span "IMPORT"]]]
      [:li.nav-item
       [:a.nav-link {:href     "#"
-                    :on-click #(rf/dispatch [:add])}
+                    :on-click #(do (.preventDefault %)
+                                   (rf/dispatch [:add]))}
        [:i.fas.fa-plus-square] [:span "ADD"]]]
      [:li.nav-item
       [:a.nav-link {:href     "#"
-                    :on-click #(rf/dispatch [:delete!])}
+                    :on-click #(do (.preventDefault %)
+                                   (rf/dispatch [:delete!]))}
        [:i.fas.fa-minus-square] [:span "DELETE"]]]
      [:li.nav-item
       [:a.nav-link {:href "#"}
        [:i.fas.fa-undo-alt] [:span "CANCEL"]]]]]
-   [:div.container>div.hor-content
-    [:div.row {:style {:margin-top "10px"}}
+   [:div.container.full-height>div.hor-content.full-height
+    [:div.row.full-height {:style {:margin-top "10px"}}
      [child-view]
      #_[:div.card
       [:div.card-header.bg-gradient-indigo.br-tr-3.br-tl-3

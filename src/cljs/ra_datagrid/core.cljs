@@ -1,8 +1,9 @@
 (ns ra-datagrid.core
-  (:require [reagent.core :as reagent]
-            [re-frame.core :as re-frame]
+  (:require [ra-datagrid.config]
             [ra-datagrid.events]
-            [ra-datagrid.subs]
             [ra-datagrid.schema]
+            [ra-datagrid.subs]
             [ra-datagrid.views]
-            [ra-datagrid.config]))
+            [ra-datagrid.views.fields]
+            [re-frame.core :as re-frame]
+            [reagent.core :as reagent]))

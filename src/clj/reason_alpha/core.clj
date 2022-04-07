@@ -1,12 +1,14 @@
 (ns reason-alpha.core
   (:require [malli.instrument :as malli.instr]
-            [reason-alpha.data.model]
-            [reason-alpha.model]
-            [reason-alpha.model.portfolio-management]
-            [reason-alpha.services.trade-pattern]))
+            [reason-alpha.model :as model]))
+
+(defn start []
+  (model/start-system))
+
+(defn stop []
+  (model/stop-system!))
 
 (defn -main []
-  #_(malli.instr/collect!)
-  (malli.instr/instrument!))
+  )
 
 

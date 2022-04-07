@@ -20,3 +20,4 @@ sqlite.5.db
 .calva/
 /data
 jwt.key
+*.~undo-tree~

@@ -2,11 +2,8 @@
   (:require [re-frame.core :as rf]
             [reagent.core :as r]
             [cljs-time.coerce :as coerce]
-            [cljs-time.format :as fmt]))
-
-;;TODO make this a dynamic var that can be set
-(def time-formatter (fmt/formatter "dd-MM-yyyy HH:mm"))
-(def date-formatter (fmt/formatter "dd-MM-yyyy"))
+            [cljs-time.format :as fmt]
+            [ra-datagrid.config :as conf]))
 
 (defn sensible-sort
   [k r]
@@ -131,20 +128,20 @@
                               (or t :default)))
 
 (defmethod default-formatter :default
-  [_]
+  [_v _r]
   identity)
 
 (defmethod default-formatter :yesno
   [_]
   (fn [v r]
-    (if v "ja" "nee")))
+    (if v "yes" "no")))
 
 (defmethod default-formatter :date
   [_]
   (fn [v r]
     (if v
       (let [v (coerce/from-date v)]
-        (fmt/unparse date-formatter v))
+        (fmt/unparse conf/date-formatter v))
       "")))
 
 (defmethod default-formatter :date-time
@@ -152,7 +149,7 @@
   (fn [v r]
     (if v
       (let [v (coerce/from-date v)]
-        (fmt/unparse time-formatter v))
+        (fmt/unparse conf/time-formatter v))
       "")))
 
 (defn apply-formatters
