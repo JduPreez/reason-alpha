@@ -130,7 +130,6 @@
                                                            :command-path [:position/open-trade-transaction
                                                                           :trade-transaction/date]}
                                                inst?]
-                                              #_[:symbols {:optional true} string?]
                                               [:open-price {:title        "Open"
                                                             :command-path [:position/open-trade-transaction
                                                                            :trade-transaction/price]}

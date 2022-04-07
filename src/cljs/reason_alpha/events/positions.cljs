@@ -9,18 +9,18 @@
 (rf/reg-event-fx
  :position/load
  (fn [{:keys [db]} _]
-   {:position.query/getn   nil
-    :instrument.query/getn nil
-    :dispatch              [:model.query/getn
-                            [:model/position :model/position-dto]]}))
+   {:position.query/get-positions nil
+    :holding.query/get-holdings   nil
+    :dispatch                     [:model.query/getn
+                                   [:model/position :model/position-dto]]}))
 
 (rf/reg-fx
- :position.query/getn
+ :position.query/get-positions
  (fn [_]
-   (api-client/chsk-send! [:position.query/getn])))
+   (api-client/chsk-send! [:position.query/get-positions])))
 
 (rf/reg-event-db
- :position.query/getn-result
+ :position.query/get-positions-result
  (fn [db [evt {:keys [result type] :as r}]]
    (utils/log evt r)
    (if (= :success type)
@@ -30,13 +30,13 @@
      db)))
 
 (rf/reg-fx
- :position.query/get1
+ :position.query/get-position
  (fn [pos-id]
    (cljs.pprint/pprint {:position.query/get1 pos-id})
    (api-client/chsk-send! [:position.query/get1 pos-id])))
 
 (rf/reg-event-db
- :position.query/get1-result
+ :position.query/get-position-result
  (fn [db [evt {:keys [result type] :as r}]]
    (utils/log evt r)
    (if (= :success type)

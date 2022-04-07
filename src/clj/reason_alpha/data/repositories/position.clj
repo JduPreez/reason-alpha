@@ -19,7 +19,7 @@
   (->> {:spec '{:find  [(pull pos [*]) (pull instr [*])]
                 :where [[pos :position/account-id account-id]
                         [pos :position/instrument-id instr]
-                        [instr :instrument/name instr-nm]]
+                        [instr :holding/instrument-name instr-nm]]
                 :in    [account-id]}
         :args [account-id]}
        (data.model/query db)
@@ -29,7 +29,7 @@
   (->> {:spec '{:find  [(pull pos [*]) (pull instr [*])]
                 :where [[pos :position/id id]
                         [pos :position/instrument-id instr]
-                        [instr :instrument/name instr-nm]]
+                        [instr :holding/instrument-name instr-nm]]
                 :in    [id]}
         :args [id]}
        (data.model/any db)

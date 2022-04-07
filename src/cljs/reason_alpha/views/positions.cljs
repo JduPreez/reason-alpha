@@ -1,7 +1,7 @@
 (ns reason-alpha.views.positions
   (:require [re-frame.core :as rf]
             [reason-alpha.views.datagrid :as datagrid]
-            [reason-alpha.views.instruments :as views.instruments]
+            [reason-alpha.views.holdings :as views.holdings]
             [reason-alpha.views.trade-patterns :as views.trade-patterns]))
 
 (def options
@@ -18,10 +18,10 @@
         fields  (datagrid/model->fields
                  @*schema
                  {:fields-opts
-                  {:instrument
+                  {:holding
                    {:menu [{:title "Edit"
-                            :view  ::views.instruments/view}]}
+                            :view  ::views.holdings/view}]}
                    :trade-pattern
                    {:menu [{:title "Edit"
-                            :view  ::views.instruments/view}]}}})]
+                            :view  ::views.holdings/view}]}}})]
     [datagrid/view fields options]))

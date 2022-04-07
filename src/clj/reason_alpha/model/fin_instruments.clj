@@ -1,6 +1,5 @@
 (ns reason-alpha.model.fin-instruments
-  (:require [reason-alpha.model.core :as model :refer [def-model]]
-            [reason-alpha.model.utils :as model.utils]))
+  (:require [reason-alpha.model.core :as model :refer [def-model]]))
 
 (def-model Symbol
   :model/symbol
@@ -26,55 +25,6 @@
    [:price/low float?]
    [:price/adj-close float?]
    [:price/volume int?]])
-
-(def-model Instrument
-  :model/instrument
-  [:map
-   [:instrument/creation-id uuid?]
-   [:instrument/id {:optional true} uuid?]
-   [:instrument/name [:string {:min 1}]]
-   [:instrument/symbols {:optional true} [:sequential Symbol]]
-   [:instrument/type [:enum
-                      {:enum/titles {:share    "Share"
-                                     :etf      "ETF"
-                                     :currency "Currency"
-                                     :crypto   "Crypto"}}
-                      :share :etf :currency :crypto]]
-   [:instrument/currency-instrument-id uuid?]
-   [:instrument/prices {:optional true} [:sequential Price]]
-   [:instrument/account-id {:optional true} uuid?]])
-
-(let [{{ptitles :enum/titles} :properties
-       providers              :members} (model.utils/get-model-members-of
-                                         Symbol
-                                         :symbol/provider)
-      symbols-schema                    (for [p    providers
-                                              :let [t (get ptitles p)]]
-                                          [p {:title        t
-                                              :optional     true
-                                              :pivot        :symbol/provider
-                                              :command-path [:instrument/symbols 0 :symbol/ticker]}
-                                           string?])]
-  (def-model InstrumentDto
-    :model/instrument-dto
-    (into
-     [:map
-      [:instrument-id {:optional     true
-                       :command-path [:instrument/id]}
-       uuid?]
-      [:instrument-creation-id {:command-path [:instrument/creation-id]}
-       uuid?]
-      [:instrument-name {:title        "Instrument"
-                         :optional     true
-                         :command-path [:instrument/name]} string?]]
-     cat
-     [symbols-schema
-      [[:instrument-type {:title        "Type"
-                          :optional     true
-                          :ref          :instrument/type
-                          :command-path [[:instrument/type]
-                                         [:instrument/type-name]]}
-        [:tuple keyword? string?]]]])))
 
 (comment
   (letfn [(get-model-members-of [schema member-k]

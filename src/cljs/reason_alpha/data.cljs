@@ -17,7 +17,7 @@
 (defn model [model-k]
   (conj models model-k))
 
-(def ^:const instruments [:data :instrument])
+(def ^:const holdings [:data :holding])
 
 (defn entity-data [type]
   [:data type])

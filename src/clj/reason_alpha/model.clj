@@ -4,7 +4,7 @@
             [malli.instrument :as malli.instr]
             [reason-alpha.data.model :as data.model :refer [DataBase]]
             [reason-alpha.data.repositories.account :as repo.account]
-            [reason-alpha.data.repositories.instrument :as repo.instrument]
+            [reason-alpha.data.repositories.holding-repository :as holding-repo]
             [reason-alpha.data.repositories.position :as repo.position]
             [reason-alpha.data.repositories.trade-pattern :as repo.trade-pattern]
             [reason-alpha.data.xtdb :as xtdb]
@@ -14,9 +14,8 @@
             [reason-alpha.model.common :as common]
             [reason-alpha.services.account :as svc.account]
             [reason-alpha.services.common :as svc.common]
-            [reason-alpha.services.instrument :as svc.instrument]
+            [reason-alpha.services.holding-service :as holding-svc]
             [reason-alpha.services.model :as svc.model]
-            [reason-alpha.services.position :as svc.position]
             [reason-alpha.services.trade-pattern :as svc.trade-pattern]
             [traversy.lens :as tl]))
 
@@ -74,57 +73,57 @@
                        (partial repo.trade-pattern/get1 d)
                        (partial svc.trade-pattern/get1 d))}}
    :position
-   {:commands {:save!   (as-> db d
-                          (partial repo.position/save! d)
-                          (svc.common/save-msg-fn
-                           {:model-type         :position
-                            :fn-repo-save!      d
-                            :fn-get-ctx         common/get-context
-                            :fn-get-account     fn-get-account
-                            :response-msg-event :position.command/save!-result}))
-               :delete! (as-> db d
-                          (partial repo.position/delete! d)
-                          (svc.common/delete-msg-fn
-                           {:fn-repo-delete!    d
-                            :model-type         :position
-                            :fn-get-ctx         common/get-context
-                            :response-msg-event :position.command/delete!-result}))}
-    :queries  {:getn (as-> db d
-                       (partial repo.position/getn d)
-                       (svc.common/getn-msg-fn
-                        {:fn-repo-getn       d
-                         :fn-get-account     fn-get-account
-                         :fn-get-ctx         common/get-context
-                         :response-msg-event :position.query/getn-result}))
-               :get1 (as-> db d
-                       (partial repo.position/get1 d)
-                       (svc.common/get1-msg-fn
-                        {:fn-repo-get1       d
-                         :fn-get-ctx         common/get-context
-                         :response-msg-event :position.query/get1-result}))}}
+   {:queries {:getn (as-> db d
+                      (partial repo.position/getn d)
+                      (svc.common/getn-msg-fn
+                       {:fn-repo-getn       d
+                        :fn-get-account     fn-get-account
+                        :fn-get-ctx         common/get-context
+                        :response-msg-event :position.query/get-position-result}))
+              :get1 (as-> db d
+                      (partial repo.position/get1 d)
+                      (svc.common/get1-msg-fn
+                       {:fn-repo-get1       d
+                        :fn-get-ctx         common/get-context
+                        :response-msg-event :position.query/get-position-result}))}}
 
-   :instrument
-   {:commands {:save!   (as-> db d
-                          (partial repo.instrument/save! d)
-                          (partial svc.instrument/save! d
-                                   fn-get-account
-                                   common/get-context))
-               :delete! (as-> db d
-                          (partial repo.instrument/delete! d)
-                          (svc.common/delete-msg-fn
-                           {:fn-repo-delete!    d
-                            :model-type         :instrument
-                            :fn-get-ctx         common/get-context
-                            :response-msg-event :instrument.command/delete!-result}))}
-    :queries  {:getn (as-> db d
-                       (partial repo.instrument/getn d)
-                       (partial svc.instrument/getn d
-                                fn-get-account
-                                common/get-context))
-               :get1 (as-> db d
-                       (partial repo.instrument/get1 d)
-                       (partial svc.instrument/get1 d
-                                common/get-context))}}
+   :holding
+   {:commands {:save-holding!    (as-> db d
+                                   (partial holding-repo/save! d)
+                                   (partial holding-svc/save-holding! d
+                                            fn-get-account
+                                            common/get-context))
+               :save-position!   (as-> db d
+                                   (partial repo.position/save! d)
+                                   (svc.common/save-msg-fn
+                                    {:model-type         :position
+                                     :fn-repo-save!      d
+                                     :fn-get-ctx         common/get-context
+                                     :fn-get-account     fn-get-account
+                                     :response-msg-event :holding.command/save-position!-result}))
+               :delete-holding!  (as-> db d
+                                   (partial holding-repo/delete! d)
+                                   (svc.common/delete-msg-fn
+                                    {:fn-repo-delete!    d
+                                     :model-type         :instrument
+                                     :fn-get-ctx         common/get-context
+                                     :response-msg-event :holding.command/delete-holding!-result}))
+               :delete-position! (as-> db d
+                                   (partial repo.position/delete! d)
+                                   (svc.common/delete-msg-fn
+                                    {:fn-repo-delete!    d
+                                     :model-type         :position
+                                     :fn-get-ctx         common/get-context
+                                     :response-msg-event :holding.command/delete-position!-result}))}
+    :queries  {:get-holdings (as-> db d
+                               (partial holding-repo/getn d)
+                               (partial holding-svc/get-holdings d
+                                        fn-get-account
+                                        common/get-context))
+               :get-holding  (as-> db d
+                               (partial holding-repo/get1 d)
+                               (partial holding-svc/get-holding d
+                                        common/get-context))}}
    :model
    {:queries {:getn #(svc.model/getn common/get-context %)}}})
 
@@ -159,12 +158,10 @@
                       :port        5000}
    ::instrumentation {:nss ['reason-alpha.data.model
                             'reason-alpha.data.repositories.account
-                            'reason-alpha.data.repositories.instrument
-                            'reason-alpha.data.repositories.position
+                            'reason-alpha.data.repositories.holding-repository
                             'reason-alpha.data.repositories.trade-pattern
                             'reason-alpha.infrastructure.auth
-                            'reason-alpha.services.instrument
-                            'reason-alpha.services.position]}})
+                            'reason-alpha.services.holding-service]}})
 
 (def *system
   (atom nil))

@@ -58,8 +58,6 @@
   (fn [fields {:keys [grid-id title] :as options}]
     (let[*options (rf/subscribe [:datagrid/options grid-id])
          opts     (or options @*options)]
-      (cljs.pprint/pprint {:O (merge default-opts opts)
-                           :F fields})
       [:div.card
        [history-list grid-id title]
        [:div.card-body {:style {:padding-top    0
