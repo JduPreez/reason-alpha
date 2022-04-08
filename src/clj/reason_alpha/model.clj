@@ -3,10 +3,10 @@
             [integrant.core :as ig]
             [malli.instrument :as malli.instr]
             [reason-alpha.data.model :as data.model :refer [DataBase]]
-            [reason-alpha.data.repositories.account :as repo.account]
+            [reason-alpha.data.repositories.account-repository :as account-repo]
             [reason-alpha.data.repositories.holding-repository :as holding-repo]
-            [reason-alpha.data.repositories.position :as repo.position]
-            [reason-alpha.data.repositories.trade-pattern :as repo.trade-pattern]
+            [reason-alpha.data.repositories.position-repository :as position-repo]
+            [reason-alpha.data.repositories.trade-pattern-repository :as trade-pattern-repo]
             [reason-alpha.data.xtdb :as xtdb]
             [reason-alpha.infrastructure.auth :as auth]
             [reason-alpha.infrastructure.server :as server]
@@ -43,8 +43,8 @@
     db))
 
 (defmethod ig/init-key ::account-svc [_ {:keys [db]}]
-  (let [fn-repo-save!      #(repo.account/save! db %)
-        fn-repo-get-by-uid #(repo.account/get-by-user-id db %)]
+  (let [fn-repo-save!      #(account-repo/save! db %)
+        fn-repo-get-by-uid #(account-repo/get-by-user-id db %)]
     {:fn-get-account   #(svc.account/get-account common/get-context
                                                  fn-repo-get-by-uid)
      :fn-save-account! #(svc.account/save! fn-repo-get-by-uid
@@ -57,31 +57,31 @@
                                         {:keys [fn-get-account]} :account-svc}]
   {:trade-pattern
    {:commands {:save!   (as-> db d
-                          (partial repo.trade-pattern/save! d)
+                          (partial trade-pattern-repo/save! d)
                           (partial svc.trade-pattern/save! d
                                    fn-get-account))
                :delete! (as-> db d
-                          (partial repo.trade-pattern/delete! d)
+                          (partial trade-pattern-repo/delete! d)
                           (svc.common/delete-fn
                            d
                            :trade-pattern))}
     :queries  {:getn (as-> db d
-                       (partial repo.trade-pattern/getn d)
+                       (partial trade-pattern-repo/getn d)
                        (partial svc.trade-pattern/getn d
                                 fn-get-account))
                :get1 (as-> db d
-                       (partial repo.trade-pattern/get1 d)
+                       (partial trade-pattern-repo/get1 d)
                        (partial svc.trade-pattern/get1 d))}}
    :position
    {:queries {:get-positions (as-> db d
-                               (partial repo.position/getn d)
+                               (partial position-repo/getn d)
                                (svc.common/getn-msg-fn
                                 {:fn-repo-getn       d
                                  :fn-get-account     fn-get-account
                                  :fn-get-ctx         common/get-context
                                  :response-msg-event :position.query/get-position-result}))
               :get-position  (as-> db d
-                               (partial repo.position/get1 d)
+                               (partial position-repo/get1 d)
                                (svc.common/get1-msg-fn
                                 {:fn-repo-get1       d
                                  :fn-get-ctx         common/get-context
@@ -95,7 +95,7 @@
                                             fn-get-account
                                             common/get-context))
                :save-position!   (as-> db d
-                                   (partial repo.position/save! d)
+                                   (partial position-repo/save! d)
                                    (svc.common/save-msg-fn
                                     {:model-type         :position
                                      :fn-repo-save!      d
@@ -110,7 +110,7 @@
                                      :fn-get-ctx         common/get-context
                                      :response-msg-event :holding.command/delete-holding!-result}))
                :delete-position! (as-> db d
-                                   (partial repo.position/delete! d)
+                                   (partial position-repo/delete! d)
                                    (svc.common/delete-msg-fn
                                     {:fn-repo-delete!    d
                                      :model-type         :position
@@ -158,9 +158,10 @@
                       :account-svc (ig/ref ::account-svc)
                       :port        5000}
    ::instrumentation {:nss ['reason-alpha.data.model
-                            'reason-alpha.data.repositories.account
+                            'reason-alpha.data.repositories.account-repository
                             'reason-alpha.data.repositories.holding-repository
-                            'reason-alpha.data.repositories.trade-pattern
+                            'reason-alpha.data.repositories.position-repository
+                            'reason-alpha.data.repositories.trade-pattern-repository
                             'reason-alpha.infrastructure.auth
                             'reason-alpha.services.holding-service]}})
 

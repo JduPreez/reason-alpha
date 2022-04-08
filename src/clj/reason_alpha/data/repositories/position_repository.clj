@@ -1,4 +1,4 @@
-(ns reason-alpha.data.repositories.position
+(ns reason-alpha.data.repositories.position-repository
   (:require [malli.core :as m]
             [reason-alpha.data.model :as data.model]
             [reason-alpha.model.mapping :as mapping]
