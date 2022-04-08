@@ -17,7 +17,6 @@
 (rf/reg-fx
  :trade-pattern.query/getn
  (fn [_]
-   (cljs.pprint/pprint :trade-pattern.query/getn)
    (api-client/chsk-send! [:trade-pattern.query/getn]
                           {:on-success [:trade-pattern/getn-result]})))
 

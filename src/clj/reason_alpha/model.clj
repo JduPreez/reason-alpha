@@ -73,20 +73,21 @@
                        (partial repo.trade-pattern/get1 d)
                        (partial svc.trade-pattern/get1 d))}}
    :position
-   {:queries {:getn (as-> db d
-                      (partial repo.position/getn d)
-                      (svc.common/getn-msg-fn
-                       {:fn-repo-getn       d
-                        :fn-get-account     fn-get-account
-                        :fn-get-ctx         common/get-context
-                        :response-msg-event :position.query/get-position-result}))
-              :get1 (as-> db d
-                      (partial repo.position/get1 d)
-                      (svc.common/get1-msg-fn
-                       {:fn-repo-get1       d
-                        :fn-get-ctx         common/get-context
-                        :response-msg-event :position.query/get-position-result}))}}
-
+   {:queries {:get-positions (as-> db d
+                               (partial repo.position/getn d)
+                               (svc.common/getn-msg-fn
+                                {:fn-repo-getn       d
+                                 :fn-get-account     fn-get-account
+                                 :fn-get-ctx         common/get-context
+                                 :response-msg-event :position.query/get-position-result}))
+              :get-position  (as-> db d
+                               (partial repo.position/get1 d)
+                               (svc.common/get1-msg-fn
+                                {:fn-repo-get1       d
+                                 :fn-get-ctx         common/get-context
+                                 :response-msg-event :position.query/get-position-result}))}}
+   ;; TODO: In future positions should be saved together with the holding & not as a separate document,
+   ;; because Holding is the root aggregate
    :holding
    {:commands {:save-holding!    (as-> db d
                                    (partial holding-repo/save! d)

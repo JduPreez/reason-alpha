@@ -13,23 +13,28 @@
 
 (defn save!
   [db position]
+  (clojure.pprint/pprint {::save! position})
   (data.model/save! db position))
 
 (defn getn [db account-id]
-  (->> {:spec '{:find  [(pull pos [*]) (pull instr [*])]
+  (->> {:spec '{:find  [(pull pos [*])
+                        (pull hold [*])
+                        (pull tpattern [*])]
                 :where [[pos :position/account-id account-id]
-                        [pos :position/instrument-id instr]
-                        [instr :holding/instrument-name instr-nm]]
+                        [(get-attr pos :position/holding-id nil) [hold ...]]
+                        [(get-attr pos :position/trade-pattern-id nil) [tpattern ...]]]
                 :in    [account-id]}
         :args [account-id]}
        (data.model/query db)
        (mapping/command-ents->query-dtos portfolio-management/PositionDto)))
 
 (defn get1 [db id]
-  (->> {:spec '{:find  [(pull pos [*]) (pull instr [*])]
+  (->> {:spec '{:find  [(pull pos [*])
+                        (pull hold [*])
+                        (pull tpattern [*])]
                 :where [[pos :position/id id]
-                        [pos :position/instrument-id instr]
-                        [instr :holding/instrument-name instr-nm]]
+                        [(get-attr pos :position/holding-id nil) [hold ...]]
+                        [(get-attr pos :position/trade-pattern-id nil) [tpattern ...]]]
                 :in    [id]}
         :args [id]}
        (data.model/any db)

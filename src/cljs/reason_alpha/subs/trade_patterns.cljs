@@ -5,6 +5,7 @@
 (rf/reg-sub
  :trade-pattern/list
  (fn [db _]
+   (cljs.pprint/pprint {:trade-pattern/list (get-in db data/trade-patterns)})
    (sort-by :trade-pattern-name
             (get-in db data/trade-patterns))))
 

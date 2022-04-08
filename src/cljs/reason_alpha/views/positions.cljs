@@ -23,5 +23,5 @@
                             :view  ::views.holdings/view}]}
                    :trade-pattern
                    {:menu [{:title "Edit"
-                            :view  ::views.holdings/view}]}}})]
+                            :view  ::views.trade-patterns/view}]}}})]
     [datagrid/view fields options]))

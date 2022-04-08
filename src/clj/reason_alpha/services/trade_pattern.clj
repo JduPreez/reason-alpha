@@ -41,10 +41,11 @@
                         :account/id
                         (assoc trade-pattern :trade-pattern/account-id)))]
     (try
-      {:result (-> tpattern
-                   fn-repo-save!
-                   (as-> tp (mapping/command-ent->query-dto
-                             portfolio-management/TradePatternDto tp)))
+      {:result (->> tpattern
+                    fn-repo-save!
+                    (conj [])
+                    (mapping/command-ent->query-dto
+                     portfolio-management/TradePatternDto))
        :type   :success}
       (catch Exception e
         (let [err-msg "Error saving Trade Pattern"]

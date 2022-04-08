@@ -58,8 +58,7 @@
                  [ring-ttl-session "0.3.1"]
                  [selmer "1.12.17"]
                  [thheller/shadow-cljs "2.15.2" :scope "provided"]
-                 [traversy "0.5.0"]
-                 [venantius/accountant "0.2.5"]]
+                 [traversy "0.5.0"]]
 
   :main ^:skip-aot reason-alpha.core
 

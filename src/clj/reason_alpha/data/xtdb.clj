@@ -230,14 +230,14 @@
   (def db (xtdb-start!))
 
   (xt/q (xt/db db)
-        '{:find  [(pull pos [*]) (pull instr [*])]
-          :where [[pos :position/id id]
-                  [pos :position/instrument-id instr]
-                  [instr :instrument/name instr-nm]]
-          :in    [id]}
-        #uuid "017ff387-c800-fad0-b481-43f1fcbb4e39")
+        '{:find  [(pull pos [*])
+                  (pull hold [*])
+                  (pull tpattern [*])]
+          :where [[pos :position/id]
+                  [(get-attr pos :position/holding-id nil) [hold ...]]
+                  [(get-attr pos :position/trade-pattern-id nil) [tpattern ...]]]})
 
-
+  [pos :position/holding-id hold]
   (entities-owners
    db
    [#:instrument{:id

@@ -65,9 +65,10 @@
   (fn [_]
     (let [{acc-id :account/id}   (fn-get-account)
           {:keys [send-message]} (fn-get-ctx)
-          instrs                 (fn-repo-getn acc-id)]
+          ents                   (fn-repo-getn acc-id)]
+      (clojure.pprint/pprint {::getn-msg-fn [response-msg-event ents]})
       (send-message
-       [response-msg-event {:result instrs
+       [response-msg-event {:result ents
                             :type   :success}]))))
 
 (defn get1-msg-fn

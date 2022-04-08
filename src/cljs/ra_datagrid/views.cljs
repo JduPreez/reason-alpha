@@ -1,15 +1,14 @@
 (ns ra-datagrid.views
-    (:require [accountant.core :as accountant]
-              [cljs-time.coerce :as coerce]
-              [cljs-time.format :as fmt]
-              [cljs.pprint :as pprint]
-              [ra-datagrid.events]
-              [ra-datagrid.schema :as ds]
-              [ra-datagrid.subs]
-              [re-frame.core :as rf]
-              [reagent.core :as r]
-              [schema.core :as s
-               :include-macros true]))
+  (:require [cljs-time.coerce :as coerce]
+            [cljs-time.format :as fmt]
+            [cljs.pprint :as pprint]
+            [ra-datagrid.events]
+            [ra-datagrid.schema :as ds]
+            [ra-datagrid.subs]
+            [re-frame.core :as rf]
+            [reagent.core :as r]
+            [schema.core :as s
+             :include-macros true]))
 
 (defn clean-formatted-keys
   [r]
