@@ -5,6 +5,8 @@
                     [taoensso.timbre :as timbre :refer-macros (tracef debugf infof warnf errorf)])
      :cljs (:require [clojure.string :as str]
                      [cljs-uuid-utils.core :as uuid]
+                     [goog.string :as gstring]
+                     [goog.string.format]
                      [taoensso.timbre :as timbre :refer-macros (infof warnf errorf)])))
 
 (defn maybe->uuid [v]
@@ -35,6 +37,12 @@
 (defn str-keys [items]
   (map #(into {} (for [[k v] %]
                    [(keyword->str k) v])) items))
+
+#?(:cljs
+   (defn format
+     "Supported substitutions s, f, d, i and u"
+     [& args]
+     (apply gstring/format args)))
 
 (defn kw-keys [item]
   (into {} (for [[k v] item]

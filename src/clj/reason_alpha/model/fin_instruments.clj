@@ -7,9 +7,9 @@
    [:symbol/ticker {:min 1} string?]
    [:symbol/instrument-id {:optional true} uuid?]
    [:symbol/provider
-    [:enum {:enum/titles {:yahoo-finance "Yahoo! Finance"
-                          :saxo-dma      "Saxo/DMA"
-                          :easy-equities "Easy Equities"}}
+    [:enum {:enum/titles {:eod-historical-data "EOD Historical Data"
+                          :saxo-dma            "Saxo/DMA"
+                          :easy-equities       "Easy Equities"}}
                          :yahoo-finance :saxo-dma :easy-equities]]])
 
 (def-model Price
