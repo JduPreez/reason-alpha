@@ -59,7 +59,7 @@
 
 (defn login-handler
   [{{:keys [fn-save-account!]} :account-svc}
-   {:keys [request-method] :as request}]
+   {:keys [request-method session] :as request}]
   (when (not= request-method :options)
     (let [{:keys [is-valid? error userUuid email]} (-> request
                                                        auth/tokens
@@ -69,10 +69,11 @@
       (debugf "Verified login of user %s (%s): %b" userUuid email is-valid?)
 
       (if is-valid?
-        (let [acc (auth/account request)]
-          (fn-save-account! acc)
-          {:status 200
-           :body   {:result "Access granted"}})
+        (let [acc               (auth/account request)
+              {aid :account/id} (fn-save-account! acc)]
+          {:status  200
+           :session (assoc session :uid aid)
+           :body    {:result "Access granted"}})
         (do
           (debugf "Error verifying login %s" error)
           {:status 401
@@ -137,12 +138,15 @@
                                                     :uri :request-method :scheme])}}))
 
   (let [fun     (get handlers id)
-        account (auth/account ring-req)
+        account (-> ring-req
+                    auth/account
+                    (assoc :account/id uid))
         data    (or ?data {})]
       ;;future
         (if fun
-          (binding [common/*context* {:user-account account
-                                      :send-message #(chsk-send! uid %)}]
+          (binding [common/*context* {:*connected-users connected-uids
+                                      :user-account     account
+                                      :send-message     #(chsk-send! uid %)}]
             (let [_      (debugf "Event handler found: %s" id) ;; Log before calling `fun` might throw exception
                   result (fun data)]
               (when ?reply-fn

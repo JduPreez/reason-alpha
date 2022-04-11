@@ -5,7 +5,7 @@
   :model/symbol
   [:map
    [:symbol/ticker {:min 1} string?]
-   [:symbol/instrument-id {:optional true} uuid?]
+   [:symbol/holding-id {:optional true} uuid?]
    [:symbol/provider
     [:enum {:enum/titles {:eod-historical-data "EOD Historical Data"
                           :saxo-dma            "Saxo/DMA"
@@ -13,7 +13,7 @@
                          :yahoo-finance :saxo-dma :easy-equities]]])
 
 (def-model Price
-  :model/instrument-price
+  :model/price
   [:map
    [:price/creation-id uuid?]
    [:price/id uuid?]

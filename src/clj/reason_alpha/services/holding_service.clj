@@ -1,5 +1,7 @@
 (ns reason-alpha.services.holding-service
   (:require [malli.core :as m]
+            [outpace.config :refer [defconfig]]
+            [reason-alpha.integration.eod-api-client :as eod-api-client]
             [reason-alpha.model.accounts :as accounts]
             [reason-alpha.model.common :as common]
             [reason-alpha.model.fin-instruments :as fin-instruments]
@@ -65,6 +67,78 @@
     (send-message
      [:holding.query/get-holdings-result {:result instrs
                                           :type   :success}])))
+
+(defconfig price-quote-interval)
+
+(def *quote-price-users (atom #{}))
+
+(defn- broadcast-prices [fn-repo-get-holdings fn-get-account fn-get-ctx fn-quote-live-prices]
+  (let [{:keys [*connected-users]} (fn-get-ctx)
+        quote-interval             (* 60000 1 #_price-quote-interval)
+        broadcast!
+        (fn [i]
+          (let [uids (:any @*connected-uids)
+
+                ;; First remove all users from *quote-price-users that are not
+                ;; in uids, because these users no longer have an active session
+                _              (swap! *quote-price-users
+                                      (fn [usrs]
+                                        (->> usrs
+                                             (filter #(some #{%} uids)))))
+                qte-price-usrs @*quote-price-users]
+            (doseq [acc-id qte-price-usrs
+                    :let   [api-token (-> acc-id
+                                          fn-get-account
+                                          :account/subscriptions
+                                          :subscription/eod-historical-data
+                                          :api-token)
+                            tickers   (->> acc-id
+                                           fn-repo-get-holdings
+                                           (map :eod-historical-data))]]
+              (chsk-send! acc-id
+                          [:price/quote
+                           {:what-is-this "An async broadcast pushed from server"
+                            :how-often    "Every 10 seconds"
+                            :to-whom      uid
+                            :i            i}]))))]
+
+    (go-loop [i 0]
+      (<! (async/timeout quote-interval))
+      (when @broadcast-enabled?_ (broadcast! i))
+      (recur (inc i)))))
+
+(comment
+  (utils/new-uuid)
+
+  (let [uids     #{#uuid "d1f5984c-c2a0-475a-8df2-5e7ef04dc989" ;; Hasn't requested prices
+                   #uuid "d3cfc2f6-d38c-4e5e-b4b1-7f906315d8e0" ;; Hasn't requested prices
+                   #uuid "bf0bb6db-7589-4e4d-aa82-a84608263dab"
+                   #uuid "6a23dee4-8a0f-4416-bb7a-3fa5e8b22590"}
+        qp-users #{#uuid "22e0743b-bf4e-4982-9a1d-d3bc97c08372" ;; Disconnected
+                   #uuid "ec0760d6-fe13-4336-b978-6df86ab4a43b" ;; Disconnected
+                   #uuid "bf0bb6db-7589-4e4d-aa82-a84608263dab"
+                   #uuid "6a23dee4-8a0f-4416-bb7a-3fa5e8b22590"}]
+    (reset! *quote-price-users qp-users)
+    (swap! *quote-price-users
+           (fn [usrs]
+             (->> usrs
+                  (filter #(some #{%} uids)))))
+    @*quote-price-users)
+  
+  
+
+  )
+
+(defn get-positions
+  [{:keys [fn-repo-getn fn-get-ctx response-msg-event]}]
+  (fn [_]
+    (let [{send-msg             :send-message
+           {acc-id :account/id} :user-account} (fn-get-ctx)
+          ents                                 (fn-repo-getn acc-id)]
+      (clojure.pprint/pprint {::getn-msg-fn [response-msg-event ents]})
+      (send-msg
+       [response-msg-event {:result ents
+                            :type   :success}]))))
 
 #_(m/=> save! [:=>
              [:cat

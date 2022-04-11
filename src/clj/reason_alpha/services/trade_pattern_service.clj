@@ -1,4 +1,4 @@
-(ns reason-alpha.services.trade-pattern
+(ns reason-alpha.services.trade-pattern-service
   (:require [malli.core :as m]
             [reason-alpha.model.accounts :as accounts]
             [reason-alpha.model.common :as common]

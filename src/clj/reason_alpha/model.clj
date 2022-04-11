@@ -12,11 +12,11 @@
             [reason-alpha.infrastructure.server :as server]
             [reason-alpha.model.accounts :as accounts]
             [reason-alpha.model.common :as common]
-            [reason-alpha.services.account :as svc.account]
+            [reason-alpha.services.account-service :as account-svc]
             [reason-alpha.services.common :as svc.common]
             [reason-alpha.services.holding-service :as holding-svc]
-            [reason-alpha.services.model :as svc.model]
-            [reason-alpha.services.trade-pattern :as svc.trade-pattern]
+            [reason-alpha.services.model-service :as model-svc]
+            [reason-alpha.services.trade-pattern-service :as trade-pattern-svc]
             [traversy.lens :as tl]))
 
 (defn handlers [aggregates]
@@ -45,9 +45,9 @@
 (defmethod ig/init-key ::account-svc [_ {:keys [db]}]
   (let [fn-repo-save!      #(account-repo/save! db %)
         fn-repo-get-by-uid #(account-repo/get-by-user-id db %)]
-    {:fn-get-account   #(svc.account/get-account common/get-context
+    {:fn-get-account   #(account-svc/get-account common/get-context
                                                  fn-repo-get-by-uid)
-     :fn-save-account! #(svc.account/save! fn-repo-get-by-uid
+     :fn-save-account! #(account-svc/save! fn-repo-get-by-uid
                                            fn-repo-save! %)}))
 
 (defmethod ig/halt-key! ::db [_ _]
@@ -58,7 +58,7 @@
   {:trade-pattern
    {:commands {:save!   (as-> db d
                           (partial trade-pattern-repo/save! d)
-                          (partial svc.trade-pattern/save! d
+                          (partial trade-pattern-svc/save! d
                                    fn-get-account))
                :delete! (as-> db d
                           (partial trade-pattern-repo/delete! d)
@@ -67,11 +67,11 @@
                            :trade-pattern))}
     :queries  {:getn (as-> db d
                        (partial trade-pattern-repo/getn d)
-                       (partial svc.trade-pattern/getn d
+                       (partial trade-pattern-svc/getn d
                                 fn-get-account))
                :get1 (as-> db d
                        (partial trade-pattern-repo/get1 d)
-                       (partial svc.trade-pattern/get1 d))}}
+                       (partial trade-pattern-svc/get1 d))}}
    :position
    {:queries {:get-positions (as-> db d
                                (partial position-repo/getn d)
@@ -126,7 +126,7 @@
                                (partial holding-svc/get-holding d
                                         common/get-context))}}
    :model
-   {:queries {:getn #(svc.model/getn common/get-context %)}}})
+   {:queries {:getn #(model-svc/getn common/get-context %)}}})
 
 (defmethod ig/init-key ::handlers [_ {:keys [aggregates]}]
   (pprint/pprint {::aggregates aggregates})
@@ -173,46 +173,3 @@
 
 (defn stop-system! []
   (ig/halt! @*system))
-
-(comment
-  (def m {:some "data"
-          :more "data"})
-
-  (let [x  {:some "data"
-            :more "data"}
-        mx (with-meta x {:bye true})]
-    (clojure.pprint/pprint (meta mx)))
-
-  (require '[malli.instrument :as malli.instr])
-
-  (start-system)
-
-  @*system
-
-  (let [aggregates {:trade-pattern
-                    {:commands
-                     {:save!
-                      0},
-                     :queries
-                     {:getn 1,
-                      :get1 2}},
-                    :holding
-                    {:commands
-                     {:save! 3}}}]
-    (handlers aggregates))
-
-  (let [m        (ig/init config)
-        id       :trade-pattern.query/get
-        handlers (:reason-alpha.model/handlers m)
-        fun      (get handlers id)]
-    (fun nil))
-
-  (-> {:test "test"}
-      (partial repo.trade-pattern/save!)
-      (partial svc.trade-pattern/save!))
-
-  (let [system ]
-    system)
-
-
-  )

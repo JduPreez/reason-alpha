@@ -9,12 +9,20 @@
    [:profile/name {:optional true} string?]
    [:profile/image {:optional true} string?]])
 
+(def-model Subscriptions
+  :model/subscriptions
+  [:map
+   [:subscription/eod-historical-data {:optional true}
+    [:map
+     [:api-token string?]]]])
+
 (def-model Account
   :model/account
   [:map
    [:account/id {:optional true} uuid?]
    [:account/user-id string?]
    [:account/user-name string?]
+   [:account/subscriptions {:optional true} Subscriptions]
    [:account/profile {:optional true} Profile]])
 
 (def AccountDto

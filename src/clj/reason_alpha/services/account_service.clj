@@ -1,4 +1,4 @@
-(ns reason-alpha.services.account
+(ns reason-alpha.services.account-service
   (:require [medley.core :as medley]))
 
 (defn get-account [fn-get-ctx fn-repo-get-acc-by-uid]
