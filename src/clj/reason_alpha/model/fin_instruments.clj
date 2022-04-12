@@ -18,13 +18,32 @@
    [:price/creation-id uuid?]
    [:price/id uuid?]
    [:price/symbol Symbol] ;; Symbol or Instrument ID?
-   [:price/date inst?]
+   [:price/time inst?]
    [:price/open float?]
    [:price/close float?]
+   [:price/previous-close float?]
    [:price/high float?]
    [:price/low float?]
    [:price/adj-close float?]
-   [:price/volume int?]])
+   [:price/volume int?]
+   [:price/change float?]])
+
+(def-model PriceDto
+  :model/price-dto
+  [:map
+   [:price-id {:optional true} uuid?]
+   [:price-creation-id uuid?]
+   [:symbol-ticker string?]
+   [:symbol-provider keyword?]
+   [:holding-id uuid?]
+   [:price-time inst?]
+   [:price-open float?]
+   [:price-close float?]
+   [:price-high float?]
+   [:price-low float?]
+   [:price-previous-close float?]
+   [:price-volume int?]
+   [:price-change float?]])
 
 (comment
   (letfn [(get-model-members-of [schema member-k]

@@ -87,20 +87,32 @@
                                              (filter #(some #{%} uids)))))
                 qte-price-usrs @*quote-price-users]
             (doseq [acc-id qte-price-usrs
-                    :let   [api-token (-> acc-id
-                                          fn-get-account
-                                          :account/subscriptions
-                                          :subscription/eod-historical-data
-                                          :api-token)
-                            tickers   (->> acc-id
-                                           fn-repo-get-holdings
-                                           (map :eod-historical-data))]]
-              (chsk-send! acc-id
-                          [:price/quote
-                           {:what-is-this "An async broadcast pushed from server"
-                            :how-often    "Every 10 seconds"
-                            :to-whom      uid
-                            :i            i}]))))]
+                    :let   [api-token     (-> acc-id
+                                              fn-get-account
+                                              :account/subscriptions
+                                              :subscription/eod-historical-data
+                                              :api-token)
+                            tickers       (->> acc-id
+                                               fn-repo-get-holdings
+                                               (map (fn [{:keys [holding-id eod-historical-data]}]
+                                                      [holding-id eod-historical-data])))
+                            price-results (fn-quote-live-prices api-token tickers {:batch-size 2})]]
+              (loop [results        price-results
+                     recheck-reslts []]
+                (let [*curnt-reslt    (first results)
+                      curnt-realized? (realized? *curnt-reslt)
+                      recheck-reslts  (if curnt-realized?
+                                        recheck-results
+                                        (conj checked-results *curnt-result))]
+                  (when curnt-realized?
+                    (chsk-send! acc-id [:price/quote @*curnt-reslt]))
+
+                  (cond
+                    (= (count rslts) 1) (recur rslts (first rslts)))
+                  (when (not (empty? rslts))
+                    ))
+                )
+              )))]
 
     (go-loop [i 0]
       (<! (async/timeout quote-interval))
@@ -118,14 +130,15 @@
                    #uuid "ec0760d6-fe13-4336-b978-6df86ab4a43b" ;; Disconnected
                    #uuid "bf0bb6db-7589-4e4d-aa82-a84608263dab"
                    #uuid "6a23dee4-8a0f-4416-bb7a-3fa5e8b22590"}]
-    (reset! *quote-price-users qp-users)
-    (swap! *quote-price-users
-           (fn [usrs]
-             (->> usrs
-                  (filter #(some #{%} uids)))))
-    @*quote-price-users)
-  
-  
+    
+    ;; (reset! *quote-price-users qp-users)
+    ;; (swap! *quote-price-users
+    ;;        (fn [usrs]
+    ;;          (->> usrs
+    ;;               (filter #(some #{%} uids)))))
+    ;; @*quote-price-users
+
+    )
 
   )
 
