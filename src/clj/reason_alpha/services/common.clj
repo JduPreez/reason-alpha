@@ -17,15 +17,15 @@
 (defn delete-msg-fn
   [{:keys [fn-repo-delete! model-type fn-get-ctx response-msg-event]}]
   (fn [ids]
-    (let [{:keys [send-message]} (fn-get-ctx)]
+    (let [{:keys [send-msg->current-user]} (fn-get-ctx)]
       (try
-          (send-message
+          (send-msg->current-user
            [response-msg-event {:result (fn-repo-delete! ids)
                                 :type   :success}])
         (catch Exception e
           (let [err-msg (str "Error deleting " model-type)]
             (errorf e err-msg)
-            (send-message
+            (send-msg->current-user
              [response-msg-event {:error       (ex-data e)
                                   :description (str err-msg ": " (ex-message e))
                                   :type        :error}])))))))
@@ -43,9 +43,9 @@
                                    (->> (fn-get-account)
                                         :account/id
                                         (assoc entity acc-id-k)))
-          {:keys [send-message]} (fn-get-ctx)]
+          {:keys [send-msg->current-user]} (fn-get-ctx)]
       (try
-        (send-message
+        (send-msg->current-user
          [response-msg-event
           {:result (-> ent
                        fn-repo-save!
@@ -54,7 +54,7 @@
         (catch Exception e
           (let [err-msg "Error saving Instrument"]
             (errorf e err-msg)
-            (send-message
+            (send-msg->current-user
              [response-msg-event
               {:error       (ex-data e)
                :description (str err-msg ": " (ex-message e))
@@ -64,18 +64,18 @@
   [{:keys [fn-repo-getn fn-get-account fn-get-ctx response-msg-event]}]
   (fn [_]
     (let [{acc-id :account/id}   (fn-get-account)
-          {:keys [send-message]} (fn-get-ctx)
+          {:keys [send-msg->current-user]} (fn-get-ctx)
           ents                   (fn-repo-getn acc-id)]
       (clojure.pprint/pprint {::getn-msg-fn [response-msg-event ents]})
-      (send-message
+      (send-msg->current-user
        [response-msg-event {:result ents
                             :type   :success}]))))
 
 (defn get1-msg-fn
   [{:keys [fn-repo-get1 fn-get-ctx response-msg-event]}]
   (fn [id]
-    (let [{:keys [send-message]} (fn-get-ctx)
+    (let [{:keys [send-msg->current-user]} (fn-get-ctx)
           entity                 (fn-repo-get1 id)]
-      (send-message
+      (send-msg->current-user
        [response-msg-event {:result entity
                             :type   :success}]))))

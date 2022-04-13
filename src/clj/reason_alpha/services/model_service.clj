@@ -3,11 +3,11 @@
             [reason-alpha.model.core :as mdl]))
 
 (defn getn [fn-get-ctx model-ks]
-  (let [{:keys [send-message]} (fn-get-ctx)
-        models                 (mdl/get-defs model-ks)
-        malli-edn              (medn/write-string [:schema {:registry models}
-                                                   (first model-ks)])]
-    (send-message
+  (let [{:keys [send-msg->current-user]} (fn-get-ctx)
+        models                           (mdl/get-defs model-ks)
+        malli-edn                        (medn/write-string [:schema {:registry models}
+                                                             (first model-ks)])]
+    (send-msg->current-user
      [:model.query/getn-result {:result malli-edn
                                 :type   :success}])))
 

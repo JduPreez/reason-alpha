@@ -103,9 +103,9 @@
       ring.middleware.session/wrap-session
       (wrap-cors allowed-origins)))
 
-(defonce broadcast-enabled?_ (atom true))
+#_(defonce broadcast-enabled?_ (atom true))
 
-(defn start-example-broadcaster!
+#_(defn start-example-broadcaster!
   "As an example of server>user async pushes, setup a loop to broadcast an
   event to all connected users every 10 seconds"
   []
@@ -144,9 +144,10 @@
         data    (or ?data {})]
       ;;future
         (if fun
-          (binding [common/*context* {:*connected-users connected-uids
-                                      :user-account     account
-                                      :send-message     #(chsk-send! uid %)}]
+          (binding [common/*context* {:*connected-users       connected-uids
+                                      :user-account           account
+                                      :send-msg->current-user #(chsk-send! uid %)
+                                      :send-msg               #(chsk-send! %1 %2)}]
             (let [_      (debugf "Event handler found: %s" id) ;; Log before calling `fun` might throw exception
                   result (fun data)]
               (when ?reply-fn
@@ -173,7 +174,7 @@
 ;;;; Init stuff
 (defonce *web-server (atom nil)) ; (fn stop [])
 (defn stop-web-server! [] (when-let [stop-fn @*web-server] (stop-fn)))
-(defn start-web-server! [{:keys [port] :as conf}]
+(defn start-web-server! [{:keys [port broadcasters] :as conf}]
   (stop-web-server!)
   (let [port         (or port 0)              ; 0 => Choose any available port
         ring-handler (main-ring-handler conf) #_ (var main-ring-handler)
@@ -188,6 +189,9 @@
     (infof "Web server is running at `%s`" uri)
     (reset! *web-server stop-fn)
     *web-server))
+
+(defn start-broadcasting [fn-broadcasters]
+                   0)
 
 (defn stop!  []
   (stop-router!)

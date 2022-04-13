@@ -84,3 +84,32 @@
 (defn str->bool [s]
   (if (= s "true") true
       false))
+
+#?(:clj
+   (defn do-if-realized [init-results fn-do]
+     (loop [results        init-results
+            recheck-reslts []]
+
+       (println results)
+       (println recheck-reslts)
+       (println)
+
+       (when (or (seq results)
+                 (seq recheck-reslts))
+
+         (let [[results
+                recheck-reslts] (if (and (empty? results)
+                                         (seq recheck-reslts))
+                                  [recheck-reslts []]
+                                  [results recheck-reslts])
+               *current-res     (first results)
+               cur-realized?    (realized? *current-res)
+               results          (remove #(= *current-res %) results)
+               recheck-reslts   (remove #(= *current-res %) recheck-reslts)
+               recheck-reslts   (if cur-realized?
+                                  recheck-reslts
+                                  (conj recheck-reslts *current-res))]
+           (when cur-realized?
+             (fn-do @*current-res))
+
+           (recur results recheck-reslts))))))

@@ -35,9 +35,9 @@
                                  (->> (fn-get-account)
                                       :account/id
                                       (assoc instrument :holding/account-id)))
-        {:keys [send-message]} (fn-get-ctx)]
+        {:keys [send-msg->current-user]} (fn-get-ctx)]
     (try
-      (send-message
+      (send-msg->current-user
        [:holding.command/save!-result
         {:result (-> instr
                      fn-repo-save!
@@ -47,24 +47,24 @@
       (catch Exception e
         (let [err-msg "Error saving Instrument"]
           (errorf e err-msg)
-          (send-message
+          (send-msg->current-user
            [:holding.command/save-holding!-result
             {:error       (ex-data e)
              :description (str err-msg ": " (ex-message e))
              :type        :error}]))))))
 
 (defn get-holding [fn-repo-get1 fn-get-ctx {:keys [instrument-id]}]
-  (let [{:keys [send-message]} (fn-get-ctx)
+  (let [{:keys [send-msg->current-user]} (fn-get-ctx)
         instr                  (fn-repo-get1 instrument-id)]
-    (send-message
+    (send-msg->current-user
      [:holding.query/get-holding-result {:result instr
                                          :type   :success}])))
 
 (defn get-holdings [fn-repo-getn fn-get-account fn-get-ctx _args]
   (let [{acc-id :account/id}   (fn-get-account)
-        {:keys [send-message]} (fn-get-ctx)
+        {:keys [send-msg->current-user]} (fn-get-ctx)
         instrs                 (fn-repo-getn acc-id)]
-    (send-message
+    (send-msg->current-user
      [:holding.query/get-holdings-result {:result instrs
                                           :type   :success}])))
 
@@ -73,8 +73,9 @@
 (def *quote-price-users (atom #{}))
 
 (defn- broadcast-prices [fn-repo-get-holdings fn-get-account fn-get-ctx fn-quote-live-prices]
-  (let [{:keys [*connected-users]} (fn-get-ctx)
-        quote-interval             (* 60000 1 #_price-quote-interval)
+  (let [{:keys [*connected-users
+                send-msg->current-user]} (fn-get-ctx)
+        quote-interval                   (* 2000 1 #_price-quote-interval)
         broadcast!
         (fn [i]
           (let [uids (:any @*connected-uids)
@@ -87,36 +88,22 @@
                                              (filter #(some #{%} uids)))))
                 qte-price-usrs @*quote-price-users]
             (doseq [acc-id qte-price-usrs
-                    :let   [api-token     (-> acc-id
-                                              fn-get-account
-                                              :account/subscriptions
-                                              :subscription/eod-historical-data
-                                              :api-token)
-                            tickers       (->> acc-id
-                                               fn-repo-get-holdings
-                                               (map (fn [{:keys [holding-id eod-historical-data]}]
-                                                      [holding-id eod-historical-data])))
-                            price-results (fn-quote-live-prices api-token tickers {:batch-size 2})]]
-              (loop [results        price-results
-                     recheck-reslts []]
-                (let [*curnt-reslt    (first results)
-                      curnt-realized? (realized? *curnt-reslt)
-                      recheck-reslts  (if curnt-realized?
-                                        recheck-results
-                                        (conj checked-results *curnt-result))]
-                  (when curnt-realized?
-                    (chsk-send! acc-id [:price/quote @*curnt-reslt]))
-
-                  (cond
-                    (= (count rslts) 1) (recur rslts (first rslts)))
-                  (when (not (empty? rslts))
-                    ))
-                )
-              )))]
+                    :let   [api-token           (-> acc-id
+                                                    fn-get-account
+                                                    :account/subscriptions
+                                                    :subscription/eod-historical-data
+                                                    :api-token)
+                            tickers             (->> acc-id
+                                                     fn-repo-get-holdings
+                                                     (map (fn [{:keys [holding-id eod-historical-data]}]
+                                                            [holding-id eod-historical-data])))
+                            price-results       (fn-quote-live-prices api-token tickers {:batch-size 2})
+                            fn-send-price-quote #(send-msg acc-id [:price/quote %])]]
+              (utils/do-if-realized price-results fn-send-price-quote))))]
 
     (go-loop [i 0]
       (<! (async/timeout quote-interval))
-      (when @broadcast-enabled?_ (broadcast! i))
+      (broadcast! i)
       (recur (inc i)))))
 
 (comment
@@ -145,7 +132,7 @@
 (defn get-positions
   [{:keys [fn-repo-getn fn-get-ctx response-msg-event]}]
   (fn [_]
-    (let [{send-msg             :send-message
+    (let [{send-msg             :send-msg->current-user
            {acc-id :account/id} :user-account} (fn-get-ctx)
           ents                                 (fn-repo-getn acc-id)]
       (clojure.pprint/pprint {::getn-msg-fn [response-msg-event ents]})

@@ -3,17 +3,18 @@
             [tick.core :as tick]))
 
 (defn quote-live-prices
-  [api-token tickers & [{:keys [batch-size]
-                         :or   {batch-size 15}}]]
+  [_api-token tickers & [{:keys [batch-size job-time-sec]
+                          :or   {batch-size   15
+                                 job-time-sec 2}}]]
   (let [parts     (if (< (count tickers) batch-size)
                     [tickers]
-                    (partition batch-size tickers))
-        tkr-parts (map (fn [p] [p (promise)]) parts)
-        results   (map #(second %) tkr-parts)]
+                    (vec (partition batch-size tickers)))
+        tkr-parts (mapv (fn [p] [p (promise)]) parts)
+        results   (mapv #(second %) tkr-parts)]
     (doall
      (for [[tkrs *reslt] tkr-parts]
        (future
-         (Thread/sleep 2000) ;; Wait 2 seconds
+         (Thread/sleep (* job-time-sec 1000)) ;; Wait X seconds
          (let [prices (for [[hid t] tkrs]
                         {:price-id             (utils/new-uuid)
                          :price-creation-id    (utils/new-uuid)
