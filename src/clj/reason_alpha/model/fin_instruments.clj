@@ -10,7 +10,7 @@
     [:enum {:enum/titles {:eod-historical-data "EOD Historical Data"
                           :saxo-dma            "Saxo/DMA"
                           :easy-equities       "Easy Equities"}}
-                         :yahoo-finance :saxo-dma :easy-equities]]])
+                         :eod-historical-data :saxo-dma :easy-equities]]])
 
 (def-model Price
   :model/price

@@ -15,10 +15,11 @@
   [db instr]
   (data.model/save! db instr))
 
-(defn getn [db account-id]
+(defn getn [db {:keys [account-id role]}]
   (->> {:spec '{:find  [(pull e [*])]
                 :where [[e :holding/account-id account-id]]
                 :in    [account-id]}
+        :role (or role :member)
         :args [account-id]}
        (data.model/query db)
        (mapping/command-ents->query-dtos portfolio-management/HoldingDto)))

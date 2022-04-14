@@ -1,5 +1,6 @@
 (ns reason-alpha.services.holding-service
-  (:require [malli.core :as m]
+  (:require [clojure.core.async :as async  :refer (<! go-loop)]
+            [malli.core :as m]
             [outpace.config :refer [defconfig]]
             [reason-alpha.integration.eod-api-client :as eod-api-client]
             [reason-alpha.model.accounts :as accounts]
@@ -35,9 +36,9 @@
                                  (->> (fn-get-account)
                                       :account/id
                                       (assoc instrument :holding/account-id)))
-        {:keys [send-msg->current-user]} (fn-get-ctx)]
+        {:keys [send-message]} (fn-get-ctx)]
     (try
-      (send-msg->current-user
+      (send-message
        [:holding.command/save!-result
         {:result (-> instr
                      fn-repo-save!
@@ -47,39 +48,42 @@
       (catch Exception e
         (let [err-msg "Error saving Instrument"]
           (errorf e err-msg)
-          (send-msg->current-user
+          (send-message
            [:holding.command/save-holding!-result
             {:error       (ex-data e)
              :description (str err-msg ": " (ex-message e))
              :type        :error}]))))))
 
 (defn get-holding [fn-repo-get1 fn-get-ctx {:keys [instrument-id]}]
-  (let [{:keys [send-msg->current-user]} (fn-get-ctx)
+  (let [{:keys [send-message]} (fn-get-ctx)
         instr                  (fn-repo-get1 instrument-id)]
-    (send-msg->current-user
+    (send-message
      [:holding.query/get-holding-result {:result instr
                                          :type   :success}])))
 
-(defn get-holdings [fn-repo-getn fn-get-account fn-get-ctx _args]
+(def *quote-price-users (atom #{}))
+
+(defn get-holdings [fn-repo-get-holdings fn-get-account fn-get-ctx _args]
   (let [{acc-id :account/id}   (fn-get-account)
-        {:keys [send-msg->current-user]} (fn-get-ctx)
-        instrs                 (fn-repo-getn acc-id)]
-    (send-msg->current-user
-     [:holding.query/get-holdings-result {:result instrs
+        {:keys [send-message]} (fn-get-ctx)
+        holdings               (fn-repo-get-holdings
+                                {:account-id acc-id})]
+    (swap! *quote-price-users conj acc-id)
+    (send-message
+     [:holding.query/get-holdings-result {:result holdings
                                           :type   :success}])))
 
 (defconfig price-quote-interval)
 
-(def *quote-price-users (atom #{}))
-
-(defn- broadcast-prices [fn-repo-get-holdings fn-get-account fn-get-ctx fn-quote-live-prices]
-  (let [{:keys [*connected-users
-                send-msg->current-user]} (fn-get-ctx)
-        quote-interval                   (* 2000 1 #_price-quote-interval)
+(defn broadcast-prices
+  [fn-repo-get-holdings fn-repo-get-acc-by-uid
+   fn-quote-live-prices {:keys [send-message *connected-users]}]
+  (let [quote-interval (* 2000 1 #_price-quote-interval)
         broadcast!
         (fn [i]
-          (let [uids (:any @*connected-uids)
-
+          (let [uids           (:any @*connected-users)
+                ;;_              (clojure.pprint/pprint {::broadcast-prices-1 {:UIDs uids
+                ;;                                                             :QPUs @*quote-price-users}})
                 ;; First remove all users from *quote-price-users that are not
                 ;; in uids, because these users no longer have an active session
                 _              (swap! *quote-price-users
@@ -87,18 +91,24 @@
                                         (->> usrs
                                              (filter #(some #{%} uids)))))
                 qte-price-usrs @*quote-price-users]
+            ;;(clojure.pprint/pprint {::broadcast-prices-2 {:QPUs @*quote-price-users}})
             (doseq [acc-id qte-price-usrs
                     :let   [api-token           (-> acc-id
-                                                    fn-get-account
+                                                    fn-repo-get-acc-by-uid
                                                     :account/subscriptions
                                                     :subscription/eod-historical-data
                                                     :api-token)
-                            tickers             (->> acc-id
+                            tickers             (->> {:account-id acc-id
+                                                      :role       :system}
                                                      fn-repo-get-holdings
                                                      (map (fn [{:keys [holding-id eod-historical-data]}]
                                                             [holding-id eod-historical-data])))
+                            ;;_                   (clojure.pprint/pprint {::broadcast-prices-3 {:T tickers}})
                             price-results       (fn-quote-live-prices api-token tickers {:batch-size 2})
-                            fn-send-price-quote #(send-msg acc-id [:price/quote %])]]
+                            fn-send-price-quote (fn [prices-quote]
+                                                  ;;(clojure.pprint/pprint {::broadcast-prices-5 prices-quote})
+                                                  (send-message acc-id [:price/quote prices-quote]))]]
+              ;;(clojure.pprint/pprint {::broadcast-prices-4 {:PR price-results}})
               (utils/do-if-realized price-results fn-send-price-quote))))]
 
     (go-loop [i 0]
@@ -108,6 +118,8 @@
 
 (comment
   (utils/new-uuid)
+
+  (:lll nil)
 
   (let [uids     #{#uuid "d1f5984c-c2a0-475a-8df2-5e7ef04dc989" ;; Hasn't requested prices
                    #uuid "d3cfc2f6-d38c-4e5e-b4b1-7f906315d8e0" ;; Hasn't requested prices
@@ -130,13 +142,13 @@
   )
 
 (defn get-positions
-  [{:keys [fn-repo-getn fn-get-ctx response-msg-event]}]
+  [{:keys [fn-repo-get-holdings fn-get-ctx response-msg-event]}]
   (fn [_]
-    (let [{send-msg             :send-msg->current-user
+    (let [{send-message         :send-message
            {acc-id :account/id} :user-account} (fn-get-ctx)
-          ents                                 (fn-repo-getn acc-id)]
+          ents                                 (fn-repo-get-holdings acc-id)]
       (clojure.pprint/pprint {::getn-msg-fn [response-msg-event ents]})
-      (send-msg
+      (send-message
        [response-msg-event {:result ents
                             :type   :success}]))))
 

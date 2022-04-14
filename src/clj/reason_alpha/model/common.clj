@@ -17,10 +17,11 @@
   :model/get-context
   [:=> :cat
        [:map
-        [:send-msg :any]
-        [:send-msg->current-user :any]
+        [:send-message :any]
         [:*connected-users :any]
-        [:user-account accounts/AccountDto]]])
+        [:user-account accounts/Account]]])
+
+(m/=> get-context getContext)
 
 (defn get-context []
   *context*)

@@ -13,7 +13,7 @@
             [taoensso.sente :as sente]
             [taoensso.sente.packers.transit :as sente-transit]
             [taoensso.sente.server-adapters.http-kit :refer (get-sch-adapter)]
-            [taoensso.timbre :as timbre :refer (tracef debugf infof warnf errorf)]))
+            [taoensso.timbre :as timbre :refer (tracef debugf infof warnf errorf info)]))
 
 (defconfig allowed-origins)
 
@@ -126,6 +126,15 @@
       (when @broadcast-enabled?_ (broadcast! i))
       (recur (inc i)))))
 
+(defn start-broadcasting! [broadcasters]
+  (info "Starting broadcasters")
+  (doseq [[name fn-broadcast] broadcasters]
+    (try
+      (fn-broadcast {:send-message     chsk-send!
+                     :*connected-users connected-uids})
+      (catch Exception e
+        (errorf e "Failed to start broadcaster '%s'" name)))))
+
 (defn server-event-msg-handler
   "Wraps `-event-msg-handler` with logging, error catching, etc."
   [handlers {:as ev-msg :keys [id ?data event ?reply-fn ring-req uid]}]
@@ -144,10 +153,9 @@
         data    (or ?data {})]
       ;;future
         (if fun
-          (binding [common/*context* {:*connected-users       connected-uids
-                                      :user-account           account
-                                      :send-msg->current-user #(chsk-send! uid %)
-                                      :send-msg               #(chsk-send! %1 %2)}]
+          (binding [common/*context* {:*connected-users connected-uids
+                                      :user-account     account
+                                      :send-message     #(chsk-send! uid %)}]
             (let [_      (debugf "Event handler found: %s" id) ;; Log before calling `fun` might throw exception
                   result (fun data)]
               (when ?reply-fn
@@ -188,10 +196,10 @@
 
     (infof "Web server is running at `%s`" uri)
     (reset! *web-server stop-fn)
+    (start-broadcasting! broadcasters)
     *web-server))
 
-(defn start-broadcasting [fn-broadcasters]
-                   0)
+
 
 (defn stop!  []
   (stop-router!)
@@ -200,7 +208,4 @@
 (defn start! [{:keys [handlers]
                :as   conf}]
   (start-router! handlers)
-  (start-web-server! conf)
-  #_(let [*ws (start-web-server! 5000)]
-    (start-example-broadcaster!)
-    *ws))
+  (start-web-server! conf))

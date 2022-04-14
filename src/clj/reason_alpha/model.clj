@@ -10,6 +10,7 @@
             [reason-alpha.data.xtdb :as xtdb]
             [reason-alpha.infrastructure.auth :as auth]
             [reason-alpha.infrastructure.server :as server]
+            [reason-alpha.integration.fake-eod-api-client :as eod]
             [reason-alpha.model.accounts :as accounts]
             [reason-alpha.model.common :as common]
             [reason-alpha.services.account-service :as account-svc]
@@ -116,21 +117,29 @@
                                      :model-type         :position
                                      :fn-get-ctx         common/get-context
                                      :response-msg-event :holding.command/delete-position!-result}))}
-    :queries  {:get-holdings (as-> db d
-                               (partial holding-repo/getn d)
-                               (partial holding-svc/get-holdings d
-                                        fn-get-account
-                                        common/get-context))
-               :get-holding  (as-> db d
-                               (partial holding-repo/get1 d)
-                               (partial holding-svc/get-holding d
-                                        common/get-context))}}
+    :queries  {:get-holdings     (as-> db d
+                                   (partial holding-repo/getn d)
+                                   (partial holding-svc/get-holdings d
+                                            fn-get-account
+                                            common/get-context))
+               :get-holding      (as-> db d
+                                   (partial holding-repo/get1 d)
+                                   (partial holding-svc/get-holding d
+                                            common/get-context))
+               :broadcast-prices (as-> db d
+                                   (partial holding-repo/getn d)
+                                   (partial holding-svc/broadcast-prices d
+                                            #(account-repo/get-by-user-id db %)
+                                            eod/quote-live-prices))}}
    :model
    {:queries {:getn #(model-svc/getn common/get-context %)}}})
 
 (defmethod ig/init-key ::handlers [_ {:keys [aggregates]}]
   (pprint/pprint {::aggregates aggregates})
   (handlers aggregates))
+
+(defmethod ig/init-key ::broadcasters [_ {:keys [aggregates]}]
+  {:broadcast-prices (get-in aggregates [:holding :queries :broadcast-prices])})
 
 (defmethod ig/init-key ::server [_ conf]
   (server/start! conf))
@@ -154,15 +163,18 @@
    ::aggregates      {:db          (ig/ref ::db)
                       :account-svc (ig/ref ::account-svc)}
    ::handlers        {:aggregates (ig/ref ::aggregates)}
-   ::server          {:handlers    (ig/ref ::handlers)
-                      :account-svc (ig/ref ::account-svc)
-                      :port        5000}
+   ::broadcasters    {:aggregates (ig/ref ::aggregates)}
+   ::server          {:handlers     (ig/ref ::handlers)
+                      :account-svc  (ig/ref ::account-svc)
+                      :port         5000
+                      :broadcasters (ig/ref ::broadcasters)}
    ::instrumentation {:nss ['reason-alpha.data.model
                             'reason-alpha.data.repositories.account-repository
                             'reason-alpha.data.repositories.holding-repository
                             'reason-alpha.data.repositories.position-repository
                             'reason-alpha.data.repositories.trade-pattern-repository
                             'reason-alpha.infrastructure.auth
+                            'reason-alpha.model.common
                             'reason-alpha.services.holding-service]}})
 
 (def *system
