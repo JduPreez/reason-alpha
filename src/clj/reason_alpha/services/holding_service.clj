@@ -63,12 +63,11 @@
 
 (def *quote-price-users (atom #{}))
 
-(defn get-holdings [fn-repo-get-holdings fn-get-account fn-get-ctx _args]
+(defn get-holdings [fn-repo-get-positions fn-get-account fn-get-ctx]
   (let [{acc-id :account/id}   (fn-get-account)
         {:keys [send-message]} (fn-get-ctx)
-        holdings               (fn-repo-get-holdings
+        holdings               (fn-repo-get-positions
                                 {:account-id acc-id})]
-    (swap! *quote-price-users conj acc-id)
     (send-message
      [:holding.query/get-holdings-result {:result holdings
                                           :type   :success}])))
@@ -76,14 +75,14 @@
 (defconfig price-quote-interval)
 
 (defn broadcast-prices
-  [fn-repo-get-holdings fn-repo-get-acc-by-uid
+  [fn-repo-get-positions fn-repo-get-acc-by-uid
    fn-quote-live-prices {:keys [send-message *connected-users]}]
-  (let [quote-interval (* 2000 1 #_price-quote-interval)
+  (let [quote-interval (* 3000 price-quote-interval) ;; TODO: Change back to minutes * 60000
         broadcast!
         (fn [i]
           (let [uids           (:any @*connected-users)
-                ;;_              (clojure.pprint/pprint {::broadcast-prices-1 {:UIDs uids
-                ;;                                                             :QPUs @*quote-price-users}})
+                #_#__          (clojure.pprint/pprint {::broadcast-prices-1 {:UIDs uids
+                                                                             :QPUs @*quote-price-users}})
                 ;; First remove all users from *quote-price-users that are not
                 ;; in uids, because these users no longer have an active session
                 _              (swap! *quote-price-users
@@ -100,18 +99,20 @@
                                                     :api-token)
                             tickers             (->> {:account-id acc-id
                                                       :role       :system}
-                                                     fn-repo-get-holdings
+                                                     fn-repo-get-positions
                                                      (map (fn [{:keys [holding-id eod-historical-data]}]
                                                             [holding-id eod-historical-data])))
                             ;;_                   (clojure.pprint/pprint {::broadcast-prices-3 {:T tickers}})
                             price-results       (fn-quote-live-prices api-token tickers {:batch-size 2})
-                            fn-send-price-quote (fn [prices-quote]
+                            fn-send-price-quote (fn [price-quotes]
                                                   ;;(clojure.pprint/pprint {::broadcast-prices-5 prices-quote})
-                                                  (send-message acc-id [:price/quote prices-quote]))]]
+                                                  (send-message acc-id [:price/quotes price-quotes]))]]
               ;;(clojure.pprint/pprint {::broadcast-prices-4 {:PR price-results}})
-              (utils/do-if-realized price-results fn-send-price-quote))))]
+              (doall
+               (pmap #(fn-send-price-quote (deref %)) price-results)))))]
 
     (go-loop [i 0]
+      ;;(println "Broadcast prices " i)
       (<! (async/timeout quote-interval))
       (broadcast! i)
       (recur (inc i)))))
@@ -142,15 +143,17 @@
   )
 
 (defn get-positions
-  [{:keys [fn-repo-get-holdings fn-get-ctx response-msg-event]}]
-  (fn [_]
-    (let [{send-message         :send-message
-           {acc-id :account/id} :user-account} (fn-get-ctx)
-          ents                                 (fn-repo-get-holdings acc-id)]
-      (clojure.pprint/pprint {::getn-msg-fn [response-msg-event ents]})
+  [fn-repo-get-positions fn-get-ctx]
+  (let [{send-message         :send-message
+         {acc-id :account/id} :user-account} (fn-get-ctx)
+        ents                                 (->> acc-id
+                                                  fn-repo-get-positions
+                                                  ;; For now all prices must be live
+                                                  (map #(assoc % :close-estimated? true)))]
+      (swap! *quote-price-users conj acc-id)
       (send-message
-       [response-msg-event {:result ents
-                            :type   :success}]))))
+       [:position.query/get-positions-result {:result ents
+                                              :type   :success}])))
 
 #_(m/=> save! [:=>
              [:cat

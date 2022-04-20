@@ -1,5 +1,6 @@
 (ns reason-alpha.events.positions
-  (:require [day8.re-frame.tracing :refer-macros [fn-traced defn-traced]]
+  (:require [clojure.set :as set]
+            [day8.re-frame.tracing :refer-macros [fn-traced defn-traced]]
             [re-frame.core :as rf]
             [reason-alpha.data :as data]
             [reason-alpha.model.mapping :as mapping]
@@ -18,7 +19,6 @@
 (rf/reg-fx
  :position.query/get-positions
  (fn [_]
-   (cljs.pprint/pprint :position.query/get-positions)
    (api-client/chsk-send! [:position.query/get-positions])))
 
 (rf/reg-event-db
@@ -34,7 +34,6 @@
 (rf/reg-fx
  :position.query/get-position
  (fn [pos-id]
-   (cljs.pprint/pprint {:position.query/get1 pos-id})
    (api-client/chsk-send! [:position.query/get1 pos-id])))
 
 (rf/reg-event-db
@@ -104,3 +103,43 @@
  (fn [db]
    (let [del-ids (data/get-selected-ids :position db)]
      (api-client/chsk-send! [:holding.command/delete-position! del-ids]))))
+
+(rf/reg-event-db
+ :price/quotes
+ (fn [db [evt result]]
+   (let [prices    (into {} (map (fn [{:keys [holding-id price-close]}]
+                                   [holding-id price-close]) result))
+         positions (->> data/positions
+                        (get-in db)
+                        (map (fn [{[price-hid _] :holding
+                                   cest?         :close-estimated?
+                                   :as           pos}]
+                               (if-let [price-close (and cest?
+                                                         (get prices price-hid))]
+                                 (assoc pos :close-price price-close)
+                                 pos))))]
+     (cljs.pprint/pprint {:price/quotes {:PRICES    prices
+                                         :POSITIONS positions}})
+     (assoc-in db data/positions positions))))
+
+(comment
+  (fn [{:keys [holding-id price-close]}]
+    (if (= holding-id price-hid)
+      
+      pos))
+
+  (into {} (map (fn [{:keys [holding-id price-close]}]
+                  [holding-id price-close]) [{:holding-id  1
+                                              :price-close 1.1}
+                                             {:holding-id  2
+                                              :price-close 2.2}
+                                             {:holding-id  3
+                                              :price-close 3.3}]))
+
+  (and true
+       787.98)
+
+  (merge {:ghgh 0 :bbnvb 9} {})
+
+
+  )

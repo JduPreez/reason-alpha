@@ -76,11 +76,8 @@
    :position
    {:queries {:get-positions (as-> db d
                                (partial position-repo/getn d)
-                               (svc.common/getn-msg-fn
-                                {:fn-repo-getn       d
-                                 :fn-get-account     fn-get-account
-                                 :fn-get-ctx         common/get-context
-                                 :response-msg-event :position.query/get-position-result}))
+                               (partial holding-svc/get-positions d
+                                        common/get-context))
               :get-position  (as-> db d
                                (partial position-repo/get1 d)
                                (svc.common/get1-msg-fn

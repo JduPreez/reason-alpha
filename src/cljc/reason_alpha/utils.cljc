@@ -87,11 +87,11 @@
 
 #?(:clj
    (defn do-if-realized [init-results fn-do]
-     (doall
-      (pmap #(fn-do (deref %)) init-results))
      #_(doall
-        (loop [results        init-results
-               recheck-reslts []]
+      (pmap #(fn-do (deref %)) init-results))
+     (doall
+      (loop [results        init-results
+             recheck-reslts []]
 
         (println results)
         (println recheck-reslts)

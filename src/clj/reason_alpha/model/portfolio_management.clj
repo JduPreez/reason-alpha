@@ -88,7 +88,6 @@
                 :command-path [:position/open-trade-transaction
                                :trade-transaction/date]}
     inst?]
-   #_[:symbols {:optional true} string?]
    [:open-price {:title        "Open"
                  :command-path [:position/open-trade-transaction
                                 :trade-transaction/price]}
@@ -98,6 +97,9 @@
                   :command-path [:position/close-trade-transaction
                                  :trade-transaction/price]}
     float?]
+   [:close-estimated? {:optional     true
+                       :command-path [:position/close-trade-transaction
+                                      :trade-transaction/estimated?]} boolean?]
    [:trade-pattern {:title        "Trade Pattern"
                     :optional     true
                     :ref          :trade-pattern

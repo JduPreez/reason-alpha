@@ -6,7 +6,7 @@
             [reason-alpha.model.portfolio-management :as portfolio-management]
             [taoensso.timbre :as timbre :refer (errorf)]))
 
-(defn getn [fn-repo-getn fn-get-account _args]
+(defn getn [fn-repo-getn fn-get-account]
   (let [{acc-id :account/id} (fn-get-account)
         tpatterns            (fn-repo-getn acc-id)]
     {:result tpatterns

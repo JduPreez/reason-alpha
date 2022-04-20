@@ -149,15 +149,19 @@
   (let [fun     (get handlers id)
         account (-> ring-req
                     auth/account
-                    (assoc :account/id uid))
-        data    (or ?data {})]
+                    (assoc :account/id uid))]
       ;;future
         (if fun
           (binding [common/*context* {:*connected-users connected-uids
                                       :user-account     account
                                       :send-message     #(chsk-send! uid %)}]
-            (let [_      (debugf "Event handler found: %s" id) ;; Log before calling `fun` might throw exception
-                  result (fun data)]
+            (let [_      (debugf "Event handler found: %s" id ) ;; Log before calling `fun` might throw exception
+                  result (if ?data
+                           (do
+                             (clojure.pprint/pprint {::server-event-msg-handler-2 ?data})
+                             (fun ?data))
+                           (fun))]
+              (clojure.pprint/pprint {::server-event-msg-handler-3 {id result}})
               (when ?reply-fn
                 (?reply-fn result))))
           (do
