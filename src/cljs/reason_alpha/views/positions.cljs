@@ -14,14 +14,17 @@
    :default-values    {}})
 
 (defn view []
-  (let [*schema (rf/subscribe [:model :model/position-dto])
-        fields  (datagrid/model->fields
-                 @*schema
-                 {:fields-opts
-                  {:holding
-                   {:menu [{:title "Edit"
-                            :view  ::views.holdings/view}]}
-                   :trade-pattern
-                   {:menu [{:title "Edit"
-                            :view  ::views.trade-patterns/view}]}}})]
+  (let [*schema    (rf/subscribe [:model :model/position-dto])
+        *ls-titles (rf/subscribe [:position/long-short-titles])
+        fields     (datagrid/model->fields
+                    @*schema
+                    {:fields-opts
+                     {:holding
+                      {:menu [{:title "Edit"
+                               :view  ::views.holdings/view}]}
+                      :trade-pattern
+                      {:menu [{:title "Edit"
+                               :view  ::views.trade-patterns/view}]}
+                      :long-short
+                      {:enum-titles @*ls-titles}}})]
     [datagrid/view fields options]))

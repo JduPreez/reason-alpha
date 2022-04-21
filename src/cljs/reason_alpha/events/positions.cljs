@@ -118,8 +118,6 @@
                                                          (get prices price-hid))]
                                  (assoc pos :close-price price-close)
                                  pos))))]
-     (cljs.pprint/pprint {:price/quotes {:PRICES    prices
-                                         :POSITIONS positions}})
      (assoc-in db data/positions positions))))
 
 (comment

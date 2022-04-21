@@ -15,22 +15,23 @@
      (for [[tkrs *reslt] tkr-parts]
        (future
          (Thread/sleep (* job-time-sec 1000)) ;; Wait X seconds
-         (let [prices (for [[hid t] tkrs]
+         (let [prices (for [[hid t] tkrs
+                            :let    [price-change (if (even? (rand-int 100))
+                                                    (rand 100)
+                                                    (* -1 (rand 100)))]]
                         {:price-id             (utils/new-uuid)
                          :price-creation-id    (utils/new-uuid)
                          :symbol-ticker        t
                          :symbol-provider      :eod-historical-data
                          :holding-id           hid
                          :price-time           (tick/now)
-                         :price-open           (rand 100)
-                         :price-close          (rand 100)
-                         :price-high           (rand 100)
-                         :price-low            (rand 100)
-                         :price-previous-close (rand 100)
+                         :price-open           (utils/round (rand 100))
+                         :price-close          (utils/round (rand 100))
+                         :price-high           (utils/round (rand 100))
+                         :price-low            (utils/round (rand 100))
+                         :price-previous-close (utils/round (rand 100))
                          :price-volume         (rand-int 1000000)
-                         :price-change         (if (even? (rand-int 100))
-                                                 (rand 100)
-                                                 (* -1 (rand 100)))})]
+                         :price-change         (utils/round price-change)})]
            (deliver *reslt prices)))))
     results))
 
@@ -52,5 +53,8 @@
      (for [*r results]
        @*r)))
 
+  (let [f          (rand 100)
+        dec-places 2]
+    )
 
   )

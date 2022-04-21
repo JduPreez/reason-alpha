@@ -58,7 +58,8 @@
 (defmethod edit-cell :select
   [id field pk]
   (let [*r            (rf/subscribe [:datagrid/edited-record-by-pk id pk])
-        *choices      (rf/subscribe (:data-subscription field))
+        *choices      (or (rf/subscribe (:data-subscription field))
+                          (reagent/atom []))
         ctype         (-> @*choices first :id choice-type)
         *selected-val (reagent/atom (->> field
                                          :name

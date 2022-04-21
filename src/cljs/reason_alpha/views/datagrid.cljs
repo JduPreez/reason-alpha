@@ -96,6 +96,9 @@
            (not ref))
       , nil
 
+      (str/blank? title)
+      , nil
+
       (and ref-ns
            ref)
       , (merge

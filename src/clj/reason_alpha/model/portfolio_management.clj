@@ -40,11 +40,11 @@
    [:trade-transaction/id {:optional true} uuid?]
    [:trade-transaction/type [:enum :buy :sell :dividend :reinvest-divi
                              :corp-action :fee :tax :exchange-fee :stamp-duty]]
-   [:trade-transaction/date inst?]
+   [:trade-transaction/date {:optional true} inst?]
    [:trade-transaction/quantity float?]
    [:trade-transaction/price float?]
    [:trade-transaction/fee-of-transaction-id {:optional true} uuid?]
-   [:trade-transaction/instrument-id uuid?]
+   [:trade-transaction/holding-id uuid?]
    [:trade-transaction/estimated? boolean?]])
 
 ;; We have to define entity schemas like this because function schemas
@@ -61,12 +61,17 @@
    [:position/creation-id uuid?]
    [:position/id {:optional true} uuid?]
    [:position/status [:enum :open :closed]]
-   [:position/open-trade-transaction TradeTransaction]
-   [:position/close-trade-transaction {:optional true} TradeTransaction]
-   [:position/dividend-trade-transactions {:optional true} [:sequential TradeTransaction]]
+   [:position/open TradeTransaction]
+   [:position/close {:optional true} TradeTransaction]
+   [:position/dividends {:optional true} [:sequential TradeTransaction]]
    [:position/holding-id {:optional true} uuid?]
    [:position/account-id uuid?]
-   [:position/trade-pattern-id {:optional true} uuid?]])
+   [:position/trade-pattern-id {:optional true} uuid?]
+   [:position/long-short
+    [:enum {:enum/titles {:long  "Long"
+                          :short "Short (Hedge)"}} :long :short]]
+   [:position/stop {:optional true} float?]
+   [:position/holding-position-id {:optional true} uuid?]])
 
 (def-model PositionDto
   :model/position-dto
@@ -81,32 +86,46 @@
                              [:holding/instrument-name]]}
     [:tuple uuid? string?]]
    [:quantity {:title        "Quantity"
-               :command-path [:position/open-trade-transaction
+               :command-path [:position/open
                               :trade-transaction/quantity]}
     float?]
+   [:long-short {:title        "Long/Short (Hedge)"
+                 :ref          :position/long-short
+                 :command-path [[:position/long-short]
+                                [:position/long-short-name]]}
+    [:tuple keyword? string?]]
    [:open-time {:title        "Open Time"
-                :command-path [:position/open-trade-transaction
+                :command-path [:position/open
                                :trade-transaction/date]}
     inst?]
    [:open-price {:title        "Open"
-                 :command-path [:position/open-trade-transaction
+                 :command-path [:position/open
                                 :trade-transaction/price]}
     float?]
    [:close-price {:title        "Close"
                   :optional     true
-                  :command-path [:position/close-trade-transaction
+                  :command-path [:position/close
                                  :trade-transaction/price]}
     float?]
    [:close-estimated? {:optional     true
-                       :command-path [:position/close-trade-transaction
-                                      :trade-transaction/estimated?]} boolean?]
+                       :command-path [:position/close
+                                      :trade-transaction/estimated?]}
+    boolean?]
+   [:stop {:optional     true
+           :title        "Stop"
+           :command-path [:position/stop]}
+    float?]
    [:trade-pattern {:title        "Trade Pattern"
                     :optional     true
                     :ref          :trade-pattern
                     :command-path [[:position/trade-pattern-id]
                                    [:trade-pattern/name]]}
     [:tuple uuid? string?]]
-   #_[:holding-position-id {:optional true} string?]])
+   [:holding-position-id {:optional     true
+                          :ref          :position/holding-position
+                          :command-path [[:position/holding-position-id]
+                                         [:position/holding-position-name]]}
+    [:tuple uuid? string?]]])
 
 (def-model Holding
   :model/holding
@@ -116,16 +135,16 @@
    [:holding/instrument-name [:string {:min 1}]]
    [:holding/symbols {:optional true} [:sequential fin-instruments/Symbol]]
    [:holding/instrument-type [:enum
-                              {:enum/titles {:share    "Share"
-                                             :etf      "ETF"
-                                             :currency "Currency"
-                                             :crypto   "Crypto"}}
+                              {:enum/titles {:share  "Share"
+                                             :etf    "ETF"
+                                             :crypto "Crypto"}}
                       :share :etf :currency :crypto]]
-   [:holding/currency-instrument-id uuid?]
+   [:holding/currency fin-instruments/Currency]
    [:holding/prices {:optional true} [:sequential fin-instruments/Price]]
    [:holding/holding-position {:optional true} Position]
    [:holding/positions {:optional true} [:sequential Position]]
-   [:holding/account-id {:optional true} uuid?]])
+   [:holding/account-id {:optional true} uuid?]
+   [:holding/target-allocation {:optional true} float?]])
 
 (let [{{ptitles :enum/titles} :properties
        providers              :members} (mutils/get-model-members-of
@@ -149,7 +168,11 @@
        uuid?]
       [:instrument-name {:title        "Instrument"
                          :optional     true
-                         :command-path [:holding/instrument-name]} string?]]
+                         :command-path [:holding/instrument-name]} string?]
+      [:currency {:title        "Currency"
+                  :command-path [[:holding/currency]
+                                 [:holding/currency-name]]}
+       [:tuple keyword? string?]]]
      cat
      [symbols-schema
       [[:instrument-type {:title        "Type"

@@ -3,11 +3,13 @@
                     [clojure.java.io :as io]
                     [clojure.string :as str]
                     [taoensso.timbre :as timbre :refer-macros (tracef debugf infof warnf errorf)])
+
      :cljs (:require [clojure.string :as str]
                      [cljs-uuid-utils.core :as uuid]
                      [goog.string :as gstring]
                      [goog.string.format]
-                     [taoensso.timbre :as timbre :refer-macros (infof warnf errorf)])))
+                     [taoensso.timbre :as timbre :refer-macros (infof warnf errorf)]))
+  #?(:clj (:import [java.math BigDecimal])))
 
 (defn maybe->uuid [v]
   #?(:clj (try
@@ -86,33 +88,9 @@
       false))
 
 #?(:clj
-   (defn do-if-realized [init-results fn-do]
-     #_(doall
-      (pmap #(fn-do (deref %)) init-results))
-     (doall
-      (loop [results        init-results
-             recheck-reslts []]
-
-        (println results)
-        (println recheck-reslts)
-        (println)
-
-        (when (or (seq results)
-                  (seq recheck-reslts))
-
-          (let [[results
-                 recheck-reslts] (if (and (empty? results)
-                                          (seq recheck-reslts))
-                                   [recheck-reslts []]
-                                   [results recheck-reslts])
-                *current-res     (first results)
-                cur-realized?    (realized? *current-res)
-                results          (remove #(= *current-res %) results)
-                recheck-reslts   (remove #(= *current-res %) recheck-reslts)
-                recheck-reslts   (if cur-realized?
-                                   recheck-reslts
-                                   (conj recheck-reslts *current-res))]
-            (when cur-realized?
-              (fn-do @*current-res))
-
-            (recur results recheck-reslts)))))))
+   (defn round [number & [dec-places]]
+     (let [dec-places (or dec-places 2)]
+       (-> number
+           BigDecimal/valueOf
+           (.setScale dec-places BigDecimal/ROUND_HALF_UP)
+           .floatValue))))
