@@ -1,10 +1,9 @@
 (ns reason-alpha.views.datagrid
-  (:require [ra-datagrid.views :as ra-datagrid]
+  (:require [clojure.string :as str]
+            [medley.core :as medley]
+            [ra-datagrid.views :as ra-datagrid]
             [re-frame.core :as rf]
-            [reagent.core :as r]
-            ;;[reason-alpha.views :as views]
-
-            [clojure.string :as str]))
+            [reagent.core :as r]))
 
 (def default-opts
   {;;:grid-id                    :my-grid
@@ -65,9 +64,10 @@
         [ra-datagrid/datagrid (merge default-opts opts) fields]]])))
 
 (defn model-member->field
-  [[member-nm & schema] & [{:keys [ref-suffix enum-titles]
-                            :as   field-opts}]]
-  (let [id-member            (-> member-nm
+  [[member-nm & schema] & [{:keys [enum-titles] :as field-opts}]]
+  (let [ref-suffix           "ref"
+        ref-suffix-list      (str ref-suffix "-list")
+        id-member            (-> member-nm
                                  name
                                  (str/ends-with? "-id"))
         field-def            (cond-> field-opts
@@ -87,7 +87,16 @@
         [type tuple-id-type] (some #(when (not (map? %))
                                       (if (sequential? %)
                                         %
-                                        [%])) schema)]
+                                        [%])) schema)
+        data-subscr          (if ref-ns
+                               (keyword ref-ns (str ref-nm "-" ref-suffix-list))
+                               (keyword ref-nm ref-suffix-list))
+        parent-subscr        (if ref-ns
+                               (keyword ref-ns (str ref-nm "-" ref-suffix))
+                               (keyword ref-nm ref-suffix))]
+    (cljs.pprint/pprint {::model-member->field {member-nm title
+                                                :IDM      id-member
+                                                :REF      ref}})
     (cond
       ;; Id members are either the current entity's `:id` or `:creation-id` fields
       ;; or they should be 'foreign keys' with a `:ref` pointing to another entity
@@ -99,20 +108,29 @@
       (str/blank? title)
       , nil
 
-      (and ref-ns
-           ref)
+      #_#_ (and ref-ns
+                ref)
       , (merge
          (cond-> {:type              :select
                   :data-subscription [(keyword ref-ns (str ref-nm "-" ref-suffix))]}
            (= tuple-id-type keyword?) (assoc :enum-titles enum-titles))
          field-def)
 
-      ref
+      (and ref
+           (not id-member))
       , (merge
          (cond-> {:type              :select
-                  :data-subscription [(keyword ref-nm ref-suffix)]}
+                  :data-subscription [data-subscr]}
            (= tuple-id-type keyword?) (assoc :enum-titles enum-titles))
          field-def)
+
+      (and ref
+           id-member)
+      , (medley/deep-merge field-def
+                           {:type              :indent-group
+                            :data-subscription [data-subscr]
+                            :indent-group
+                            {:parent-subscription parent-subscr}})
 
       (= type (-> #'float? meta :name))
       , (merge field-def {:type :number})
@@ -124,13 +142,8 @@
       :default
       , field-def)))
 
-(defn model->fields [[_ & members] & [{fields-opts :fields-opts
-                                       ref-suffix  :ref-suffix
-                                       :or         {ref-suffix "ref-list"}}]]
+(defn model->fields [[_ & members] & [{fields-opts :fields-opts}]]
   (->> members
        (mapv (fn [[membr-k & _ :as m]]
-               (let [fo (-> fields-opts
-                            (get membr-k)
-                            (assoc :ref-suffix "ref-list"))]
-                 (model-member->field m fo))))
+               (model-member->field m (get fields-opts membr-k))))
        (remove nil?)))

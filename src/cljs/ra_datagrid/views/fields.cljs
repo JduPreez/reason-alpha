@@ -2,10 +2,11 @@
   (:require [cljs-time.coerce :as coerce]
             [cljs-time.format :as fmt]
             [cljs-uuid-utils.core :as uuid]
+            [clojure.string :as str]
             [medley.core :as medley]
             [ra-datagrid.config :as conf]
             [ra-datagrid.subs :as subs :refer [default-formatter]]
-            [ra-datagrid.views :as views :refer [edit-cell]]
+            [ra-datagrid.views :as views :refer [edit-cell table-cell]]
             [re-com.core :as re-com]
             [re-com.datepicker :as datepicker]
             [re-com.dropdown :as dropdown]
@@ -117,3 +118,61 @@
                           (reset! *selected-date %)
                           (rf/dispatch [:datagrid/update-edited-record id pk
                                         (:name field) (coerce/to-date %)]))]])))
+;; Date)
+;; -----
+
+;; (Indent Group
+;; -------------
+
+(defmethod table-cell :indent-group
+  [id {child->parent-field         :name
+       {:keys [parent-subscription
+               display-name-path]} :indent-group
+       :as                         _field} record first?]
+  (let [parent-id (get record child->parent-field)
+        parent    @(rf/subscribe [parent-subscription parent-id])]
+    (get-in parent display-name-path)))
+
+(defmethod edit-cell :indent-group
+  [id {child->parent-field         :name
+       data-subscr                 :data-subscription
+       {:keys [id-path
+               display-name-path]} :indent-group
+       :as                         _field} pk]
+  (let [*r (rf/subscribe [:datagrid/edited-record-by-pk id pk])]
+    (fn [id field pk]
+      (let [id               (get-in @*r id-path)
+            parent-id        (get @*r child->parent-field)
+            records          @(rf/subscribe data-subscr)
+            eligible-parents (->> records
+                                  (remove #(let [ep-id        (get-in % id-path)
+                                                 ep-parent-id (get-in % child->parent-field)]
+                                             (or (nil? ep-id)   ;; If not saved to back-end
+                                                 (= ep-id id)   ;; If option is this record
+                                                 ep-parent-id   ;; If option is a child (has a parent)
+                                                 (some (fn [r]  ;; If record has a child somewhere
+                                                         (and id
+                                                              (= (get r child->parent-field) id)))
+                                                       records))))
+                                  (sort-by (fn [r] (get-in r display-name-path))))]
+        [:select.form-control {:value     (or parent-id "")
+                               :on-change #(let [v (as-> % v
+                                                     (.-target v)
+                                                     (.-value v)
+                                                     (if (and (string? v)
+                                                              (str/blank? v))
+                                                       nil
+                                                       v)
+                                                     (utils/maybe->uuid v))]
+                                             (rf/dispatch [:datagrid/update-edited-record id pk
+                                                           (:name field) v]))}
+         ^{:key (str child->parent-field "-option-" id "-default-option")}
+         [:option {:value ""} ""]
+         (for [ep   eligible-parents
+               :let [ep-id   (get-in ep id-path)
+                     ep-name (get-in ep display-name-path)]]
+           ^{:key (str child->parent-field "-option-" id "-" ep-id)}
+           [:option {:value ep-id} ep-name])]))))
+
+;; Indent Group)
+;; -------------

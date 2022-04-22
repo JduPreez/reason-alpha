@@ -121,11 +121,12 @@
                     :command-path [[:position/trade-pattern-id]
                                    [:trade-pattern/name]]}
     [:tuple uuid? string?]]
-   [:holding-position-id {:optional     true
+   [:holding-position-id {:title        "Holding Position"
+                          :optional     true
                           :ref          :position/holding-position
                           :command-path [[:position/holding-position-id]
                                          [:position/holding-position-name]]}
-    [:tuple uuid? string?]]])
+    uuid?]])
 
 (def-model Holding
   :model/holding

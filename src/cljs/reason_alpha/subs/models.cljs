@@ -19,5 +19,4 @@
  (fn [[_ model-k _member-k]]
    (rf/subscribe [:model model-k]))
  (fn [model [_ _model-k member-k]]
-   (cljs.pprint/pprint {:models/members-of (model.utils/get-model-members-of model member-k)})
    (model.utils/get-model-members-of model member-k)))

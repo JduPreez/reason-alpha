@@ -22,9 +22,16 @@
                      {:holding
                       {:menu [{:title "Edit"
                                :view  ::views.holdings/view}]}
+
                       :trade-pattern
                       {:menu [{:title "Edit"
                                :view  ::views.trade-patterns/view}]}
+
                       :long-short
-                      {:enum-titles @*ls-titles}}})]
+                      {:enum-titles @*ls-titles}
+
+                      :holding-position-id
+                      {:indent-group {:display-name-path [:holding 1]
+                                      :id-path           [:position-id]}}}})]
+    (cljs.pprint/pprint {::view @*schema})
     [datagrid/view fields options]))
