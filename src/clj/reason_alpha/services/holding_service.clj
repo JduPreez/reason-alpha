@@ -77,7 +77,7 @@
 (defn broadcast-prices
   [fn-repo-get-positions fn-repo-get-acc-by-uid
    fn-quote-live-prices {:keys [send-message *connected-users]}]
-  (let [quote-interval (* 3000 price-quote-interval) ;; TODO: Change back to minutes * 60000
+  (let [quote-interval (* 60000 price-quote-interval)
         broadcast!
         (fn [i]
           (let [uids           (:any @*connected-users)

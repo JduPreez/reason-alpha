@@ -22,16 +22,17 @@
    [:trade-pattern-id {:optional     true
                        :command-path [:trade-pattern/id]}
     uuid?]
-   [:trade-pattern-parent-id {:optional     true
-                              :command-path [:trade-pattern/parent-id]}
-    uuid?]
-   [:trade-pattern-name {:command-path [:trade-pattern/name]}
+   [:trade-pattern-name {:title        "Trade Pattern"
+                         :command-path [:trade-pattern/name]}
     [string? {:min 1}]]
-   [:trade-pattern-description {:optional     true
+   [:trade-pattern-description {:title        "Description"
+                                :optional     true
                                 :command-path [:trade-pattern/description]}
     [string? {:min 1}]]
-   [:trade-pattern-account-id {:optional     true
-                               :command-path [:trade-pattern/account-id]}
+   [:trade-pattern-parent-id {:title        "Sub-Pattern"
+                              :optional     true
+                              :ref          :trade-pattern
+                              :command-path [:trade-pattern/parent-id]}
     uuid?]])
 
 (def Transaction

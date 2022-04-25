@@ -31,6 +31,6 @@
                       {:enum-titles @*ls-titles}
 
                       :holding-position-id
-                      {:indent-group {:display-name-path [:holding 1]
-                                      :group-path        [:position-id]}}}})]
+                      {:indent-group {:group-path        [:position-id]
+                                      :display-name-path [:holding 1]}}}})]
     [datagrid/view fields options]))
