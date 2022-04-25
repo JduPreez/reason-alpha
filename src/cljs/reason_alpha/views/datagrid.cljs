@@ -11,7 +11,7 @@
    :id-field                   :id
    ;;:header-filters             true
    ;;:progressive-loading        true
-   :can-sort                   true
+   :can-sort                   false
    :can-edit                   true
    ;;:can-reorder                true
    :can-create                 true
@@ -94,9 +94,6 @@
         parent-subscr        (if ref-ns
                                (keyword ref-ns (str ref-nm "-" ref-suffix))
                                (keyword ref-nm ref-suffix))]
-    (cljs.pprint/pprint {::model-member->field {member-nm title
-                                                :IDM      id-member
-                                                :REF      ref}})
     (cond
       ;; Id members are either the current entity's `:id` or `:creation-id` fields
       ;; or they should be 'foreign keys' with a `:ref` pointing to another entity

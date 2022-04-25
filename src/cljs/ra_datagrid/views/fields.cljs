@@ -125,54 +125,65 @@
 ;; -------------
 
 (defmethod table-cell :indent-group
-  [id {child->parent-field         :name
-       {:keys [parent-subscription
-               display-name-path]} :indent-group
-       :as                         _field} record first?]
-  (let [parent-id (get record child->parent-field)
-        parent    @(rf/subscribe [parent-subscription parent-id])]
-    (get-in parent display-name-path)))
+  [id field record indent?]
+  (let [*options (rf/subscribe [:datagrid/options id])]
+    (fn [id field record indent?]
+      (let [{:keys [parent-subscription
+                    display-name-path]} (:indent-group field)
+            is-clickable?               (not (nil? (:on-click field)))
+            formatter                   (:formatter field)
+            fieldname                   (:name field)
+            parent-id                   (get record fieldname)
+            parent                      @(rf/subscribe [parent-subscription parent-id])
+            formatted-value             (get-in parent display-name-path)
+            align                       (if (nil? (:align field)) :text-left (:align field))]
+        [:td (cond-> {:key       fieldname
+                      :className align}
+               indent? (assoc :style {:padding-left "30px"}))
+         formatted-value]))))
 
 (defmethod edit-cell :indent-group
-  [id {child->parent-field         :name
-       data-subscr                 :data-subscription
-       {:keys [id-path
-               display-name-path]} :indent-group
-       :as                         _field} pk]
-  (let [*r (rf/subscribe [:datagrid/edited-record-by-pk id pk])]
-    (fn [id field pk]
-      (let [id               (get-in @*r id-path)
-            parent-id        (get @*r child->parent-field)
+  [grid-id {member-key                  :name
+            data-subscr                 :data-subscription
+            {:keys [group-path
+                    display-name-path]} :indent-group
+            :as                         _field} pk]
+  (let [*r (rf/subscribe [:datagrid/edited-record-by-pk grid-id pk])]
+    (fn [grid-id field pk]
+      (let [id               (get-in @*r group-path)
+            parent-id        (get @*r member-key)
             records          @(rf/subscribe data-subscr)
             eligible-parents (->> records
-                                  (remove #(let [ep-id        (get-in % id-path)
-                                                 ep-parent-id (get-in % child->parent-field)]
+                                  (remove #(let [ep-id        (get-in % group-path)
+                                                 ep-parent-id (get % member-key)]
                                              (or (nil? ep-id)   ;; If not saved to back-end
                                                  (= ep-id id)   ;; If option is this record
                                                  ep-parent-id   ;; If option is a child (has a parent)
                                                  (some (fn [r]  ;; If record has a child somewhere
                                                          (and id
-                                                              (= (get r child->parent-field) id)))
+                                                              (= (get r member-key) id)))
                                                        records))))
                                   (sort-by (fn [r] (get-in r display-name-path))))]
-        [:select.form-control {:value     (or parent-id "")
-                               :on-change #(let [v (as-> % v
-                                                     (.-target v)
-                                                     (.-value v)
-                                                     (if (and (string? v)
-                                                              (str/blank? v))
-                                                       nil
-                                                       v)
-                                                     (utils/maybe->uuid v))]
-                                             (rf/dispatch [:datagrid/update-edited-record id pk
-                                                           (:name field) v]))}
-         ^{:key (str child->parent-field "-option-" id "-default-option")}
-         [:option {:value ""} ""]
-         (for [ep   eligible-parents
-               :let [ep-id   (get-in ep id-path)
-                     ep-name (get-in ep display-name-path)]]
-           ^{:key (str child->parent-field "-option-" id "-" ep-id)}
-           [:option {:value ep-id} ep-name])]))))
+        [:td {:key       member-key
+              :className "editing"}
+         [:select.form-control {:value     (or parent-id "")
+                                :on-change #(let [v (as-> % v
+                                                      (.-target v)
+                                                      (.-value v)
+                                                      (if (and (string? v)
+                                                               (str/blank? v))
+                                                        nil
+                                                        v)
+                                                      (utils/maybe->uuid v))]
+                                              (rf/dispatch [:datagrid/update-edited-record grid-id pk
+                                                            member-key v]))}
+          ^{:key (str member-key "-option-" id "-default-option")}
+          [:option {:value ""} ""]
+          (for [ep   eligible-parents
+                :let [ep-id   (get-in ep group-path)
+                      ep-name (get-in ep display-name-path)]]
+            ^{:key (str member-key "-option-" id "-" ep-id)}
+            [:option {:value ep-id} ep-name])]]))))
 
 ;; Indent Group)
 ;; -------------

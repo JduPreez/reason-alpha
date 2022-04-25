@@ -124,8 +124,7 @@
    [:holding-position-id {:title        "Holding Position"
                           :optional     true
                           :ref          :position/holding-position
-                          :command-path [[:position/holding-position-id]
-                                         [:position/holding-position-name]]}
+                          :command-path [:position/holding-position-id]}
     uuid?]])
 
 (def-model Holding

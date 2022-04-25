@@ -54,7 +54,7 @@
    :title             "Trade Patterns"
    :data-subscription [:trade-pattern/list]
    :id-field          :trade-pattern-creation-id
-   #_#_:group-by          {:group-key  :trade-pattern-id
+   :group-by          {:group-key  :trade-pattern-id
                        :member-key :trade-pattern-parent-id}
    :create-dispatch   [:trade-pattern.command/create]
    :update-dispatch   [:trade-pattern.command/update]})

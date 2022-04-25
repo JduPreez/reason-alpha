@@ -32,6 +32,5 @@
 
                       :holding-position-id
                       {:indent-group {:display-name-path [:holding 1]
-                                      :id-path           [:position-id]}}}})]
-    (cljs.pprint/pprint {::view @*schema})
+                                      :group-path        [:position-id]}}}})]
     [datagrid/view fields options]))

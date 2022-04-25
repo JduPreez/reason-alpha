@@ -119,25 +119,3 @@
                                  (assoc pos :close-price price-close)
                                  pos))))]
      (assoc-in db data/positions positions))))
-
-(comment
-  (fn [{:keys [holding-id price-close]}]
-    (if (= holding-id price-hid)
-      
-      pos))
-
-  (into {} (map (fn [{:keys [holding-id price-close]}]
-                  [holding-id price-close]) [{:holding-id  1
-                                              :price-close 1.1}
-                                             {:holding-id  2
-                                              :price-close 2.2}
-                                             {:holding-id  3
-                                              :price-close 3.3}]))
-
-  (and true
-       787.98)
-
-  (merge {:ghgh 0 :bbnvb 9} {})
-
-
-  )

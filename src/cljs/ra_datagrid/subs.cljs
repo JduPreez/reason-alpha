@@ -176,16 +176,16 @@
  (fn [[fields records]]
    (map (partial apply-formatters fields) records)))
 
-(defn group-records [{:keys [records group-key member-key id-field]}]
-  (if group-key
+(defn group-records [{:keys [records group-path member-key id-field]}]
+  (if group-path
     (->> records
          (filter #(nil? (get % member-key)))
          (map #(assoc % :datagrid/children
                       (filter
                        (fn [r]
-                         (and (get % group-key)
+                         (and (get-in % group-path)
                               (get r member-key)
-                              (= (get % group-key) (get r member-key))))
+                              (= (get-in % group-path) (get r member-key))))
                        records))))
     ;; else
     records))
@@ -202,20 +202,24 @@
  (fn [[{{:keys [group-key member-key]} :group-by
         :keys                          [id-field show-max-num-rows]
         :as                            options} formatted-records expanded? sorting fields filters] _]
-   (let [rs (group-records {:records    formatted-records
-                            :group-key  group-key
-                            :member-key member-key
-                            :id-field   id-field})
-         rs (if (and (:key sorting)
-                     (:direction sorting))
-              (sort-records rs fields (:key sorting) (:direction sorting))
-              rs)
+   (let [group-by (some (fn [{:keys [type] :as f}]
+                          (when (= type :indent-group)
+                            f))
+                        fields)
+         rs       (group-records {:records    formatted-records
+                                  :group-path (-> group-by :indent-group :group-path)
+                                  :member-key (:name group-by)
+                                  :id-field   id-field})
+         rs       (if (and (:key sorting)
+                           (:direction sorting))
+                    (sort-records rs fields (:key sorting) (:direction sorting))
+                    rs)
          ;; Flatten records again
-         rs (->> (mapcat #(into [%] (:datagrid/children %)) rs)
-                 (map #(dissoc % :datagrid/children)))
-         rs (if (:header-filters options)
-              (filter-by-header-filters rs filters fields)
-              rs)]
+         rs       (->> (mapcat #(into [%] (:datagrid/children %)) rs)
+                       (map #(dissoc % :datagrid/children)))
+         rs       (if (:header-filters options)
+                    (filter-by-header-filters rs filters fields)
+                    rs)]
      (if (and show-max-num-rows (not expanded?))
        (take show-max-num-rows rs)
        rs))))

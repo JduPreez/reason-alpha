@@ -24,3 +24,16 @@
  :<- [:models/members-of :model/position :position/long-short]
  (fn [{{:keys [enum/titles]} :properties} _]
    titles))
+
+(rf/reg-sub
+ :position/holding-position-ref
+ :<- [:position/list]
+ (fn [positions [_ pid]]
+   (some (fn [{:keys [position-id] :as pos}]
+           (when (= position-id pid) pos))
+         positions)))
+
+(rf/reg-sub
+ :position/holding-position-ref-list
+ :<- [:position/list]
+ (fn [positions _] positions))
