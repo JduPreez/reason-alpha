@@ -2,7 +2,8 @@
   (:require [malli.instrument :as malli.instr]
             [reason-alpha.model.core :as model :refer [def-model]]
             [reason-alpha.model.fin-instruments :as fin-instruments]
-            [reason-alpha.model.utils :as mutils]))
+            [reason-alpha.model.utils :as mutils]
+            [reason-alpha.utils :as utils]))
 
 (def-model TradePattern
   :model/trade-pattern
@@ -126,7 +127,10 @@
                           :optional     true
                           :ref          :position/holding-position
                           :command-path [:position/holding-position-id]}
-    uuid?]])
+    uuid?]
+   [:stop-loss-amount {:title    "Stop Loss Amount"
+                       :optional true}
+    float?]])
 
 (def-model Holding
   :model/holding
@@ -183,6 +187,39 @@
                                          [:holding/instrument-type-name]]}
         [:tuple keyword? string?]]]])))
 
+(defn stop-loss-amount
+  ([{_long-short                       :position/long-short
+     stop                              :position/stop
+     {:keys [trade-transaction/quantity
+             trade-transaction/price]} :position/open
+     :as                               position}]
+   (-> stop
+       (- price)
+       (* quantity)
+       utils/round))
+  ([{_long-short                       :position/long-short
+     stop                              :position/stop
+     {:keys [trade-transaction/quantity
+             trade-transaction/price]} :position/open
+     :as                               position}
+    sub-positions]
+
+   ;; If the stop/quantity is set on the overall holding position,
+   ;; then assume it's manually managed & don't do a roll-up summary.
+   (let [subs-total-quantity (or quantity
+                                 (->> sub-positions
+                                      (map
+                                       #(get-in % [:position/open
+                                                   :trade-transaction/quantity]))
+                                      (reduce +)))
+         subs-total-stop     (or stop
+                                 (->> sub-positions
+                                      (map stop-loss-amount)
+                                      (reduce +)))
+         position            (-> position
+                                 (assoc :position/stop subs-total-stop)
+                                 (assoc-in [:position/open :trade-transaction/quantity] subs-total-quantity))]
+     (stop-loss-amount position))))
 
 ;; (defn position-total-return
 ;;   "Also know as the Holding Period Yield"

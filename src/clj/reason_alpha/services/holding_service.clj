@@ -8,7 +8,8 @@
             [reason-alpha.model.fin-instruments :as fin-instruments]
             [reason-alpha.model.portfolio-management :as portfolio-management]
             [reason-alpha.utils :as utils]
-            [taoensso.timbre :as timbre :refer (errorf)]))
+            [taoensso.timbre :as timbre :refer (errorf)]
+            [traversy.lens :as lens]))
 
 (m/=> save-holding! [:=>
                      [:cat
@@ -141,6 +142,47 @@
     )
 
   )
+
+(defn get-holding-positions
+  [fn-repo-get-holding-positions fn-get-ctx response-msg-event id]
+  (let [{:keys [send-message]} (fn-get-ctx)
+        positions              (fn-repo-get-holding-positions id)
+        position               (-> positions
+                                   (lens/view-single
+                                    (lens/only
+                                     #(= id
+                                         (:position/id %)))))
+        holding-pos            (-> positions
+                                   (lens/view-single
+                                    (lens/only
+                                     #(nil?
+                                       (:position/holding-position-id %)))))
+        sub-positions          (-> positions
+                                   (lens/view
+                                    (lens/only
+                                     :position/holding-position-id)))]
+    
+    (send-message
+     [response-msg-event {:result entity
+                          :type   :success}])))
+
+(comment
+  (let [id        2
+        positions [{:position/id 1}
+                   {:position/id                  2
+                    :position/holding-position-id 1}
+                   {:position/id                  3
+                    :position/holding-position-id 1}]]
+    (-> positions
+        (lens/view-single
+         (lens/only
+          #(= id
+              (:position/id %))))))
+
+
+
+  )
+
 
 (defn get-positions
   [fn-repo-get-positions fn-get-ctx]
