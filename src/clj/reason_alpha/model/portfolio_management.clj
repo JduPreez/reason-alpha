@@ -162,64 +162,138 @@
                                               :pivot        :symbol/provider
                                               :command-path [:holding/symbols 0 :symbol/ticker]}
                                            string?])]
-  (def-model HoldingDto
-    :model/holding-dto
-    (into
-     [:map
-      [:holding-id {:optional     true
-                    :command-path [:holding/id]}
-       uuid?]
-      [:holding-creation-id {:command-path [:holding/creation-id]}
-       uuid?]
-      [:instrument-name {:title        "Instrument"
-                         :optional     true
-                         :command-path [:holding/instrument-name]} string?]
-      [:currency {:title        "Currency"
-                  :command-path [[:holding/currency]
-                                 [:holding/currency-name]]}
-       [:tuple keyword? string?]]]
-     cat
-     [symbols-schema
-      [[:instrument-type {:title        "Type"
-                          :optional     true
-                          :ref          :holding/instrument-type
-                          :command-path [[:holding/instrument-type]
-                                         [:holding/instrument-type-name]]}
-        [:tuple keyword? string?]]]])))
+(def-model HoldingDto
+  :model/holding-dto
+  (into
+   [:map
+    [:holding-id {:optional     true
+                  :command-path [:holding/id]}
+     uuid?]
+    [:holding-creation-id {:command-path [:holding/creation-id]}
+     uuid?]
+    [:instrument-name {:title        "Instrument"
+                       :optional     true
+                       :command-path [:holding/instrument-name]} string?]
+    [:currency {:title        "Currency"
+                :command-path [[:holding/currency]
+                               [:holding/currency-name]]}
+     [:tuple keyword? string?]]]
+   cat
+   [symbols-schema
+    [[:instrument-type {:title        "Type"
+                        :optional     true
+                        :ref          :holding/instrument-type
+                        :command-path [[:holding/instrument-type]
+                                       [:holding/instrument-type-name]]}
+      [:tuple keyword? string?]]]])))
 
 (defn stop-loss-amount
-  ([{_long-short                       :position/long-short
-     stop                              :position/stop
-     {:keys [trade-transaction/quantity
-             trade-transaction/price]} :position/open
-     :as                               position}]
+  ([{:keys [stop open-price quantity] :as position}]
    (-> stop
-       (- price)
+       (- open-price)
        (* quantity)
-       utils/round))
-  ([{_long-short                       :position/long-short
-     stop                              :position/stop
-     {:keys [trade-transaction/quantity
-             trade-transaction/price]} :position/open
-     :as                               position}
+       utils/round
+       (as-> a (assoc position :stop-loss-amount a))))
+  ([{:keys [stop open-price quantity] :as position}
     sub-positions]
 
    ;; If the stop/quantity is set on the overall holding position,
    ;; then assume it's manually managed & don't do a roll-up summary.
-   (let [subs-total-quantity (or quantity
-                                 (->> sub-positions
-                                      (map
-                                       #(get-in % [:position/open
-                                                   :trade-transaction/quantity]))
-                                      (reduce +)))
-         subs-total-stop     (or stop
-                                 (->> sub-positions
-                                      (map stop-loss-amount)
-                                      (reduce +)))
-         position            (-> position
-                                 (assoc :position/stop subs-total-stop)
-                                 (assoc-in [:position/open :trade-transaction/quantity] subs-total-quantity))]
-     (stop-loss-amount position))))
+   (let [fn-avg-cost             (fn [quantity amount]
+                                   (when (and quantity
+                                              amount
+                                              (not= 0 quantity))
+                                     (/ amount quantity)))
+         total-quantity          (or quantity
+                                     (->> sub-positions
+                                          (map :quantity)
+                                          (remove nil?)
+                                          (reduce +)))
+         avg-cost-open           (or open-price
+                                     (->> sub-positions
+                                          (map (fn [{:keys [open-price quantity]}]
+                                                 (if (and open-price
+                                                          quantity)
+                                                   (* open-price quantity)
+                                                   0)))
+                                          (reduce +)
+                                          (fn-avg-cost total-quantity)))
+         #_#_total-stop-quantity (->> sub-positions
+                                      (reduce (fn [total {:keys [stop quantity]}]
+                                                (if stop
+                                                  (+ quantity (or total 0))
+                                                  total)) nil))
+         avg-cost-stop           (or stop
+                                     (->> sub-positions
+                                          (map (fn [{:keys [stop quantity]}]
+                                                 (* (or stop 0)
+                                                    (or quantity 0))))
+                                          (reduce +)
+                                          (fn-avg-cost total-quantity)))
+         position                (-> position
+                                     (merge {:open-price avg-cost-open
+                                             :stop       avg-cost-stop
+                                             :quantity   total-quantity})
+                                     stop-loss-amount
+                                     (merge {:open-price (utils/round avg-cost-open)
+                                             :stop       (utils/round avg-cost-stop)
+                                             :quantity   total-quantity}))]
+     position)))
+
+(comment
+
+  (let [fn-avg-cost    (fn [quantity amount]
+                         (when (and quantity
+                                    amount
+                                    (not= 0 quantity))
+                           (/ amount quantity)))
+        open-price     (rand 100)
+        holding-pos-id (utils/new-uuid)
+        holding-pos    {:position-creation-id (utils/new-uuid)
+                        :position-id          holding-pos-id
+                        :long-short           :long}
+        sub-positions  [{:position-creation-id (utils/new-uuid)
+                         :position-id          (utils/new-uuid)
+                         :holding-position-id  holding-pos-id
+                         :long-short           :long
+                         :quantity             35.0
+                         :open-price           73.77
+                         :stop                 68.5}
+                        {:position-creation-id (utils/new-uuid)
+                         :position-id          (utils/new-uuid)
+                         :holding-position-id  holding-pos-id
+                         :long-short           :long
+                         :quantity             35.0
+                         :open-price           61.04}
+                        {:position-creation-id (utils/new-uuid)
+                         :position-id          (utils/new-uuid)
+                         :holding-position-id  holding-pos-id
+                         :long-short           :long
+                         :quantity             30.0
+                         :open-price           78.25
+                         :stop                 70.0}
+                        {:position-creation-id (utils/new-uuid)
+                         :position-id          (utils/new-uuid)
+                         :holding-position-id  holding-pos-id
+                         :long-short           :long
+                         :quantity             30.0
+                         :open-price           57.84}]
+        total-quantity (->> sub-positions
+                            (map :quantity)
+                            (remove nil?)
+                            (reduce +))]
+    (stop-loss-amount holding-pos sub-positions)
+    #_(->> sub-positions
+           (reduce (fn [total {:keys [stop quantity]}]
+                   (if stop
+                     (-> quantity
+                         (* stop)
+                         (+ (or total 0)))
+                     
+                     total)) nil))
+    )
+
+  )
 
 ;; (defn position-total-return
 ;;   "Also know as the Holding Period Yield"

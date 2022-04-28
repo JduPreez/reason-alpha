@@ -161,9 +161,8 @@
                                    (lens/view
                                     (lens/only
                                      :position/holding-position-id)))]
-    
     (send-message
-     [response-msg-event {:result entity
+     [response-msg-event {:result positions
                           :type   :success}])))
 
 (comment
