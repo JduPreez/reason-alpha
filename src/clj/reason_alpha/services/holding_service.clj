@@ -62,8 +62,6 @@
      [:holding.query/get-holding-result {:result instr
                                          :type   :success}])))
 
-(def *quote-price-users (atom #{}))
-
 (defn get-holdings [fn-repo-get-positions fn-get-account fn-get-ctx]
   (let [{acc-id :account/id}   (fn-get-account)
         {:keys [send-message]} (fn-get-ctx)
@@ -73,116 +71,105 @@
      [:holding.query/get-holdings-result {:result holdings
                                           :type   :success}])))
 
+(defn- aggregate-holding-positions [positions]
+  (let [holding-pos   (-> positions
+                          (lens/view-single
+                           (lens/only
+                            #(nil?
+                              (:position/holding-position-id %)))))
+        sub-positions (-> positions
+                          (lens/view
+                           (lens/only
+                            :position/holding-position-id)))
+        holding-pos   (when holding-pos
+                        (portfolio-management/stop-loss-amount holding-pos
+                                                               sub-positions))
+        sub-positions (if (seq sub-positions)
+                        (map portfolio-management/stop-loss-amount
+                             sub-positions)
+                        [])]
+    (cond-> []
+      (seq sub-positions) (into sub-positions)
+      holding-pos         (conj holding-pos)
+      :else               [])))
+
+(defn- assoc-close-prices-fn [fn-repo-get-acc-by-uid & [{:keys [batch-size]}]]
+  (fn [account-id positions]
+    (let [api-token     (-> account-id
+                            fn-repo-get-acc-by-uid
+                            :account/subscriptions
+                            :subscription/eod-historical-data
+                            :api-token)
+          tickers       (->> positions
+                             (map (fn [{:keys [holding-id eod-historical-data]}]
+                                    [holding-id eod-historical-data]))
+                             dedupe)
+          prices        (fn-quote-live-prices api-token tickers {:batch-size (or batch-size 2)})
+          positions     (->> prices
+                             (pmap #(deref %))
+                             (mapcat identity)
+                             (mapcat (fn [{price-hid   :holding-id
+                                           price-close :price-close}]
+                                       (->> positions
+                                            (filter (fn [{:keys [holding-id]}]
+                                                      (= holding-id price-id)))
+                                            (map #(assoc % :close-price price-close))))))
+          #_#_positions (->> positions
+                             (map (fn [{:keys [holding-id] :as pos}]
+                                    (if-let [price (some #(if (= holding-id
+                                                                 (:holding-id %))
+                                                            (:price-close %))
+                                                         prices)]
+                                      (assoc pos :close-price price)
+                                      pos))))]
+      positions)))
+
+(defn get-holding-positions-fn
+  [fn-repo-get-holding-positions fn-repo-get-acc-by-uid fn-get-ctx]
+  (let [fn-assoc-close-prices (assoc-close-prices-fn fn-repo-get-acc-by-uid)]
+    (fn [id]
+      (let [{send-message         :send-message
+             {acc-id :account/id} :user-account} (fn-get-ctx)
+            positions                            (-> id
+                                                     fn-repo-get-holding-positions
+                                                     aggregate-holding-positions
+                                                     (as-> p (fn-assoc-close-prices acc-id p)))]
+        (send-message [:holding.query/get-holding-positions-result
+                       {:result positions
+                        :type   :success}])))))
+
+(def *broadcast-holdings-positions (atom #{}))
+
 (defconfig price-quote-interval)
 
-(defn broadcast-prices
-  [fn-repo-get-positions fn-repo-get-acc-by-uid
-   fn-quote-live-prices {:keys [send-message *connected-users]}]
-  (let [quote-interval (* 60000 price-quote-interval)
-        broadcast!
-        (fn [i]
-          (let [uids           (:any @*connected-users)
-                #_#__          (clojure.pprint/pprint {::broadcast-prices-1 {:UIDs uids
-                                                                             :QPUs @*quote-price-users}})
-                ;; First remove all users from *quote-price-users that are not
-                ;; in uids, because these users no longer have an active session
-                _              (swap! *quote-price-users
-                                      (fn [usrs]
-                                        (->> usrs
-                                             (filter #(some #{%} uids)))))
-                qte-price-usrs @*quote-price-users]
-            ;;(clojure.pprint/pprint {::broadcast-prices-2 {:QPUs @*quote-price-users}})
-            (doseq [acc-id qte-price-usrs
-                    :let   [api-token           (-> acc-id
-                                                    fn-repo-get-acc-by-uid
-                                                    :account/subscriptions
-                                                    :subscription/eod-historical-data
-                                                    :api-token)
-                            tickers             (->> {:account-id acc-id
-                                                      :role       :system}
-                                                     fn-repo-get-positions
-                                                     (map (fn [{:keys [holding-id eod-historical-data]}]
-                                                            [holding-id eod-historical-data])))
-                            ;;_                   (clojure.pprint/pprint {::broadcast-prices-3 {:T tickers}})
-                            price-results       (fn-quote-live-prices api-token tickers {:batch-size 2})
-                            fn-send-price-quote (fn [price-quotes]
-                                                  ;;(clojure.pprint/pprint {::broadcast-prices-5 prices-quote})
-                                                  (send-message acc-id [:price/quotes price-quotes]))]]
-              ;;(clojure.pprint/pprint {::broadcast-prices-4 {:PR price-results}})
-              (doall
-               (pmap #(fn-send-price-quote (deref %)) price-results)))))]
-
-    (go-loop [i 0]
-      ;;(println "Broadcast prices " i)
-      (<! (async/timeout quote-interval))
-      (broadcast! i)
-      (recur (inc i)))))
-
-(comment
-  (utils/new-uuid)
-
-  (:lll nil)
-
-  (let [uids     #{#uuid "d1f5984c-c2a0-475a-8df2-5e7ef04dc989" ;; Hasn't requested prices
-                   #uuid "d3cfc2f6-d38c-4e5e-b4b1-7f906315d8e0" ;; Hasn't requested prices
-                   #uuid "bf0bb6db-7589-4e4d-aa82-a84608263dab"
-                   #uuid "6a23dee4-8a0f-4416-bb7a-3fa5e8b22590"}
-        qp-users #{#uuid "22e0743b-bf4e-4982-9a1d-d3bc97c08372" ;; Disconnected
-                   #uuid "ec0760d6-fe13-4336-b978-6df86ab4a43b" ;; Disconnected
-                   #uuid "bf0bb6db-7589-4e4d-aa82-a84608263dab"
-                   #uuid "6a23dee4-8a0f-4416-bb7a-3fa5e8b22590"}]
-    
-    ;; (reset! *quote-price-users qp-users)
-    ;; (swap! *quote-price-users
-    ;;        (fn [usrs]
-    ;;          (->> usrs
-    ;;               (filter #(some #{%} uids)))))
-    ;; @*quote-price-users
-
-    )
-
-  )
-
-(defn get-holding-positions
-  [fn-repo-get-holding-positions fn-get-ctx response-msg-event id]
-  (let [{:keys [send-message]} (fn-get-ctx)
-        positions              (fn-repo-get-holding-positions id)
-        position               (-> positions
-                                   (lens/view-single
-                                    (lens/only
-                                     #(= id
-                                         (:position/id %)))))
-        holding-pos            (-> positions
-                                   (lens/view-single
-                                    (lens/only
-                                     #(nil?
-                                       (:position/holding-position-id %)))))
-        sub-positions          (-> positions
-                                   (lens/view
-                                    (lens/only
-                                     :position/holding-position-id)))]
-    (send-message
-     [response-msg-event {:result positions
-                          :type   :success}])))
-
-(comment
-  (let [id        2
-        positions [{:position/id 1}
-                   {:position/id                  2
-                    :position/holding-position-id 1}
-                   {:position/id                  3
-                    :position/holding-position-id 1}]]
-    (-> positions
-        (lens/view-single
-         (lens/only
-          #(= id
-              (:position/id %))))))
+(defn get-holdings-positions-fn
+  [fn-repo-get-holdings-positions fn-repo-get-acc-by-uid fn-get-ctx]
+  (let [fn-assoc-close-prices (assoc-close-prices-fn fn-repo-get-acc-by-uid)]
+    (fn [& [{:keys [account-id broadcast?]}]]
+      (let [{send-message :send-message
+             :as          ctx} (fn-get-ctx)
+            acc-id             (or account-id
+                                   (get-in ctx [:user-account :account/id]))
+            positions          (->> {:account-id acc-id
+                                     :role       (if account-id
+                                                   :system
+                                                   :member)}
+                                    fn-repo-get-holdings-positions
+                                    ;; For now all prices must be live
+                                    (map #(assoc % :close-estimated? true))
+                                    (group-by (fn [{:keys [position-id holding-position-id]}]
+                                                (or holding-position-id
+                                                    position-id)))
+                                    (mapcat (fn [[_ hs]]
+                                              (aggregate-holding-positions hs)))
+                                    (as-> p (fn-assoc-close-prices acc-id p)))]
+        (when broadcast? (swap! *broadcast-holdings-positions conj acc-id))
+        (send-message
+         [:holding.query/get-holdings-positions-result {:result positions
+                                                        :type   :success}])))))
 
 
-
-  )
-
-
+;; TODO: Deprecate this once `get-holdings-positions` is complete
 (defn get-positions
   [fn-repo-get-positions fn-get-ctx]
   (let [{send-message         :send-message
@@ -191,10 +178,84 @@
                                                   fn-repo-get-positions
                                                   ;; For now all prices must be live
                                                   (map #(assoc % :close-estimated? true)))]
-      (swap! *quote-price-users conj acc-id)
-      (send-message
-       [:position.query/get-positions-result {:result ents
-                                              :type   :success}])))
+    (swap! *quote-price-users conj acc-id)
+    (send-message
+     [:position.query/get-positions-result {:result ents
+                                            :type   :success}])))
+
+(defn broadcast-prices
+  [fn-get-holdings-positions {:keys [send-message *connected-users]}]
+  (let [quote-interval (* 60000 price-quote-interval)
+        broadcast!
+        (fn [i]
+          (let [uids (:any @*connected-users)
+                ;; First remove all users from *quote-price-users that are not
+                ;; in uids, because these users no longer have an active session
+                _    (swap! *broadcast-holdings-positions
+                            (fn [usrs]
+                              (->> usrs
+                                   (filter #(some #{%} uids)))))]
+
+            (doseq [acc-id @*broadcast-holdings-positions]
+              (fn-get-holdings-positions {:account-id acc-id
+                                          :broadcast? true}))
+
+            ;; (doseq [acc-id qte-price-usrs
+            ;;         :let   [api-token           (-> acc-id
+            ;;                                         fn-repo-get-acc-by-uid
+            ;;                                         :account/subscriptions
+            ;;                                         :subscription/eod-historical-data
+            ;;                                         :api-token)
+            ;;                 tickers             (->> {:account-id acc-id
+            ;;                                           :role       :system}
+            ;;                                          fn-repo-get-positions
+            ;;                                          (map (fn [{:keys [holding-id eod-historical-data]}]
+            ;;                                                 [holding-id eod-historical-data])))
+            ;;                 price-results       (fn-quote-live-prices api-token tickers {:batch-size 2})
+            ;;                 fn-send-price-quote (fn [price-quotes]
+            ;;                                       (send-message acc-id [:price/quotes price-quotes]))]]
+            ;;   (doall
+            ;;    (pmap #(fn-send-price-quote (deref %)) price-results)))
+            ))]
+
+    (go-loop [i 0]
+      ;;(println "Broadcast prices " i)
+      (<! (async/timeout quote-interval))
+      (broadcast! i)
+      (recur (inc i)))))
+
+(comment
+  (let [id        2
+        positions [{:position/id 1}
+                   {:position/id                  2
+                    :position/holding-position-id 1}
+                   {:position/id                  3
+                    :position/holding-position-id 1}
+                   {:position/id 4}
+                   {:position/id                  5
+                    :position/holding-position-id 4}
+                   {:position/id                  6
+                    :position/holding-position-id 4}]]
+    (->> positions
+         (group-by (fn [{:keys [position/id position/holding-position-id]}]
+                    (or holding-position-id
+                        id)))))
+
+  (let [x {1
+           [#:position{:id 1}
+            #:position{:id 2, :holding-position-id 1}
+            #:position{:id 3, :holding-position-id 1}],
+           4
+           [#:position{:id 4}
+            #:position{:id 5, :holding-position-id 4}
+            #:position{:id 6, :holding-position-id 4}]}]
+    (map (fn [y] y) x))
+
+
+  )
+
+
+
 
 #_(m/=> save! [:=>
              [:cat

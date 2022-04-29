@@ -199,45 +199,40 @@
 
    ;; If the stop/quantity is set on the overall holding position,
    ;; then assume it's manually managed & don't do a roll-up summary.
-   (let [fn-avg-cost             (fn [quantity amount]
-                                   (when (and quantity
-                                              amount
-                                              (not= 0 quantity))
-                                     (/ amount quantity)))
-         total-quantity          (or quantity
-                                     (->> sub-positions
-                                          (map :quantity)
-                                          (remove nil?)
-                                          (reduce +)))
-         avg-cost-open           (or open-price
-                                     (->> sub-positions
-                                          (map (fn [{:keys [open-price quantity]}]
-                                                 (if (and open-price
-                                                          quantity)
-                                                   (* open-price quantity)
-                                                   0)))
-                                          (reduce +)
-                                          (fn-avg-cost total-quantity)))
-         #_#_total-stop-quantity (->> sub-positions
-                                      (reduce (fn [total {:keys [stop quantity]}]
-                                                (if stop
-                                                  (+ quantity (or total 0))
-                                                  total)) nil))
-         avg-cost-stop           (or stop
-                                     (->> sub-positions
-                                          (map (fn [{:keys [stop quantity]}]
-                                                 (* (or stop 0)
-                                                    (or quantity 0))))
-                                          (reduce +)
-                                          (fn-avg-cost total-quantity)))
-         position                (-> position
-                                     (merge {:open-price avg-cost-open
-                                             :stop       avg-cost-stop
-                                             :quantity   total-quantity})
-                                     stop-loss-amount
-                                     (merge {:open-price (utils/round avg-cost-open)
-                                             :stop       (utils/round avg-cost-stop)
-                                             :quantity   total-quantity}))]
+   (let [fn-avg-cost    (fn [quantity amount]
+                          (when (and quantity
+                                     amount
+                                     (not= 0 quantity))
+                            (/ amount quantity)))
+         total-quantity (or quantity
+                            (->> sub-positions
+                                 (map :quantity)
+                                 (remove nil?)
+                                 (reduce +)))
+         avg-cost-open  (or open-price
+                            (->> sub-positions
+                                 (map (fn [{:keys [open-price quantity]}]
+                                        (if (and open-price
+                                                 quantity)
+                                          (* open-price quantity)
+                                          0)))
+                                 (reduce +)
+                                 (fn-avg-cost total-quantity)))
+         avg-cost-stop  (or stop
+                            (->> sub-positions
+                                 (map (fn [{:keys [stop quantity]}]
+                                        (* (or stop 0)
+                                           (or quantity 0))))
+                                 (reduce +)
+                                 (fn-avg-cost total-quantity)))
+         position       (-> position
+                            (merge {:open-price avg-cost-open
+                                    :stop       avg-cost-stop
+                                    :quantity   total-quantity})
+                            stop-loss-amount
+                            (merge {:open-price (utils/round avg-cost-open)
+                                    :stop       (utils/round avg-cost-stop)
+                                    :quantity   total-quantity}))]
      position)))
 
 (comment
