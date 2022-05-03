@@ -9,8 +9,8 @@
    :title             "Positions"
    :data-subscription [:position/list]
    :id-field          :position-creation-id
-   :create-dispatch   [:position.command/create]
-   :update-dispatch   [:position.command/update]
+   :create-dispatch   [:position/create]
+   :update-dispatch   [:position/update]
    :default-values    {}})
 
 (defn view []

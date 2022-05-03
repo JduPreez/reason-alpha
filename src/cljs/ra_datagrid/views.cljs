@@ -266,7 +266,10 @@
           [:input.form-control {:type      "number"
                                 :value     v
                                 :on-change #(rf/dispatch [:datagrid/update-edited-record id pk
-                                                          (:name field) (.-target.value ^js %)])}]]]))))
+                                                          (:name field) (-> %
+                                                                            .-target
+                                                                            .-value
+                                                                            cljs.reader/read-string)])}]]]))))
 
 (defmethod edit-cell :custom
   [id field pk]

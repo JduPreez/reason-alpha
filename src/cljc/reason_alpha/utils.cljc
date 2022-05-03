@@ -94,3 +94,7 @@
            BigDecimal/valueOf
            (.setScale dec-places BigDecimal/ROUND_HALF_UP)
            .floatValue))))
+
+;; #?(:cljs
+;;    (defn parse-number [nr]
+;;      ))

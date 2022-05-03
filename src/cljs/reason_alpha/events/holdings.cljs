@@ -85,7 +85,7 @@
       :holding.command/save! cmd-ent})))
 
 (rf/reg-event-fx
- :holding.command/delete!-result
+ :holding.command/delete-holdings!-result
  (fn [{:keys [db]} [evt result]]
    (utils/log evt result)
    (data/delete-local! {:db         db
@@ -93,7 +93,7 @@
                         :data       result})))
 
 (rf/reg-fx
- :holding.command/delete!
+ :holding.command/delete-holdings!
  (fn [db]
    (let [del-ids (data/get-selected-ids :holding db)]
      (api-client/chsk-send! [:holding.command/delete-holding! del-ids]))))
