@@ -3,6 +3,7 @@
             [malli.core :as m]
             [outpace.config :refer [defconfig]]
             [reason-alpha.integration.eod-api-client :as eod-api-client]
+            [reason-alpha.model.core :as model]
             [reason-alpha.model.accounts :as accounts]
             [reason-alpha.model.common :as common]
             [reason-alpha.model.fin-instruments :as fin-instruments]
@@ -84,14 +85,12 @@
         holding-pos   (when holding-pos
                         (portfolio-management/stop-loss-amount holding-pos
                                                                sub-positions))
-        sub-positions (if (seq sub-positions)
+        sub-positions (when (seq sub-positions)
                         (map portfolio-management/stop-loss-amount
-                             sub-positions)
-                        [])]
+                             sub-positions))]
     (cond-> []
       (seq sub-positions) (into sub-positions)
-      holding-pos         (conj holding-pos)
-      :else               [])))
+      holding-pos         (conj holding-pos))))
 
 (defn- assoc-close-prices-fn [fn-repo-get-acc-by-uid fn-quote-live-prices account-id & [{:keys [batch-size]}]]
   (fn [positions]
@@ -160,7 +159,7 @@
                                                                            :system
                                                                            :member)}
                                                             fn-repo-get-holdings-positions
-                                                            (map #(assoc % :close-estimated? true))
+                                                            ;;(map #(assoc % :close-estimated? true))
                                                             (group-by (fn [{:keys [position-id holding-position-id]}]
                                                                         (or holding-position-id
                                                                             position-id))))})
@@ -240,6 +239,50 @@
       (broadcast! i)
       (recur (inc i)))))
 
+(defn save-position!
+  [fn-repo-save! fn-get-account fn-get-ctx
+   {acc-id          :position/account-id
+    {quantity :trade-transaction/quantity
+     :as      open} :position/open
+    close           :position/close
+    hid             :position/holding-id
+    :as             position}]
+  (let [pos                    (cond-> position
+                                 (nil? acc-id) (assoc :position/account-id (-> (fn-get-account)
+                                                                               :account/id))
+                                 open          (update-in [:position/open]
+                                                          #(merge % {:trade-transaction/type       :buy
+                                                                     :trade-transaction/holding-id hid}))
+                                 close         (update-in [:position/close]
+                                                          #(merge % {:trade-transaction/type       :sell
+                                                                     :trade-transaction/holding-id hid
+                                                                     :trade-transaction/quantity   quantity}))
+                                 :always       (assoc :position/status :open))
+        {:keys [send-message]} (fn-get-ctx)]
+      (try
+        (if-let [v (model/validate :position pos)]
+          (do
+            (clojure.pprint/pprint {::save-position! v})
+            (send-message
+             [:holding.command/save-position!-result
+              {:error       v
+               :type        :failed-validation
+               :description "Invalid position"}]))
+          (send-message
+           [:holding.command/save-position!-result
+            {:result (-> pos
+                         fn-repo-save!
+                         (select-keys [:position/creation-id :position/id]))
+             :type   :success}]))
+        (catch Exception e
+          (let [err-msg "Error saving position"]
+            (errorf e err-msg)
+            (send-message
+             [:holding.command/save-position!-result
+              {:error       (ex-data e)
+               :description (str err-msg ": " (ex-message e))
+               :type        :error}]))))))
+
 (comment
   (let [id        2
         positions [{:position/id 1}
@@ -269,31 +312,3 @@
 
 
   )
-
-
-
-
-#_(m/=> save! [:=>
-             [:cat
-              [:=>
-               [:cat
-                :any
-                portfolio-management/Position]
-               portfolio-management/Position]]
-             (common/result-schema portfolio-management/Position)])
-
-(defn save-position!
-  [fn-repo-save-position! fn-get-account ent]
-  (try
-    (let [{:keys [account/id]} (fn-get-account)]
-
-      (if id
-        {:result (fn-repo-save-position! (assoc ent :position/account-id id))
-         :type   :success}
-        {:description "No account found."
-         :type        :error}))
-
-    (catch Exception e
-      (errorf e "Error saving Position")
-      {:error (ex-data e)
-       :type  :error})))

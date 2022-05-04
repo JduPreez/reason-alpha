@@ -84,12 +84,9 @@
                ;; because Holding is the root aggregate
                :save-position!    (as-> db d
                                     (partial holding-repo/save-position! d)
-                                    (svc.common/save-msg-fn
-                                     {:model-type         :position
-                                      :fn-repo-save!      d
-                                      :fn-get-ctx         common/get-context
-                                      :fn-get-account     fn-get-account
-                                      :response-msg-event :holding.command/save-position!-result}))
+                                    (partial holding-svc/save-position! d
+                                             fn-get-account
+                                             common/get-context))
                :delete-holdings!  (as-> db d
                                     (partial holding-repo/delete-holdings! d)
                                     (svc.common/delete-msg-fn

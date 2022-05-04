@@ -95,6 +95,9 @@
            (.setScale dec-places BigDecimal/ROUND_HALF_UP)
            .floatValue))))
 
-;; #?(:cljs
-;;    (defn parse-number [nr]
-;;      ))
+#?(:cljs
+   (defn maybe-parse-number [nr]
+     (cond
+       (re-find #"^-?\d+\.\d+$" nr) (js/parseFloat nr)
+       (re-find #"^-?\d+$" nr)      (js/parseInt nr)
+       :else                        nr)))

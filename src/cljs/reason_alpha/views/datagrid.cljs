@@ -129,7 +129,8 @@
                             :indent-group
                             {:parent-subscription parent-subscr}})
 
-      (= type (-> #'float? meta :name))
+      (or (= type (-> #'number? meta :name))
+          (= type (-> #'float? meta :name)))
       , (merge field-def {:type :number})
 
       (= type (-> #'inst? meta :name))

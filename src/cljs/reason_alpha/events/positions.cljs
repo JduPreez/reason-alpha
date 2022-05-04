@@ -62,7 +62,7 @@
      (cljs.pprint/pprint {:position.command/create {:M  query-dto-model
                                                     :NP new-pos
                                                     :CP cmd-pos}})
-     #_{:db                             db
+     {:db                             db
       :holding.command/save-position! cmd-pos})))
 
 (rf/reg-event-fx
@@ -112,9 +112,9 @@
          positions (->> data/positions
                         (get-in db)
                         (map (fn [{[price-hid _] :holding
-                                   cest?         :close-estimated?
+                                   status        :status
                                    :as           pos}]
-                               (if-let [price-close (and cest?
+                               (if-let [price-close (and (#{:open} status)
                                                          (get prices price-hid))]
                                  (assoc pos :close-price price-close)
                                  pos))))]

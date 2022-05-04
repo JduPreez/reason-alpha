@@ -5,6 +5,7 @@
             [ra-datagrid.events]
             [ra-datagrid.schema :as ds]
             [ra-datagrid.subs]
+            [ra-datagrid.utils :as utils]
             [re-frame.core :as rf]
             [reagent.core :as r]
             [schema.core :as s

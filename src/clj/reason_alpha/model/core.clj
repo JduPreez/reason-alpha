@@ -56,7 +56,10 @@
     [:schema {:registry @*model} ns-model-k]))
 
 (defn validate [model-k entity]
-  (m/validate (get-def model-k) entity))
+  (let [model-k (if (= "model" (namespace model-k))
+                  model-k
+                  (keyword "model" (name model-k)))]
+    (m/explain (get-def model-k) entity)))
 
 (defn entity-type [entity-map]
   (-> entity-map

@@ -1,5 +1,6 @@
 (ns reason-alpha.model.portfolio-management
-  (:require [malli.instrument :as malli.instr]
+  (:require [malli.core :as m]
+            [malli.instrument :as malli.instr]
             [reason-alpha.model.core :as model :refer [def-model]]
             [reason-alpha.model.fin-instruments :as fin-instruments]
             [reason-alpha.model.utils :as mutils]
@@ -38,16 +39,15 @@
 
 (def Transaction
   [:map
-   [:trade-transaction/creation-id uuid?]
+   [:trade-transaction/creation-id {:optional true} uuid?]
    [:trade-transaction/id {:optional true} uuid?]
    [:trade-transaction/type [:enum :buy :sell :dividend :reinvest-divi
                              :corp-action :fee :tax :exchange-fee :stamp-duty]]
    [:trade-transaction/date {:optional true} inst?]
-   [:trade-transaction/quantity float?]
-   [:trade-transaction/price float?]
+   [:trade-transaction/quantity number?]
+   [:trade-transaction/price number?]
    [:trade-transaction/fee-of-transaction-id {:optional true} uuid?]
-   [:trade-transaction/holding-id uuid?]
-   [:trade-transaction/estimated? boolean?]])
+   [:trade-transaction/holding-id uuid?]])
 
 ;; We have to define entity schemas like this because function schemas
 ;; don't support recursive references
@@ -66,13 +66,13 @@
    [:position/open TradeTransaction]
    [:position/close {:optional true} TradeTransaction]
    [:position/dividends {:optional true} [:sequential TradeTransaction]]
-   [:position/holding-id {:optional true} uuid?]
+   [:position/holding-id uuid?]
    [:position/account-id uuid?]
    [:position/trade-pattern-id {:optional true} uuid?]
    [:position/long-short
     [:enum {:enum/titles {:long  "Long"
                           :short "Short (Hedge)"}} :long :short]]
-   [:position/stop {:optional true} float?]
+   [:position/stop {:optional true} number?]
    [:position/holding-position-id {:optional true} uuid?]])
 
 (def-model PositionDto
@@ -90,7 +90,7 @@
    [:quantity {:title        "Quantity"
                :command-path [:position/open
                               :trade-transaction/quantity]}
-    float?]
+    number?]
    [:long-short {:title        "Long/Short (Hedge)"
                  :ref          :position/long-short
                  :command-path [[:position/long-short]
@@ -103,20 +103,19 @@
    [:open-price {:title        "Open"
                  :command-path [:position/open
                                 :trade-transaction/price]}
-    float?]
+    number?]
    [:close-price {:title        "Close"
                   :optional     true
                   :command-path [:position/close
                                  :trade-transaction/price]}
-    float?]
-   [:close-estimated? {:optional     true
-                       :command-path [:position/close
-                                      :trade-transaction/estimated?]}
-    boolean?]
+    number?]
+   [:status {:optional     true
+             :command-path [:position/status]}
+    keyword?]
    [:stop {:optional     true
            :title        "Stop"
            :command-path [:position/stop]}
-    float?]
+    number?]
    [:trade-pattern {:title        "Trade Pattern"
                     :optional     true
                     :ref          :trade-pattern
@@ -189,11 +188,21 @@
 
 (defn stop-loss-amount
   ([{:keys [stop open-price quantity] :as position}]
-   (-> stop
-       (- open-price)
-       (* quantity)
-       utils/round
-       (as-> a (assoc position :stop-loss-amount a))))
+   ;; TODO: Remove this conversion once validation has been fixed
+   (let [stop       (if (string? stop)
+                      (read-string stop)
+                      stop)
+         open-price (if (string? open-price)
+                      (read-string open-price)
+                      open-price)
+         quantity   (if (string? quantity)
+                      (read-string quantity)
+                      quantity)]
+     (-> stop
+         (- open-price)
+         (* quantity)
+         utils/round
+         (as-> a (assoc position :stop-loss-amount a)))))
   ([{:keys [stop open-price quantity] :as position}
     sub-positions]
 
@@ -218,6 +227,9 @@
                                           0)))
                                  (reduce +)
                                  (fn-avg-cost total-quantity)))
+         avg-cost-open  (if (string? avg-cost-open)
+                          (read-string avg-cost-open)
+                          avg-cost-open)
          avg-cost-stop  (or stop
                             (->> sub-positions
                                  (map (fn [{:keys [stop quantity]}]
@@ -225,6 +237,9 @@
                                            (or quantity 0))))
                                  (reduce +)
                                  (fn-avg-cost total-quantity)))
+         avg-cost-stop  (if (string? avg-cost-stop)
+                          (read-string avg-cost-stop)
+                          avg-cost-stop)
          position       (-> position
                             (merge {:open-price avg-cost-open
                                     :stop       avg-cost-stop
