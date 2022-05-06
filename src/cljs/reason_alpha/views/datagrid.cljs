@@ -65,35 +65,36 @@
 
 (defn model-member->field
   [[member-nm & schema] & [{:keys [enum-titles] :as field-opts}]]
-  (let [ref-suffix           "ref"
-        ref-suffix-list      (str ref-suffix "-list")
-        id-member            (-> member-nm
-                                 name
-                                 (str/ends-with? "-id"))
-        field-def            (cond-> field-opts
-                               (not (contains? field-opts :can-sort))
-                               , (assoc :can-sort true)
-                               :default
-                               , (dissoc field-opts :ref-suffix))
-        props-or-type        (first schema)
-        has-props?           (map? props-or-type)
-        {:keys [title ref]}  props-or-type
-        field-def            (merge field-def {:title title
-                                               :name  member-nm})
-        ref-nm               (when ref
-                               (name ref))
-        ref-ns               (when ref
-                               (namespace ref))
-        [type tuple-id-type] (some #(when (not (map? %))
-                                      (if (sequential? %)
-                                        %
-                                        [%])) schema)
-        data-subscr          (if ref-ns
-                               (keyword ref-ns (str ref-nm "-" ref-suffix-list))
-                               (keyword ref-nm ref-suffix-list))
-        parent-subscr        (if ref-ns
-                               (keyword ref-ns (str ref-nm "-" ref-suffix))
-                               (keyword ref-nm ref-suffix))]
+  (let [ref-suffix             "ref"
+        ref-suffix-list        (str ref-suffix "-list")
+        id-member              (-> member-nm
+                                   name
+                                   (str/ends-with? "-id"))
+        field-def              (cond-> field-opts
+                                 (not (contains? field-opts :can-sort))
+                                 , (assoc :can-sort true)
+                                 :default
+                                 , (dissoc field-opts :ref-suffix))
+        props-or-type          (first schema)
+        has-props?             (map? props-or-type)
+        {:keys [title ref
+                command-path]} props-or-type
+        field-def              (merge field-def {:title title
+                                                 :name  member-nm})
+        ref-nm                 (when ref
+                                 (name ref))
+        ref-ns                 (when ref
+                                 (namespace ref))
+        [type tuple-id-type]   (some #(when (not (map? %))
+                                        (if (sequential? %)
+                                          %
+                                          [%])) schema)
+        data-subscr            (if ref-ns
+                                 (keyword ref-ns (str ref-nm "-" ref-suffix-list))
+                                 (keyword ref-nm ref-suffix-list))
+        parent-subscr          (if ref-ns
+                                 (keyword ref-ns (str ref-nm "-" ref-suffix))
+                                 (keyword ref-nm ref-suffix))]
     (cond
       ;; Id members are either the current entity's `:id` or `:creation-id` fields
       ;; or they should be 'foreign keys' with a `:ref` pointing to another entity
@@ -105,13 +106,8 @@
       (str/blank? title)
       , nil
 
-      #_#_ (and ref-ns
-                ref)
-      , (merge
-         (cond-> {:type              :select
-                  :data-subscription [(keyword ref-ns (str ref-nm "-" ref-suffix))]}
-           (= tuple-id-type keyword?) (assoc :enum-titles enum-titles))
-         field-def)
+      (nil? command-path)
+      , (assoc field-def :type :no-edit)
 
       (and ref
            (not id-member))

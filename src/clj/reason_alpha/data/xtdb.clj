@@ -230,6 +230,16 @@
   (def db (xtdb-start!))
 
   (xt/q (xt/db db)
+        '{:find  [(pull pos [*])
+                  (pull hold [*])
+                  (pull tpattern [*])]
+          :where [[pos :position/account-id account-id]
+                  [(get-attr pos :position/holding-id nil) [hold ...]]
+                  [(get-attr pos :position/trade-pattern-id nil) [tpattern ...]]]
+          :in    [account-id]}
+        #uuid "017f87dc-59d1-7beb-9e1d-7a2a354e5a49")
+
+  (xt/q (xt/db db)
         '{:find  [(pull hpos [*])
                   (pull hold [*])
                   (pull tpattern [*])]

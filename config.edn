@@ -3,4 +3,4 @@
  reason-alpha.infrastructure.auth/tenant-id                    "6nz7wwpb"
  reason-alpha.infrastructure.server/allowed-origins            "http://localhost:8700"
  reason-alpha.integration.eod-api-client/live-stock-prices-api "https://eodhistoricaldata.com/api/real-time/%s"
- reason-alpha.services.holding-service/price-quote-interval    5}
+ reason-alpha.services.holding-service/price-quote-interval    1}

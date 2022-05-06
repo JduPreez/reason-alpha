@@ -95,6 +95,8 @@
                                  (map
                                   (fn [[k props type]]
                                     [k props type])))]
+    #_{:APV  all-paths-vals
+       :REPV ref-ents-paths-vals}
     (->> all-paths-vals
          (reduce
           (fn [{:keys [dto membr-nm-paths] :as dto-paths} [path v]]
@@ -130,6 +132,7 @@
                                                   (= k nm-k))
                                                 membr-nm-paths)}
                               dto-paths)]
+              ;;(clojure.pprint/pprint dto-paths)
               dto-paths))
           {:dto            {}
            :membr-nm-paths member-nm-paths})
@@ -142,44 +145,58 @@
 
 (comment
   (let [qry-dto-model [:map
-                       [:instrument-id
-                        {:optional true, :command-path [:instrument/id]}
+                       [:position-creation-id {:command-path [:position/creation-id]}
                         uuid?]
-                       [:instrument-creation-id
-                        {:command-path [:instrument/creation-id]}
+                       [:position-id {:optional     true
+                                      :command-path [:position/id]} uuid?]
+                       [:holding {:title        "Holding (Instrument)"
+                                  :ref          :holding
+                                  :command-path [[:position/holding-id]
+                                                 [:holding/instrument-name]]}
+                        [:tuple uuid? string?]]
+                       [:quantity {:title        "Quantity"
+                                   :command-path [:position/open
+                                                  :trade-transaction/quantity]}
+                        number?]
+                       [:long-short {:title        "Long/Short (Hedge)"
+                                     :ref          :position/long-short
+                                     :command-path [[:position/long-short]
+                                                    [:position/long-short-name]]}
+                        [:tuple keyword? string?]]
+                       [:open-time {:title        "Open Time"
+                                    :command-path [:position/open
+                                                   :trade-transaction/date]}
+                        inst?]
+                       [:open-price {:title        "Open"
+                                     :command-path [:position/open
+                                                    :trade-transaction/price]}
+                        number?]
+                       [:close-price {:title        "Close"
+                                      :optional     true
+                                      :command-path [:position/close
+                                                     :trade-transaction/price]}
+                        number?]
+                       [:status {:optional     true
+                                 :command-path [:position/status]}
+                        keyword?]
+                       [:stop {:optional     true
+                               :title        "Stop"
+                               :command-path [:position/stop]}
+                        number?]
+                       [:trade-pattern {:title        "Trade Pattern"
+                                        :optional     true
+                                        :ref          :trade-pattern
+                                        :command-path [[:position/trade-pattern-id]
+                                                       [:trade-pattern/name]]}
+                        [:tuple uuid? string?]]
+                       [:holding-position-id {:title        "Holding Position"
+                                              :optional     true
+                                              :ref          :position/holding-position
+                                              :command-path [:position/holding-position-id]}
                         uuid?]
-                       [:instrument-name
-                        {:title        "Instrument",
-                         :optional     true,
-                         :command-path [:instrument/name]}
-                        string?]
-                       [:yahoo-finance
-                        {:title        "Yahoo! Finance",
-                         :optional     true,
-                         :pivot        :symbol/provider,
-                         :command-path [:instrument/symbols 0 :symbol/ticker]}
-                        string?]
-                       [:saxo-dma
-                        {:title        "Saxo/DMA",
-                         :optional     true,
-                         :pivot        :symbol/provider,
-                         :command-path [:instrument/symbols 0 :symbol/ticker]}
-                        string?]
-                       [:easy-equities
-                        {:title        "Easy Equities",
-                         :optional     true,
-                         :pivot        :symbol/provider,
-                         :command-path [:instrument/symbols 0 :symbol/ticker]}
-                        string?]
-                       [:instrument-type
-                        {:title        "Type",
-                         :optional     true,
-                         :ref          :instrument/type,
-                         :command-path [[:instrument/type]
-                                        [:instrument/type-name]]}
-                        [:tuple
-                         keyword
-                         string?]]]
+                       [:stop-total-loss {:title    "Stop Total Loss"
+                                          :optional true}
+                        float?]]
         qry-dto       {:position-id          #uuid "017fe4f2-b562-236b-f34e-88e227dcf280"
                        :instrument           [#uuid "017fd139-a0bd-d2b4-11f2-222a61e7edfc" "111111"],
                        :quantity             "778",
@@ -188,15 +205,98 @@
                        :close-price          "89789",
                        :position-creation-id #uuid "5851072d-4014-48a1-8b5d-507d10a6239b"
                        :trade-pattern        [#uuid "017fd139-a0bd-d2b4-11f2-222a61e7edfc" "Breakout"]}
-        cmd-ents      [[{:instrument/id   #uuid "017fd139-a0bd-d2b4-11f2-222a61e7edfc",
-                         :instrument/creation-id
-                         #uuid "ea669a4e-e815-4100-8cf3-da7d7fa50a17",
-                         :instrument/name "Starbucks",
-                         :instrument/symbols
-                         [{:symbol/ticker "hjhjhjh", :symbol/provider :yahoo-finance}
-                          {:symbol/ticker "4", :symbol/provider :easy-equities}],
-                         :instrument/type :share}]]
-        type          [:tuple uuid? string?]]
+        cmd-ents      #{[{:position/long-short  :long,
+                          :position/id          #uuid "01808fb9-4f61-999f-6a3b-58f29b27acee",
+                          :position/status      :open,
+                          :position/creation-id #uuid "bdc2bfb6-dcd4-4674-bc91-dc56b0a93276",
+                          :position/open
+                          #:trade-transaction{:quantity 22.44,
+                                              :date     #inst "2022-05-12T00:00:00.000-00:00",
+                                              :price    23,
+                                              :type     :buy,
+                                              :holding-id
+                                              #uuid "018004b9-3a7f-df48-4c96-c63d6aea78b5"},
+                          :position/close
+                          #:trade-transaction{:price    33.3,
+                                              :type     :sell,
+                                              :holding-id
+                                              #uuid "018004b9-3a7f-df48-4c96-c63d6aea78b5",
+                                              :quantity 22.44},
+                          :position/holding-id  #uuid "018004b9-3a7f-df48-4c96-c63d6aea78b5",
+                          :xt/id                #uuid "01808fb9-4f61-999f-6a3b-58f29b27acee",
+                          :position/account-id  #uuid "017f87dc-59d1-7beb-9e1d-7a2a354e5a49",
+                          :position/stop        3.2}
+                         {:holding/creation-id     #uuid "e4c5d7d8-5abe-4182-942b-f6c04e2b1c0c",
+                          :holding/instrument-name "AAA",
+                          :holding/symbols
+                          [#:symbol{:ticker "AAA", :provider :yahoo-finance}
+                           #:symbol{:ticker "AAA", :provider :saxo-dma}
+                           #:symbol{:ticker "AAA", :provider :easy-equities}],
+                          :holding/instrument-type :share,
+                          :holding/account-id      #uuid "017f87dc-59d1-7beb-9e1d-7a2a354e5a49",
+                          :holding/id              #uuid "018004b9-3a7f-df48-4c96-c63d6aea78b5",
+                          :xt/id                   #uuid "018004b9-3a7f-df48-4c96-c63d6aea78b5"}
+                         nil]
+                        [{:position/holding-position-id #uuid "018008e1-a0db-2638-b2e2-4e9f0e332d11",
+                          :position/trade-pattern-id    #uuid "01800865-9069-63c7-9c6c-4d24cdcefc9a",
+                          :position/long-short          :long,
+                          :position/id                  #uuid "0180098b-e65e-d7ce-645b-41eef737fa0c",
+                          :position/creation-id         #uuid "74e921b2-fe79-454d-b47c-08c43b298019",
+                          :position/open
+                          #:trade-transaction{:quantity "3333",
+                                              :date     #inst "2022-04-06T00:00:00.000-00:00",
+                                              :price    "333"},
+                          :position/close               #:trade-transaction{:price 36.85, :estimated? true},
+                          :position/holding-id          #uuid "018004bb-227c-d6de-69ac-bc1eab688ab5",
+                          :xt/id                        #uuid "0180098b-e65e-d7ce-645b-41eef737fa0c",
+                          :position/account-id          #uuid "017f87dc-59d1-7beb-9e1d-7a2a354e5a49",
+                          :position/stop                "3333"}
+                         {:holding/creation-id     #uuid "c818b4ab-fbc7-48ca-ab7b-abf15a71b74c",
+                          :holding/instrument-name "BBB",
+                          :holding/symbols
+                          [#:symbol{:ticker "BBB", :provider :yahoo-finance}
+                           #:symbol{:ticker "BBB", :provider :saxo-dma}
+                           #:symbol{:ticker "BBB", :provider :easy-equities}],
+                          :holding/instrument-type :crypto,
+                          :holding/account-id      #uuid "017f87dc-59d1-7beb-9e1d-7a2a354e5a49",
+                          :holding/id              #uuid "018004bb-227c-d6de-69ac-bc1eab688ab5",
+                          :xt/id                   #uuid "018004bb-227c-d6de-69ac-bc1eab688ab5"}
+                         {:trade-pattern/creation-id #uuid "47427389-60f3-4f0b-a32e-7fbe139b6e36",
+                          :trade-pattern/id          #uuid "01800865-9069-63c7-9c6c-4d24cdcefc9a",
+                          :trade-pattern/name        "Breakout",
+                          :trade-pattern/description "Breakout",
+                          :trade-pattern/account-id  #uuid "017f87dc-59d1-7beb-9e1d-7a2a354e5a49",
+                          :xt/id                     #uuid "01800865-9069-63c7-9c6c-4d24cdcefc9a"}]
+                        [{:position/trade-pattern-id #uuid "0180088d-aa18-6709-de16-4d2e56126947",
+                          :position/long-short       :long,
+                          :position/id               #uuid "018008e1-a0db-2638-b2e2-4e9f0e332d11",
+                          :position/creation-id      #uuid "0d4a7fdf-5ab0-4d08-a35a-c5b23fa46c6e",
+                          :position/open
+                          #:trade-transaction{:quantity "454",
+                                              :date     #inst "2022-04-20T00:00:00.000-00:00",
+                                              :price    "23"},
+                          :position/close            #:trade-transaction{:price 83.33, :estimated? true},
+                          :position/holding-id       #uuid "018004b9-3a7f-df48-4c96-c63d6aea78b5",
+                          :xt/id                     #uuid "018008e1-a0db-2638-b2e2-4e9f0e332d11",
+                          :position/account-id       #uuid "017f87dc-59d1-7beb-9e1d-7a2a354e5a49",
+                          :position/stop             "2342"}
+                         {:holding/creation-id     #uuid "e4c5d7d8-5abe-4182-942b-f6c04e2b1c0c",
+                          :holding/instrument-name "AAA",
+                          :holding/symbols
+                          [#:symbol{:ticker "AAA", :provider :yahoo-finance}
+                           #:symbol{:ticker "AAA", :provider :saxo-dma}
+                           #:symbol{:ticker "AAA", :provider :easy-equities}],
+                          :holding/instrument-type :share,
+                          :holding/account-id      #uuid "017f87dc-59d1-7beb-9e1d-7a2a354e5a49",
+                          :holding/id              #uuid "018004b9-3a7f-df48-4c96-c63d6aea78b5",
+                          :xt/id                   #uuid "018004b9-3a7f-df48-4c96-c63d6aea78b5"}
+                         {:trade-pattern/creation-id #uuid "1d9cd550-017a-4cbb-8fe2-38db3971d394",
+                          :trade-pattern/id          #uuid "0180088d-aa18-6709-de16-4d2e56126947",
+                          :trade-pattern/parent-id   #uuid "01800865-9069-63c7-9c6c-4d24cdcefc9a",
+                          :trade-pattern/name        "zzzzzz",
+                          :trade-pattern/description "zzzz",
+                          :trade-pattern/account-id  #uuid "017f87dc-59d1-7beb-9e1d-7a2a354e5a49",
+                          :xt/id                     #uuid "0180088d-aa18-6709-de16-4d2e56126947"}]}]
     (command-ents->query-dtos qry-dto-model cmd-ents))
 
 

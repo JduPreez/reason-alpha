@@ -48,12 +48,15 @@
 
 (rf/reg-event-fx
  :position/create
- (fn [{:keys [db]} [_ {:keys [creation-id] :as new-pos}]]
+ (fn [{:keys [db]} [_ {:keys [creation-id close-price] :as new-pos}]]
    (let [new-pos         (if creation-id
                            new-pos
                            (assoc new-pos
                                   :position-creation-id
                                   (utils/new-uuid)))
+         new-pos         (if close-price
+                           (assoc new-pos :status :closed)
+                           (assoc new-pos :status :open))
          query-dto-model (get-in db (data/model :model/position-dto))
          cmd-pos         (mapping/query-dto->command-ent query-dto-model new-pos)
          db              (data/save-local! {:model-type :position
@@ -67,12 +70,21 @@
 
 (rf/reg-event-fx
  :position/update
- (fn [{:keys [db]} [_ {:keys [creation-id] :as pos}]]
-   (let [query-dto-model (get-in db (data/model :model/position-dto))
-         cmd-pos         (mapping/query-dto->command-ent query-dto-model pos)
-         db              (data/save-local! {:model-type :position
-                                            :data       pos
-                                            :db         db})]
+ (fn [{:keys [db]} [_ {:keys [creation-id close-price position-id] :as pos}]]
+   (let [{cur-close-pr :close-price} (data/get-entity db :position {:position-id position-id})
+         status                      (if (and close-price
+                                              (not= close-price cur-close-pr))
+                                       :closed
+                                       :open)
+         pos                         (assoc pos :status status)
+         _                           (cljs.pprint/pprint {:position/update {:CP  close-price
+                                                                            :CCP cur-close-pr
+                                                                            :P   pos}})
+         query-dto-model             (get-in db (data/model :model/position-dto))
+         cmd-pos                     (mapping/query-dto->command-ent query-dto-model pos)
+         db                          (data/save-local! {:model-type :position
+                                                        :data       pos
+                                                        :db         db})]
      {:db                             db
       :holding.command/save-position! cmd-pos})))
 

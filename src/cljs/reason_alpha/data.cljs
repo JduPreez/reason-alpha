@@ -66,6 +66,14 @@
                                             (get id-k)))))]
     ids))
 
+(defn get-entity [db model-type qry]
+  (let [k (-> qry keys first)
+        v (get qry k)]
+    (->> model-type
+         entity-data
+         (get-in db)
+         (some #(when (= (k %) v))))))
+
 (defn save-local!
   [{db :db, type :model-type, data :data}]
   (let [current     (get-in db (entity-data type))

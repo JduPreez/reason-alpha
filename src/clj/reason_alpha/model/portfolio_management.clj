@@ -127,8 +127,8 @@
                           :ref          :position/holding-position
                           :command-path [:position/holding-position-id]}
     uuid?]
-   [:stop-loss-amount {:title    "Stop Loss Amount"
-                       :optional true}
+   [:stop-total-loss {:title    "Stop Total Loss"
+                      :optional true}
     float?]])
 
 (def-model Holding
@@ -186,7 +186,7 @@
                                        [:holding/instrument-type-name]]}
       [:tuple keyword? string?]]]])))
 
-(defn stop-loss-amount
+(defn assoc-stop-total-loss
   ([{:keys [stop open-price quantity] :as position}]
    ;; TODO: Remove this conversion once validation has been fixed
    (let [stop       (if (string? stop)
@@ -202,7 +202,7 @@
          (- open-price)
          (* quantity)
          utils/round
-         (as-> a (assoc position :stop-loss-amount a)))))
+         (as-> a (assoc position :stop-total-loss a)))))
   ([{:keys [stop open-price quantity] :as position}
     sub-positions]
 
@@ -244,7 +244,7 @@
                             (merge {:open-price avg-cost-open
                                     :stop       avg-cost-stop
                                     :quantity   total-quantity})
-                            stop-loss-amount
+                            assoc-stop-total-loss
                             (merge {:open-price (utils/round avg-cost-open)
                                     :stop       (utils/round avg-cost-stop)
                                     :quantity   total-quantity}))]
@@ -292,7 +292,7 @@
                             (map :quantity)
                             (remove nil?)
                             (reduce +))]
-    (stop-loss-amount holding-pos sub-positions)
+    (assoc-stop-total-loss holding-pos sub-positions)
     #_(->> sub-positions
            (reduce (fn [total {:keys [stop quantity]}]
                    (if stop

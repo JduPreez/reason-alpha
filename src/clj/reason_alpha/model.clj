@@ -115,7 +115,8 @@
                                                (partial holding-svc/get-holdings-positions d
                                                         #(account-repo/get-by-user-id db %)
                                                         eod/quote-live-prices
-                                                        common/get-context))
+                                                        true
+                                                        {:fn-get-ctx common/get-context}))
                :get-holding-positions        (as-> db d
                                                (partial holding-repo/get-holding-positions d)
                                                (svc.common/get1-msg-fn
@@ -127,7 +128,6 @@
                                                (partial holding-svc/get-holdings-positions d
                                                         #(account-repo/get-by-user-id db %)
                                                         eod/quote-live-prices
-                                                        common/get-context
                                                         false)
                                                (partial holding-svc/broadcast-holdings-positions d))}}
    :model

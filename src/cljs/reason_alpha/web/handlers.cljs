@@ -16,7 +16,7 @@
 
 (defmethod -event-msg-handler :chsk/recv
   [{:keys [id event ?data] :as ev-msg}]
-  (cljs.pprint/pprint {"Push event from server:" ?data})
+  ;;(cljs.pprint/pprint {"Push event from server:" ?data})
 
   (if-let [[evt-id data] ?data]
     (rf/dispatch
