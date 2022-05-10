@@ -5,7 +5,7 @@
 
 (rf/reg-sub
  :holding/instrument-type-ref-list
- :<- [:models/members-of :model/holding :holding/instrument-type]
+ :<- [:model/members-of :model/holding :holding/instrument-type]
  (fn [{{:keys [enum/titles]} :properties
        mbrs                  :members
        :as                   _holding-types} _]
@@ -15,7 +15,7 @@
 
 (rf/reg-sub
  :holding/instrument-type-titles
- :<- [:models/members-of :model/holding :holding/instrument-type]
+ :<- [:model/members-of :model/holding :holding/instrument-type]
  (fn [{{:keys [enum/titles]} :properties} _]
    titles))
 
@@ -34,3 +34,20 @@
       {:id    (str holding-id)
        :label instrument-name})
     holdings)))
+
+(rf/reg-sub
+ :holding/currency-ref-list
+ :<- [:model/members-of :model/holding :holding/currency]
+ (fn [{{:keys [enum/titles]} :properties
+       mbrs                  :members
+       :as                   _currencies} _]
+   (cljs.pprint/pprint {:holding/currency-ref-list _currencies})
+   (for [m    mbrs
+         :let [t (get titles m)]]
+     {:id m :label t})))
+
+(rf/reg-sub
+ :holding/currency-titles
+ :<- [:model/members-of :model/holding :holding/currency]
+ (fn [{{:keys [enum/titles]} :properties} _]
+   titles))

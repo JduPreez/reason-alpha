@@ -33,7 +33,7 @@
 (defn save-holding!
   [fn-repo-save! fn-get-account fn-get-ctx {acc-id :holding/account-id
                                             :as    instrument}]
-  (let [instr                  (if acc-id
+  (let [holding                  (if acc-id
                                  instrument
                                  (->> (fn-get-account)
                                       :account/id
@@ -41,8 +41,8 @@
         {:keys [send-message]} (fn-get-ctx)]
     (try
       (send-message
-       [:holding.command/save!-result
-        {:result (-> instr
+       [:holding.command/save-holding!-result
+        {:result (-> holding
                      fn-repo-save!
                      (select-keys [:holding/creation-id
                                    :holding/id]))
@@ -56,11 +56,11 @@
              :description (str err-msg ": " (ex-message e))
              :type        :error}]))))))
 
-(defn get-holding [fn-repo-get1 fn-get-ctx {:keys [instrument-id]}]
+(defn get-holding [fn-repo-get1 fn-get-ctx id]
   (let [{:keys [send-message]} (fn-get-ctx)
-        instr                  (fn-repo-get1 instrument-id)]
+        holding                (fn-repo-get1 id)]
     (send-message
-     [:holding.query/get-holding-result {:result instr
+     [:holding.query/get-holding-result {:result holding
                                          :type   :success}])))
 
 (defn get-holdings [fn-repo-get-positions fn-get-account fn-get-ctx]
@@ -94,7 +94,6 @@
 
 (defn- assoc-close-prices-fn [fn-repo-get-acc-by-uid fn-quote-live-prices account-id & [{:keys [batch-size]}]]
   (fn [positions]
-    (println ::assoc-close-prices)
     (let [api-token         (-> account-id
                                 fn-repo-get-acc-by-uid
                                 :account/subscriptions
@@ -105,6 +104,9 @@
                                         [holding-id eod-historical-data]))
                                  dedupe)
           prices            (fn-quote-live-prices api-token tickers {:batch-size (or batch-size 2)})
+          _                 (clojure.pprint/pprint {::assoc-close-prices {:P  positions
+                                                                          :T  tickers
+                                                                          :PR prices}})
           pos-with-close-pr (->> prices
                                  (pmap #(deref %))
                                  (mapcat identity)
@@ -139,6 +141,7 @@
                                                      fn-repo-get-holding-positions
                                                      aggregate-holding-positions
                                                      (as-> p (fn-assoc-close-prices acc-id p)))]
+
         (send-message [:holding.query/get-holding-positions-result
                        {:result positions
                         :type   :success}])))))
@@ -249,7 +252,6 @@
       (try
         (if-let [v (model/validate :position pos)]
           (do
-            (clojure.pprint/pprint {::save-position! v})
             (send-message
              [:holding.command/save-position!-result
               {:error       v

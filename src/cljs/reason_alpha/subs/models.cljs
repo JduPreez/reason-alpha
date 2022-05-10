@@ -4,18 +4,18 @@
             [reason-alpha.model.utils :as model.utils]))
 
 (rf/reg-sub
- :models
+ :model/list
  (fn [db _]
    (get-in db data/models)))
 
 (rf/reg-sub
  :model
- :<- [:models]
+ :<- [:model/list]
  (fn [models [_ model-k]]
    (get models model-k)))
 
 (rf/reg-sub
- :models/members-of
+ :model/members-of
  (fn [[_ model-k _member-k]]
    (rf/subscribe [:model model-k]))
  (fn [model [_ _model-k member-k]]

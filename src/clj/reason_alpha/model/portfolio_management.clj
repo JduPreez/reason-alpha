@@ -174,6 +174,7 @@
                        :optional     true
                        :command-path [:holding/instrument-name]} string?]
     [:currency {:title        "Currency"
+                :ref          :holding/currency
                 :command-path [[:holding/currency]
                                [:holding/currency-name]]}
      [:tuple keyword? string?]]]
@@ -215,18 +216,15 @@
                             (/ amount quantity)))
          total-quantity (or quantity
                             (->> sub-positions
-                                 (map :quantity)
-                                 (remove nil?)
-                                 (reduce +)))
+                                 (reduce #(+ (or %1 0) (or %2 0)))))
          avg-cost-open  (or open-price
                             (->> sub-positions
                                  (map (fn [{:keys [open-price quantity]}]
-                                        (if (and open-price
-                                                 quantity)
-                                          (* open-price quantity)
-                                          0)))
+                                        (* (or open-price 0)
+                                           (or quantity 0))))
                                  (reduce +)
                                  (fn-avg-cost total-quantity)))
+         ;; TODO: Remove this
          avg-cost-open  (if (string? avg-cost-open)
                           (read-string avg-cost-open)
                           avg-cost-open)
@@ -237,17 +235,19 @@
                                            (or quantity 0))))
                                  (reduce +)
                                  (fn-avg-cost total-quantity)))
-         avg-cost-stop  (if (string? avg-cost-stop)
-                          (read-string avg-cost-stop)
-                          avg-cost-stop)
-         position       (-> position
-                            (merge {:open-price avg-cost-open
-                                    :stop       avg-cost-stop
-                                    :quantity   total-quantity})
-                            assoc-stop-total-loss
-                            (merge {:open-price (utils/round avg-cost-open)
-                                    :stop       (utils/round avg-cost-stop)
-                                    :quantity   total-quantity}))]
+
+         ;; TODO: Remove this
+         avg-cost-stop (if (string? avg-cost-stop)
+                         (read-string avg-cost-stop)
+                         avg-cost-stop)
+         position      (-> position
+                           (merge {:open-price avg-cost-open
+                                   :stop       avg-cost-stop
+                                   :quantity   total-quantity})
+                           assoc-stop-total-loss
+                           (merge {:open-price (utils/round avg-cost-open)
+                                   :stop       (utils/round avg-cost-stop)
+                                   :quantity   total-quantity}))]
      position)))
 
 (comment

@@ -10,13 +10,13 @@
 (rf/reg-event-fx
  :holding/load
  (fn [{:keys [db]} _]
-   {:holding.query/get-holdings nil
-    :dispatch                   [:model.query/getn
-                                 [:model/holding :model/symbol
-                                  :model/holding-dto]]}))
+   {:holding/get-holdings nil
+    :dispatch             [:model.query/getn
+                           [:model/holding :model/symbol
+                            :model/holding-dto]]}))
 
 (rf/reg-fx
- :holding.query/get-holdings
+ :holding/get-holdings
  (fn [_]
    (api-client/chsk-send! [:holding.query/get-holdings])))
 
@@ -41,7 +41,7 @@
      db)))
 
 (rf/reg-fx
- :holding.query/get-holding
+ :holding/get-holding
  (fn [id]
    (api-client/chsk-send! [:holding.query/get-holding id])))
 
@@ -50,17 +50,17 @@
  (fn [_ [evt {:keys [type result] :as r}]]
    (utils/log evt r)
    (when (= :success type)
-     {:holding.query/get-holding (:holding/id result)})))
+     {:holding/get-holding (:holding/id result)})))
 
 (rf/reg-fx
- :holding.command/save-holding!
+ :holding/save!
  (fn [ent]
    (utils/log :holding.command/save-holding! ent)
    (data/save-remote! {:command :holding.command/save-holding!
                        :data    ent})))
 
 (rf/reg-event-fx
- :holding.command/create
+ :holding/create
  (fn [{:keys [db]} [_ {:keys [creation-id] :as new-ent}]]
    (let [new-ent         (if creation-id
                            new-ent
@@ -70,19 +70,19 @@
          db              (data/save-local! {:model-type :holding
                                             :data       new-ent
                                             :db         db})]
-     {:db                            db
-      :holding.command/save-holding! cmd-ent})))
+     {:db            db
+      :holding/save! cmd-ent})))
 
 (rf/reg-event-fx
- :holding.command/update
+ :holding/update
  (fn [{:keys [db]} [_ {:keys [creation-id] :as ent}]]
    (let [query-dto-model (get-in db (data/model :model/holding-dto))
          cmd-ent         (mapping/query-dto->command-ent query-dto-model ent)
          db              (data/save-local! {:model-type :holding
-                                            :data       cmd-ent
+                                            :data       ent
                                             :db         db})]
-     {:db                    db
-      :holding.command/save! cmd-ent})))
+     {:db            db
+      :holding/save! cmd-ent})))
 
 (rf/reg-event-fx
  :holding.command/delete-holdings!-result
@@ -93,7 +93,7 @@
                         :data       result})))
 
 (rf/reg-fx
- :holding.command/delete-holdings!
+ :holding/delete!
  (fn [db]
    (let [del-ids (data/get-selected-ids :holding db)]
-     (api-client/chsk-send! [:holding.command/delete-holding! del-ids]))))
+     (api-client/chsk-send! [:holding.command/delete-holdings! del-ids]))))

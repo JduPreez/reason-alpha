@@ -51,9 +51,7 @@
     (when model
       (-> model
           name
-          (str ".command/"
-               (name action))
-          keyword))))
+          (keyword (name action))))))
 
 (defn-traced action-event
   "Derives the correct toolbar data event-fx from the current
@@ -61,9 +59,7 @@
   [{:keys [db]} [action]]
   (let [{:keys [model]} (get-in db data/active-view-model)
         _               (cljs.pprint/pprint {::action-event-1 model})
-        event           [(keyword (str (name model)
-                             ".command/"
-                             (name action)))]]
+        event           [(keyword (name model) (name action))]]
     (cljs.pprint/pprint {::action-event-2 [action event]})
     (if model
       {:dispatch event}

@@ -393,6 +393,7 @@
                                                      @options)))}
                                formatted-value]
                               formatted-value)]
+
         [:td (cond-> {:key       fieldname
                       :className align}
                indent? (assoc :style {:padding-left "30px"}))

@@ -10,14 +10,14 @@
 (rf/reg-event-fx
  :position/load
  (fn [{:keys [db]} _]
-   {:holding.query/get-holdings-positions nil
-    :holding.query/get-holdings           nil
-    :trade-pattern.query/getn             nil
-    :dispatch                             [:model.query/getn
-                                           [:model/position :model/position-dto]]}))
+   {:position/get-holdings-positions nil
+    :holding/get-holdings            nil
+    :trade-pattern.query/getn        nil
+    :dispatch                        [:model.query/getn
+                                      [:model/position :model/position-dto]]}))
 
 (rf/reg-fx
- :holding.query/get-holdings-positions
+ :position/get-holdings-positions
  (fn [_]
    (api-client/chsk-send! [:holding.query/get-holdings-positions])))
 
@@ -32,7 +32,7 @@
      db)))
 
 (rf/reg-fx
- :holding.query/get-holding-positions
+ :position/get-holding-positions
  (fn [pos-id]
    (api-client/chsk-send! [:holding.query/get-holding-positions pos-id])))
 
@@ -62,11 +62,10 @@
          db              (data/save-local! {:model-type :position
                                             :data       new-pos
                                             :db         db})]
-     (cljs.pprint/pprint {:position.command/create {:M  query-dto-model
-                                                    :NP new-pos
+     (cljs.pprint/pprint {:position.command/create {:NP new-pos
                                                     :CP cmd-pos}})
-     {:db                             db
-      :holding.command/save-position! cmd-pos})))
+     {:db             db
+      :position/save! cmd-pos})))
 
 (rf/reg-event-fx
  :position/update
@@ -85,18 +84,18 @@
          db                          (data/save-local! {:model-type :position
                                                         :data       pos
                                                         :db         db})]
-     {:db                             db
-      :holding.command/save-position! cmd-pos})))
+     {:db             db
+      :position/save! cmd-pos})))
 
 (rf/reg-event-fx
  :holding.command/save-position!-result
  (fn [_ [evt {:keys [type result] :as r}]]
    (utils/log evt r)
    (when (= :success type)
-     {:position.query/get-position (:position/id result)})))
+     {:position/get-holding-positions (:position/id result)})))
 
 (rf/reg-fx
- :holding.command/save-position!
+ :position/save!
  (fn [pos]
    (utils/log :holding.command/save-position! pos)
    (data/save-remote! {:command :holding.command/save-position!
@@ -111,7 +110,7 @@
                         :data       result})))
 
 (rf/reg-fx
- :holding.command/delete-positions!
+ :position/delete!
  (fn [db]
    (let [del-ids (data/get-selected-ids :position db)]
      (api-client/chsk-send! [:holding.command/delete-positions! del-ids]))))

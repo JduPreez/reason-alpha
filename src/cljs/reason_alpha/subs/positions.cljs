@@ -12,7 +12,7 @@
 
 (rf/reg-sub
  :position/long-short-ref-list
- :<- [:models/members-of :model/position :position/long-short]
+ :<- [:model/members-of :model/position :position/long-short]
  (fn [{{:keys [enum/titles]} :properties
        mbrs                  :members} _]
    (for [m    mbrs
@@ -21,7 +21,7 @@
 
 (rf/reg-sub
  :position/long-short-titles
- :<- [:models/members-of :model/position :position/long-short]
+ :<- [:model/members-of :model/position :position/long-short]
  (fn [{{:keys [enum/titles]} :properties} _]
    titles))
 

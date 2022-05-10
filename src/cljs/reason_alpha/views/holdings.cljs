@@ -7,16 +7,20 @@
    :title             "Holdings (Instruments)"
    :data-subscription [:holding/list]
    :id-field          :holding-creation-id
-   :create-dispatch   [:holding.command/create]
-   :update-dispatch   [:holding.command/update]
+   :create-dispatch   [:holding/create]
+   :update-dispatch   [:holding/update]
    :default-values    {:instrument-type [:share ""]}})
 
 (defn view []
-  (let [*schema      (rf/subscribe [:model :model/holding-dto])
-        *type-titles (rf/subscribe [:holding/instrument-type-titles])
-        fields       (datagrid/model->fields
-                      @*schema
-                      {:fields-opts
-                       {:instrument-type
-                        {:enum-titles @*type-titles}}})]
+  (let [*schema          (rf/subscribe [:model :model/holding-dto])
+        *type-titles     (rf/subscribe [:holding/instrument-type-titles])
+        *currency-titles (rf/subscribe [:holding/currency-titles])
+        fields           (datagrid/model->fields
+                          @*schema
+                          {:fields-opts
+                           {:currency
+                            {:enum-titles @*currency-titles}
+
+                            :instrument-type
+                            {:enum-titles @*type-titles}}})]
     [datagrid/view fields options]))

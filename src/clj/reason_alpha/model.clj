@@ -117,12 +117,12 @@
                                                         eod/quote-live-prices
                                                         true
                                                         {:fn-get-ctx common/get-context}))
-               :get-holding-positions        (as-> db d
-                                               (partial holding-repo/get-holding-positions d)
-                                               (svc.common/get1-msg-fn
-                                                {:fn-repo-get1       d
-                                                 :fn-get-ctx         common/get-context
-                                                 :response-msg-event :holding.query/get-holding-positions-result}))
+               :get-holding-positions        (holding-svc/get-holding-positions-fn
+                                              #(holding-repo/get-holding-positions db %)
+                                              #(account-repo/get-by-user-id db %)
+                                              eod/quote-live-prices
+                                              common/get-context)
+
                :broadcast-holdings-positions (as-> db d
                                                (partial holding-repo/get-holdings-positions d)
                                                (partial holding-svc/get-holdings-positions d
