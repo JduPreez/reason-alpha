@@ -34,6 +34,7 @@
                  [metosin/ring-http-response "0.9.1"]
                  [migratus "1.2.6"]
                  [nrepl "0.6.0"]
+                 [org.babashka/sci "0.3.5"]
                  [org.clojure/clojure "1.10.3"]
                  [org.clojure/clojurescript "1.10.879" :scope "provided"]
                  [org.clojure/core.async "0.4.500"]

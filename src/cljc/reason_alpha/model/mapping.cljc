@@ -1,6 +1,7 @@
 (ns reason-alpha.model.mapping
   (:require [malli.util :as mu]
-            [reason-alpha.utils :as utils]))
+            [reason-alpha.utils :as utils]
+            [sci.core :as sci]))
 
 (defn mv-assoc-in
   "A version of `assoc-in` (`mv-` = map & vector) that creates nested maps & collections."
@@ -85,6 +86,8 @@
          (into {}))
     [path step]))
 
+(def eval-str (memoize #(sci/eval-string %)))
+
 (defn command-ent->query-dto [query-model [root-ent & other-ents :as ents]]
   (let [all-paths-vals      (flatten-path [] root-ent)
         ref-ents-paths-vals (->> other-ents
@@ -95,44 +98,55 @@
                                  (map
                                   (fn [[k props type]]
                                     [k props type])))]
-    #_{:APV  all-paths-vals
-       :REPV ref-ents-paths-vals}
     (->> all-paths-vals
          (reduce
           (fn [{:keys [dto membr-nm-paths] :as dto-paths} [path v]]
             (let [path-template (mapv #(if (number? %) 0 %) path)
-                  [nm-k
-                   tuple-lbl-v] (some
-                                 (fn [[k {p   :command-path
-                                          pvt :pivot} type]]
-                                   (let [id-lbl-tuple?   (id-label-tuple? type)
-                                         [p tuple-lbl-p] (if id-lbl-tuple?
-                                                           p [p])]
-                                     (when (= p path-template)
-                                       (cond
-                                         pvt
-                                         , (-> path
-                                               butlast
-                                               vec
-                                               (conj pvt)
-                                               (as-> x (get all-paths-vals x))
-                                               (as-> x (conj [] x)))
+                  {:keys             [member-nm-key
+                                      tuple-label]
+                   {:keys [arg fun]} :fn-value}
+                  , (some
+                     (fn [[k {p        :command-path
+                              pvt      :pivot
+                              fn-value :fn-value} type]]
+                       (let [id-lbl-tuple?   (id-label-tuple? type)
+                             [p tuple-lbl-p] (if id-lbl-tuple?
+                                               p [p])]
+                         (when (= p path-template)
+                           (cond
+                             pvt
+                             , {:member-nm-key (-> path
+                                                   butlast
+                                                   vec
+                                                   (conj pvt)
+                                                   (as-> x (get all-paths-vals x)))}
 
-                                         id-lbl-tuple?
-                                         , [k (or (get ref-ents-paths-vals tuple-lbl-p)
-                                                  "")]
+                             id-lbl-tuple?
+                             , {:member-nm-key k
+                                :tuple-label   (or (get ref-ents-paths-vals tuple-lbl-p)
+                                                   "")}
 
-                                         :else [k]))))
-                                 membr-nm-paths)
-                  v         (if tuple-lbl-v [v tuple-lbl-v] v)
+                             :else {:member-nm-key k
+                                    :fn-value      fn-value}))))
+                     membr-nm-paths)
+
+                  f         (when fun (-> fun str eval-str))
+                  arg-v     (when arg (-> path
+                                          butlast
+                                          vec
+                                          (conj arg)
+                                          (as-> x (get all-paths-vals x))))
+                  v         (cond
+                              tuple-lbl-v [v tuple-lbl-v]
+                              fun         (f arg-v)
+                              :else       v)
                   dto-paths (if nm-k
-                              {:dto            (assoc dto nm-k v)
-                               :membr-nm-paths (remove
-                                                (fn [[k _]]
-                                                  (= k nm-k))
-                                                membr-nm-paths)}
+                              (cond-> {:membr-nm-paths (remove
+                                                        (fn [[k _]]
+                                                          (= k nm-k))
+                                                        membr-nm-paths)}
+                                (and fun v) {:dto (assoc dto nm-k (:value v))})
                               dto-paths)]
-              ;;(clojure.pprint/pprint dto-paths)
               dto-paths))
           {:dto            {}
            :membr-nm-paths member-nm-paths})

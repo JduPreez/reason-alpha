@@ -105,4 +105,3 @@
 (defn save-position!
   [db position]
   (data.model/save! db position))
-

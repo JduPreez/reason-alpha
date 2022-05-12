@@ -129,7 +129,20 @@
     uuid?]
    [:stop-total-loss {:title    "Stop Total Loss"
                       :optional true}
-    float?]])
+    float?]
+   [:eod-historical-data {:optional     true
+                          :fn-value     {:arg :symbol/provider
+                                         :fun '(fn [{p :symbol/provider} v]
+                                                 (when (= p :eod-historical-data)
+                                                   {:value v}))}
+                          :command-path [:holding/symbols 0 :symbol/ticker]}]])
+
+(comment
+  (= 'fn* (first '#([{:keys [x y]}] (> x y))))
+
+  (sequential? '#([{:keys [x y]}] (> x y)))
+
+  )
 
 (def-model Holding
   :model/holding
