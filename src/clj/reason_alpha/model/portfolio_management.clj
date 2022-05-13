@@ -135,7 +135,8 @@
                                          :fun '(fn [{p :symbol/provider} v]
                                                  (when (= p :eod-historical-data)
                                                    {:value v}))}
-                          :command-path [:holding/symbols 0 :symbol/ticker]}]])
+                          :command-path [:holding/symbols 0 :symbol/ticker]}
+    string?]])
 
 (comment
   (= 'fn* (first '#([{:keys [x y]}] (> x y))))
