@@ -36,6 +36,12 @@
                               :pivot        :symbol/provider,
                               :command-path [:instrument/symbols 0 :symbol/ticker]}
                              string?]
+                            [:easy-equities
+                             {:title        "Easy Equities",
+                              :optional     true,
+                              :pivot        :symbol/provider,
+                              :command-path [:instrument/symbols 0 :symbol/ticker]}
+                             string?]
                             [:currency-account
                              {:title        "Currency Account"
                               :optional     true
@@ -147,46 +153,48 @@
 (deftest mapping-position-command-ent->query-dto
   (let [cid                           #uuid "74e921b2-fe79-454d-b47c-08c43b298019"
         id                            #uuid "0180098b-e65e-d7ce-645b-41eef737fa0c"
-        holding
-        qty                           333.4
-        long-short
-        open-time
-        open-price
-        close-price
-        status
-        stop
-        trade-pattern
-        holding-position-id
-        stop-total-loss
-        eod-historical-data
-        root+ref-ents                 [{:position/holding-position-id #uuid "018008e1-a0db-2638-b2e2-4e9f0e332d11",
-                                        :position/trade-pattern-id    #uuid "01800865-9069-63c7-9c6c-4d24cdcefc9a",
-                                        :position/long-short          :long,
+        hid                           #uuid "018004bb-227c-d6de-69ac-bc1eab688ab5"
+        hname                         "Duolingo"
+        qty                           150
+        l-s                           :long
+        otime                         #inst "2022-04-06T00:00:00.000-00:00"
+        oprice                        352.22
+        cprice                        421.34
+        st                            :open
+        stp                           325
+        trade-ptrn-id                 #uuid "01800865-9069-63c7-9c6c-4d24cdcefc9a"
+        trade-ptrn-nm                 "Breakout"
+        hposition-id                  #uuid "018008e1-a0db-2638-b2e2-4e9f0e332d11"
+        eod                           "XOXOXO"
+        root+ref-ents                 [{:position/holding-position-id hposition-id,
+                                        :position/trade-pattern-id    trade-ptrn-id,
+                                        :position/long-short          l-s,
                                         :position/id                  id,
                                         :position/creation-id         cid,
+                                        :position/status              st
                                         :position/open
                                         #:trade-transaction{:quantity qty,
-                                                            :date     #inst "2022-04-06T00:00:00.000-00:00",
-                                                            :price    "333"},
-                                        :position/close               #:trade-transaction{:price 36.85, :estimated? true},
-                                        :position/holding-id          #uuid "018004bb-227c-d6de-69ac-bc1eab688ab5",
+                                                            :date     otime,
+                                                            :price    oprice},
+                                        :position/close               #:trade-transaction{:price cprice,},
+                                        :position/holding-id          hid,
                                         :xt/id                        #uuid "0180098b-e65e-d7ce-645b-41eef737fa0c",
                                         :position/account-id          #uuid "017f87dc-59d1-7beb-9e1d-7a2a354e5a49",
-                                        :position/stop                "3333"}
+                                        :position/stop                stp}
                                        {:holding/creation-id     #uuid "c818b4ab-fbc7-48ca-ab7b-abf15a71b74c",
-                                        :holding/instrument-name "BBB",
+                                        :holding/instrument-name hname,
                                         :holding/symbols
-                                        [#:symbol{:ticker "BBB", :provider :eod-historical-data}
+                                        [#:symbol{:ticker eod :provider :eod-historical-data}
                                          #:symbol{:ticker "BBB", :provider :saxo-dma}
                                          #:symbol{:ticker "BBB", :provider :easy-equities}],
                                         :holding/instrument-type :crypto,
                                         :holding/account-id      #uuid "017f87dc-59d1-7beb-9e1d-7a2a354e5a49",
-                                        :holding/id              #uuid "018004bb-227c-d6de-69ac-bc1eab688ab5",
+                                        :holding/id              hid,
                                         :xt/id                   #uuid "018004bb-227c-d6de-69ac-bc1eab688ab5"}
                                        {:trade-pattern/creation-id #uuid "47427389-60f3-4f0b-a32e-7fbe139b6e36",
                                         :trade-pattern/id          #uuid "01800865-9069-63c7-9c6c-4d24cdcefc9a",
-                                        :trade-pattern/name        "Breakout",
-                                        :trade-pattern/description "Breakout",
+                                        :trade-pattern/name        trade-ptrn-nm,
+                                        :trade-pattern/description "Lorem ipsum",
                                         :trade-pattern/account-id  #uuid "017f87dc-59d1-7beb-9e1d-7a2a354e5a49",
                                         :xt/id                     #uuid "01800865-9069-63c7-9c6c-4d24cdcefc9a"}]
         {:keys [position-creation-id
@@ -201,9 +209,24 @@
                 stop
                 trade-pattern
                 holding-position-id
-                stop-total-loss
                 eod-historical-data]} (sut/command-ent->query-dto position-qry-dto-model root+ref-ents)]
-    ))
+    (testing "`command-ent->query-dto` should map using a function"
+      (is (= eod eod-historical-data)))
+    (testing "`command-ent->query-dto` should map simple command paths"
+      (is (= id position-id))
+      (is (= cid position-creation-id))
+      (is (= hid (first holding)))
+      (is (= qty quantity))
+      (is (= otime open-time))
+      (is (= oprice open-price))
+      (is (= cprice close-price))
+      (is (= st status))
+      (is (= stp stop))
+      (is (= hposition-id holding-position-id)))
+    (testing "`command-ent->query-dto` should map tuples"
+      (is (= [hid hname] holding))
+      (is (= [l-s ""] long-short))
+      (is (= [trade-ptrn-id trade-ptrn-nm] trade-pattern)))))
 
 (deftest mapping-command-ents->query-dtos
   (let [symbol-yahoo-ticker     "SBUX"
@@ -231,6 +254,22 @@
       (is (= iname instrument-name))
       (is (= yahoo-finance symbol-yahoo-ticker))
       (is (= easy-equities symbol-ee-ticker)))))
+
+(comment
+  (let [ent {:instrument/id   #uuid "017fd139-a0bd-d2b4-11f2-222a61e7edfc",
+             :instrument/creation-id
+             #uuid "ea669a4e-e815-4100-8cf3-da7d7fa50a17",
+             :instrument/name "Starbucks",
+             :instrument/symbols
+             [{:symbol/ticker   "SBUX"
+               :symbol/provider :yahoo-finance}
+              {:symbol/ticker   "SBUX.NY"
+               :symbol/provider :easy-equities}],
+             :instrument/type :share}]
+    (sut/command-ents->query-dtos holding-qry-dto-model
+                                  [[ent]]))
+
+  )
 
 (deftest mapping-tuple-query-dto<->command-ent
   (let [tptrn-id                             #uuid "017fd139-a0bd-d2b4-11f2-222a61e7edfc"

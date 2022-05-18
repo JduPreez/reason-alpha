@@ -110,20 +110,22 @@
               (-> vs vals first))]
     {:value [v (or lbl "")]}))
 
-(defmethod path-value :pivot [{:keys [member-nm-key pivot path path-vals]}]
-  (let [pvt-items (-> path
-                      butlast
-                      vec
-                      (conj pivot)
-                      (as-> x (get path-vals x)))]
-    (some (fn [[p v]]
-            (let [pvt-val (-> p
-                              butlast
-                              vec
-                              (conj pivot)
-                              (as-> x (get pvt-items x)))]
-              (when (= pvt-val member-nm-key) v)))
-          (get path-vals path))))
+(defmethod path-value :pivot [{:keys [member-nm-key pivot path path-vals] :as x}]
+  (when (not= (last path) pivot)
+    (let [pvt-items (-> path
+                        butlast
+                        vec
+                        (conj pivot)
+                        (as-> x (get path-vals x)))]
+      (when-let [v (some (fn [[p v]]
+                           (let [pvt-val (-> p
+                                             butlast
+                                             vec
+                                             (conj pivot)
+                                             (as-> x (get pvt-items x)))]
+                             (when (= pvt-val member-nm-key) v)))
+                         (get path-vals path))]
+        {:value v}))))
 
 (defmethod path-value :function [{:keys [fun arg path path-vals]}]
   (let [val-k (last path)]
@@ -144,55 +146,55 @@
                       val-k v})))
               (get path-vals path))))))
 
-(defn command-ent->query-dto [query-model [root-ent & other-ents :as ents]]
-  (let [all-paths-vals      (flatten-path [] root-ent)
-        ref-ents-paths-vals (->> other-ents
-                                 (map #(flatten-path [] %))
-                                 (apply merge))
-        member-nm-paths     (->> query-model
-                                 rest
-                                 (map
-                                  (fn [[k props type]]
-                                    [k props type])))]
-    (->> all-paths-vals
-         (reduce
-          (fn [{:keys [dto membr-nm-paths] :as dto-paths} [path v]]
-            (let [path-template (mapv #(if (number? %) 0 %) path)
-                  [nm-k
-                   tuple-lbl-v] (some
-                                 (fn [[k {p   :command-path
-                                          pvt :pivot} type]]
-                                   (let [id-lbl-tuple?   (id-label-tuple? type)
-                                         [p tuple-lbl-p] (if id-lbl-tuple?
-                                                           p [p])]
-                                     (when (= p path-template)
-                                       (cond
-                                         pvt
-                                         , (-> path
-                                               butlast
-                                               vec
-                                               (conj pvt)
-                                               (as-> x (get all-paths-vals x))
-                                               (as-> x (conj [] x)))
+;; (defn command-ent->query-dto [query-model [root-ent & other-ents :as ents]]
+;;   (let [all-paths-vals      (flatten-path [] root-ent)
+;;         ref-ents-paths-vals (->> other-ents
+;;                                  (map #(flatten-path [] %))
+;;                                  (apply merge))
+;;         member-nm-paths     (->> query-model
+;;                                  rest
+;;                                  (map
+;;                                   (fn [[k props type]]
+;;                                     [k props type])))]
+;;     (->> all-paths-vals
+;;          (reduce
+;;           (fn [{:keys [dto membr-nm-paths] :as dto-paths} [path v]]
+;;             (let [path-template (mapv #(if (number? %) 0 %) path)
+;;                   [nm-k
+;;                    tuple-lbl-v] (some
+;;                                  (fn [[k {p   :command-path
+;;                                           pvt :pivot} type]]
+;;                                    (let [id-lbl-tuple?   (id-label-tuple? type)
+;;                                          [p tuple-lbl-p] (if id-lbl-tuple?
+;;                                                            p [p])]
+;;                                      (when (= p path-template)
+;;                                        (cond
+;;                                          pvt
+;;                                          , (-> path
+;;                                                butlast
+;;                                                vec
+;;                                                (conj pvt)
+;;                                                (as-> x (get all-paths-vals x))
+;;                                                (as-> x (conj [] x)))
 
-                                         id-lbl-tuple?
-                                         , [k (or (get ref-ents-paths-vals tuple-lbl-p)
-                                                  "")]
+;;                                          id-lbl-tuple?
+;;                                          , [k (or (get ref-ents-paths-vals tuple-lbl-p)
+;;                                                   "")]
 
-                                         :else [k]))))
-                                 membr-nm-paths)
-                  v         (if tuple-lbl-v [v tuple-lbl-v] v)
-                  dto-paths (if nm-k
-                              {:dto            (assoc dto nm-k v)
-                               :membr-nm-paths (remove
-                                                (fn [[k _]]
-                                                  (= k nm-k))
-                                                membr-nm-paths)}
-                              dto-paths)]
-              dto-paths))
-          {:dto            {}
-           :membr-nm-paths member-nm-paths})
-         :dto)))
+;;                                          :else [k]))))
+;;                                  membr-nm-paths)
+;;                   v         (if tuple-lbl-v [v tuple-lbl-v] v)
+;;                   dto-paths (if nm-k
+;;                               {:dto            (assoc dto nm-k v)
+;;                                :membr-nm-paths (remove
+;;                                                 (fn [[k _]]
+;;                                                   (= k nm-k))
+;;                                                 membr-nm-paths)}
+;;                               dto-paths)]
+;;               dto-paths))
+;;           {:dto            {}
+;;            :membr-nm-paths member-nm-paths})
+;;          :dto)))
 
 (defn command-ent->query-dto [query-model ents]
   (let [mega-ent            (apply merge ents)
@@ -205,44 +207,53 @@
         schema-member-paths (->> query-model
                                  rest
                                  (mapcat
-                                  (fn [[_ {:keys         [command-path]
+                                  (fn [[_ {:keys         [command-path pivot]
                                            {:keys [arg]} :fn-value} type :as schema-membr]]
-                                    (let [cmd-path      (when command-path
-                                                          (if (every? sequential? command-path)
-                                                            [(first command-path) schema-membr]
-                                                            [command-path schema-membr]))
-                                          arg-path      (when (and command-path arg)
-                                                          [(-> command-path
-                                                               butlast
-                                                               vec
-                                                               (conj arg)) schema-membr])
-                                          id-lbl-tuple? (id-label-tuple? type)]
+                                    (let [arg-path (when (and command-path arg)
+                                                     [(-> command-path
+                                                          butlast
+                                                          vec
+                                                          (conj arg)) schema-membr])
+                                          pvt-path (when (and command-path pivot)
+                                                     [(-> command-path
+                                                          butlast
+                                                          vec
+                                                          (conj pivot)) schema-membr])
+                                          cmd-path (when (and command-path
+                                                              (not arg-path))
+                                                     ;; Check if it's a tuple
+                                                     (if (every? sequential? command-path)
+                                                       [(first command-path) schema-membr]
+                                                       [command-path schema-membr]))]
                                       (cond-> []
-                                        cmd-path        (conj cmd-path)
-                                        arg-path        (conj arg-path)
-                                        id-label-tuple? (conj [(second command-path) schema-membr])))))
+                                        cmd-path (conj cmd-path)
+                                        arg-path (conj arg-path)
+                                        pvt-path (conj pvt-path)))))
+                                 (group-by first)
+                                 (map (fn [[k v]]
+                                        [k (map second v)]))
                                  (into {}))
-        gpath-vals          (select-keys gpath-vals (keys schema-member-paths))
         dto                 (->> schema-member-paths
                                  keys
                                  (select-keys gpath-vals)
                                  (reduce
                                   (fn [dto [path sub-path-vals]]
-                                    (let [[member-nm-key
-                                           {p                 :command-path
-                                            pvt               :pivot
-                                            {:keys [arg fun]} :fn-value}
-                                           type] (get schema-member-paths path)
-                                          v      (path-value {:type          type
-                                                              :path          p
-                                                              :path-vals     gpath-vals
-                                                              :fun           fun
-                                                              :arg           arg
-                                                              :pivot         pvt
-                                                              :member-nm-key member-nm-key})]
-                                      (if v
-                                        (assoc dto member-nm-key (:value v))
-                                        dto)))
+                                    (let [kvs (->> (for [smp  (get schema-member-paths path)
+                                                         :let [[member-nm-key
+                                                                {p                 :command-path
+                                                                 pvt               :pivot
+                                                                 {:keys [arg fun]} :fn-value}
+                                                                type] smp
+                                                               v (path-value {:type          type
+                                                                              :path          p
+                                                                              :path-vals     gpath-vals
+                                                                              :fun           fun
+                                                                              :arg           arg
+                                                                              :pivot         pvt
+                                                                              :member-nm-key member-nm-key})]]
+                                                     (when v {member-nm-key (:value v)}))
+                                                   (remove nil?))]
+                                      (apply merge dto kvs)))
                                   {}))]
     dto))
 
@@ -253,8 +264,51 @@
 
 (comment
 
-  (let [
-        
+  (let [query-model         [:map
+                             [:instrument-id
+                              {:optional true, :command-path [:instrument/id]}
+                              uuid?]
+                             [:instrument-creation-id
+                              {:command-path [:instrument/creation-id]}
+                              uuid?]
+                             [:instrument-name
+                              {:title        "Instrument",
+                               :optional     true,
+                               :command-path [:instrument/name]}
+                              string?]
+                             [:instrument-type
+                              {:title        "Type",
+                               :optional     true,
+                               :ref          :instrument/type,
+                               :command-path [[:instrument/type]
+                                              [:instrument/type-name]]}
+                              [:tuple keyword string?]]
+                             [:yahoo-finance
+                              {:title        "Yahoo! Finance",
+                               :optional     true,
+                               :pivot        :symbol/provider,
+                               :command-path [:instrument/symbols 0 :symbol/ticker]}
+                              string?]
+                             [:saxo-dma
+                              {:title        "Saxo/DMA",
+                               :optional     true,
+                               :pivot        :symbol/provider,
+                               :command-path [:instrument/symbols 0 :symbol/ticker]}
+                              string?]
+                             [:currency-account
+                              {:title        "Currency Account"
+                               :optional     true
+                               :command-path [:instrument/currency-instrument :instrument/account :account/user-name]}]]
+        ents                [{:instrument/id   #uuid "017fd139-a0bd-d2b4-11f2-222a61e7edfc",
+                              :instrument/creation-id
+                              #uuid "ea669a4e-e815-4100-8cf3-da7d7fa50a17",
+                              :instrument/name "Starbucks",
+                              :instrument/symbols
+                              [{:symbol/ticker   "SBUX"
+                                :symbol/provider :yahoo-finance}
+                               {:symbol/ticker   "SBUX.NY"
+                                :symbol/provider :easy-equities}],
+                              :instrument/type :share}]
         mega-ent            (apply merge ents)
         path-vals           (flatten-path [] mega-ent)
         gpath-vals          (->> path-vals
@@ -265,45 +319,56 @@
         schema-member-paths (->> query-model
                                  rest
                                  (mapcat
-                                  (fn [[_ {:keys         [command-path]
+                                  (fn [[_ {:keys         [command-path pivot]
                                            {:keys [arg]} :fn-value} type :as schema-membr]]
-                                    (let [cmd-path      (when command-path
-                                                          (if (every? sequential? command-path)
-                                                            [(first command-path) schema-membr]
-                                                            [command-path schema-membr]))
-                                          arg-path      (when (and command-path arg)
-                                                          [(-> command-path
-                                                               butlast
-                                                               vec
-                                                               (conj arg)) schema-membr])
-                                          id-lbl-tuple? (id-label-tuple? type)]
+                                    (let [arg-path (when (and command-path arg)
+                                                     [(-> command-path
+                                                          butlast
+                                                          vec
+                                                          (conj arg)) schema-membr])
+                                          pvt-path (when (and command-path pivot)
+                                                     [(-> command-path
+                                                          butlast
+                                                          vec
+                                                          (conj pivot)) schema-membr])
+                                          cmd-path (when (and command-path
+                                                              (not arg-path))
+                                                     ;; Check if it's a tuple
+                                                     (if (every? sequential? command-path)
+                                                       [(first command-path) schema-membr]
+                                                       [command-path schema-membr]))]
                                       (cond-> []
-                                        cmd-path        (conj cmd-path)
-                                        arg-path        (conj arg-path)
-                                        id-label-tuple? (conj [(second command-path) schema-membr])))))
+                                        cmd-path (conj cmd-path)
+                                        arg-path (conj arg-path)
+                                        pvt-path (conj pvt-path)))))
+                                 (group-by first)
+                                 (map (fn [[k v]]
+                                        [k (map second v)]))
                                  (into {}))
-        gpath-vals          (select-keys gpath-vals (keys schema-member-paths))
+        #_#_gpath-vals      (select-keys gpath-vals (keys schema-member-paths))
         dto                 (->> schema-member-paths
                                  keys
                                  (select-keys gpath-vals)
                                  (reduce
                                   (fn [dto [path sub-path-vals]]
-                                    (let [[member-nm-key
-                                           {p                 :command-path
-                                            pvt               :pivot
-                                            {:keys [arg fun]} :fn-value}
-                                           type] (get schema-member-paths path)
-                                          v      (path-value {:type          type
-                                                              :path          p
-                                                              :path-vals     gpath-vals
-                                                              :fun           fun
-                                                              :arg           arg
-                                                              :pivot         pvt
-                                                              :member-nm-key member-nm-key})]
-                                      (if v
-                                        (assoc dto member-nm-key (:value v))
-                                        dto)))
+                                    (let [kvs (->> (for [smp  (get schema-member-paths path)
+                                                         :let [[member-nm-key
+                                                                {p                 :command-path
+                                                                 pvt               :pivot
+                                                                 {:keys [arg fun]} :fn-value}
+                                                                type] smp
+                                                               v (path-value {:type          type
+                                                                              :path          p
+                                                                              :path-vals     gpath-vals
+                                                                              :fun           fun
+                                                                              :arg           arg
+                                                                              :pivot         pvt
+                                                                              :member-nm-key member-nm-key})]]
+                                                     (when v {member-nm-key (:value v)}))
+                                                   (remove nil?))]
+                                      (apply merge dto kvs)))
                                   {}))]
+    ;;schema-member-paths
     dto)
 
   (let [[k v :as x] nil] x)
