@@ -101,12 +101,11 @@
                                 :api-token)
           tickers           (->> positions
                                  (map (fn [{:keys [holding-id eod-historical-data]}]
-                                        [holding-id eod-historical-data]))
+                                        (when (and holding-id eod-historical-data)
+                                          [holding-id eod-historical-data])))
+                                 (remove nil?)
                                  dedupe)
-          prices            (fn-quote-live-prices api-token tickers {:batch-size (or batch-size 2)})
-          _                 (clojure.pprint/pprint {::assoc-close-prices {:P  positions
-                                                                          :T  tickers
-                                                                          :PR prices}})
+          prices            (fn-quote-live-prices api-token tickers {:batch-size batch-size})
           pos-with-close-pr (->> prices
                                  (pmap #(deref %))
                                  (mapcat identity)
@@ -118,16 +117,7 @@
                                                 (mapv (fn [{:keys [status] :as p}]
                                                         (if (#{:open} status)
                                                           (assoc p :close-price price)
-                                                          p)))))))
-          ;; positions (->> positions
-          ;;                    (map (fn [{:keys [holding-id] :as pos}]
-          ;;                           (if-let [price (some #(if (= holding-id
-          ;;                                                        (:holding-id %))
-          ;;                                                   (:price-close %))
-          ;;                                                prices)]
-          ;;                             (assoc pos :close-price price)
-          ;;                             pos))))
-          ]
+                                                          p)))))))]
       pos-with-close-pr)))
 
 (defn get-holding-positions-fn
@@ -164,24 +154,33 @@
         fn-assoc-close-prices (assoc-close-prices-fn fn-repo-get-acc-by-uid
                                                      fn-quote-live-prices
                                                      acc-id)
-        positions             (->> {:account-id acc-id
+        gpositions            (->> {:account-id acc-id
                                     :role       (if account-id
                                                   :system
                                                   :member)}
                                    fn-repo-get-holdings-positions
-                                   ;; For now all prices must be live
-                                   ;;(map #(assoc % :close-estimated? true))
                                    (group-by (fn [{:keys [position-id holding-position-id]}]
                                                (or holding-position-id
-                                                   position-id)))
-                                   (mapcat (fn [[_ hs]]
-                                             (aggregate-holding-positions hs)))
-                                   fn-assoc-close-prices)]
+                                                   position-id))))]
     (when broadcast? (swap! *broadcast-holdings-positions conj acc-id))
 
-    (send-msg
-     [:holding.query/get-holdings-positions-result {:result positions
-                                                    :type   :success}])))
+    (doseq [[_gpos-id posns] gpositions]
+      (future
+        (try
+          (let [positions (->> posns
+                               aggregate-holding-positions
+                               fn-assoc-close-prices)]
+            (send-msg
+             [:holding.query/get-holdings-positions-result {:result positions
+                                                            :type   :success}]))
+          (catch Exception e
+            (let [err-msg "Error getting holdings positions"]
+              (errorf e err-msg)
+              (send-message
+               [:holding.query/get-holdings-positions-result
+                {:error       (ex-data e)
+                 :description (str err-msg ": " (ex-message e))
+                 :type        :error}]))))))))
 
 (defn broadcast-holdings-positions
   [fn-get-holdings-positions {:keys [send-message *connected-users]}]
@@ -202,25 +201,7 @@
             (doseq [acc-id @*broadcast-holdings-positions]
               (println (str i ") Broadcast holdings positions " acc-id))
               (fn-get-holdings-positions {:send-message send-message
-                                          :account-id   acc-id}))
-
-            ;; (doseq [acc-id qte-price-usrs
-            ;;         :let   [api-token           (-> acc-id
-            ;;                                         fn-repo-get-acc-by-uid
-            ;;                                         :account/subscriptions
-            ;;                                         :subscription/eod-historical-data
-            ;;                                         :api-token)
-            ;;                 tickers             (->> {:account-id acc-id
-            ;;                                           :role       :system}
-            ;;                                          fn-repo-get-positions
-            ;;                                          (map (fn [{:keys [holding-id eod-historical-data]}]
-            ;;                                                 [holding-id eod-historical-data])))
-            ;;                 price-results       (fn-quote-live-prices api-token tickers {:batch-size 2})
-            ;;                 fn-send-price-quote (fn [price-quotes]
-            ;;                                       (send-message acc-id [:price/quotes price-quotes]))]]
-            ;;   (doall
-            ;;    (pmap #(fn-send-price-quote (deref %)) price-results)))
-            ))]
+                                          :account-id   acc-id}))))]
 
     (go-loop [i 0]
       (println "Broadcast holdings positions " i)

@@ -3,14 +3,14 @@
             [tick.core :as tick]))
 
 (defn quote-live-prices
-  [_api-token tickers & [{:keys [batch-size job-time-sec]
-                          :or   {batch-size   15
-                                 job-time-sec 2}}]]
-  (let [parts     (if (< (count tickers) batch-size)
-                    [tickers]
-                    (vec (partition batch-size tickers)))
-        tkr-parts (mapv (fn [p] [p (promise)]) parts)
-        results   (mapv #(second %) tkr-parts)]
+  [_api-token tickers & [{:keys [batch-size job-time-sec]}]]
+  (let [batch-size   (or batch-size 2)
+        job-time-sec (or job-time-sec 2)
+        parts        (if (< (count tickers) batch-size)
+                       [tickers]
+                       (vec (partition batch-size tickers)))
+        tkr-parts    (mapv (fn [p] [p (promise)]) parts)
+        results      (mapv #(second %) tkr-parts)]
     (doall
      (for [[tkrs *reslt] tkr-parts]
        (future

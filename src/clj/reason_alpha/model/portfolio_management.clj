@@ -132,11 +132,15 @@
     float?]
    [:eod-historical-data {:optional     true
                           :fn-value     {:arg :symbol/provider
-                                         :fun '(fn [{p :symbol/provider} v]
+                                         :fun '(fn [{p :symbol/provider
+                                                     v :symbol/ticker}]
                                                  (when (= p :eod-historical-data)
                                                    {:value v}))}
                           :command-path [:holding/symbols 0 :symbol/ticker]}
-    string?]])
+    string?]
+   [:holding-id {:optional     true
+                 :command-path [:position/holding-id]}
+    uuid?]])
 
 (comment
   (= 'fn* (first '#([{:keys [x y]}] (> x y))))
