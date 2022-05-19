@@ -26,22 +26,3 @@
 (defn get-context []
   *context*)
 
-#_(defn get-context [data]
-  (when data
-    (-> data
-        meta
-        :context)))
-
-#_(defn set-context [data ctx]
-  (if (and data (instance? clojure.lang.IObj
-                           data))
-    (with-meta data {:context ctx})
-    data))
-
-(comment
-
-  (let [d (set-context [:one :two] {:something "very cool"})]
-    (get-context d))
-  
-
-  )

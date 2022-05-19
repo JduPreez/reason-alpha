@@ -22,6 +22,7 @@
                  [day8.re-frame/http-fx "0.2.4"]
                  [http-kit "2.5.3"]
                  [integrant "0.8.0"]
+                 [io.xapix/axel-f "2.0.11"]
                  [cljsjs/jquery "3.2.1-0"]
                  [com.xtdb/xtdb-core "1.20.0"]
                  [com.xtdb/xtdb-rocksdb "1.20.0"]

@@ -1,5 +1,6 @@
 (ns reason-alpha.model.portfolio-management
-  (:require [malli.core :as m]
+  (:require [axel-f.excel :as axel-f]
+            [malli.core :as m]
             [malli.instrument :as malli.instr]
             [reason-alpha.model.core :as model :refer [def-model]]
             [reason-alpha.model.fin-instruments :as fin-instruments]
@@ -75,6 +76,21 @@
    [:position/stop {:optional true} number?]
    [:position/holding-position-id {:optional true} uuid?]])
 
+(def position-dto-formulas
+  {:percent-loss "TPERCENT(stop-total-loss/(quantity * open-price))" })
+
+(comment
+  (let [f-str (:percent-loss position-dto-formulas)
+        f-str (format "WITH(PERCENT, FN(n, ROUND(n * 100, 2)),
+                            TPERCENT, FN(n, PERCENT(n) & '%%'), %s)" f-str)
+        f     (axel-f/compile f-str)
+        data  {:stop-total-loss -760
+               :quantity        152
+               :open-price      71.83}]
+    (f data))
+
+)
+
 (def-model PositionDto
   :model/position-dto
   [:map
@@ -140,7 +156,9 @@
     string?]
    [:holding-id {:optional     true
                  :command-path [:position/holding-id]}
-    uuid?]])
+    uuid?]
+   [:stop-percent-loss {:optional true
+                        :title    "Percent Loss"} float?]])
 
 (comment
   (= 'fn* (first '#([{:keys [x y]}] (> x y))))
