@@ -1,6 +1,7 @@
 (ns reason-alpha.services.common
   (:require [taoensso.timbre :as timbre :refer (errorf)]
-            [reason-alpha.model.utils :as mutils]))
+            [reason-alpha.model.utils :as mutils]
+            [reason-alpha.model.core :as model]))
 
 (defn delete-fn [fn-repo-delete! model-type]
   (fn [ids]
@@ -45,14 +46,20 @@
                                         (assoc entity acc-id-k)))
           {:keys [send-message]} (fn-get-ctx)]
       (try
-        (send-message
-         [response-msg-event
-          {:result (-> ent
-                       fn-repo-save!
-                       (select-keys [creation-id-k id-k]))
-           :type   :success}])
+        (if-let [v (model/validate model-type ent)]
+          (send-message
+           [response-msg-event
+            {:error       v
+             :type        :failed-validation
+             :description (format "Invalid '%s'" model-type-nm)}])
+          (send-message
+           [response-msg-event
+            {:result (-> ent
+                         fn-repo-save!
+                         (select-keys [creation-id-k id-k]))
+             :type   :success}]))
         (catch Exception e
-          (let [err-msg "Error saving Instrument"]
+          (let [err-msg (format "Error saving '%s'" model-type-nm)]
             (errorf e err-msg)
             (send-message
              [response-msg-event
@@ -60,14 +67,33 @@
                :description (str err-msg ": " (ex-message e))
                :type        :error}])))))))
 
+(comment
+  (model/validate :position #:position{:creation-id
+                                       #uuid "35ccc174-5563-480b-b51e-28bd27bdd396",
+                                       :holding-id
+                                       #uuid "018004b9-3a7f-df48-4c96-c63d6aea78b5",
+                                       :open
+                                       #:trade-transaction{:quantity
+                                                           "45",
+                                                           :date
+                                                           #inst "2022-05-01T00:00:00.000-00:00",
+                                                           :price
+                                                           "67.8"},
+                                       :long-short :long} )
+  (get @model/*model :model/position)
+  (model/get-def :model/position)
+
+  )
+
 (defn getn-msg-fn
   [{:keys [fn-repo-getn fn-get-account fn-get-ctx response-msg-event]}]
   (fn [_]
     (let [{acc-id :account/id}   (fn-get-account)
           {:keys [send-message]} (fn-get-ctx)
-          instrs                 (fn-repo-getn acc-id)]
+          ents                   (fn-repo-getn acc-id)]
+      (clojure.pprint/pprint {::getn-msg-fn [response-msg-event ents]})
       (send-message
-       [response-msg-event {:result instrs
+       [response-msg-event {:result ents
                             :type   :success}]))))
 
 (defn get1-msg-fn

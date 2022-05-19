@@ -8,7 +8,7 @@
 (defn result-schema [result-schema]
   [:map
    [:result {:optional true} result-schema]
-   [:type [:enum :error :success :warn :info]]
+   [:type [:enum :error :success :warn :info :failed-validation]]
    [:error {:optional true} any?]
    [:description {:optional true} string?]
    [:nr-items {:optional true} int?]])
@@ -18,7 +18,10 @@
   [:=> :cat
        [:map
         [:send-message :any]
-        [:user-account accounts/AccountDto]]])
+        [:*connected-users :any]
+        [:user-account accounts/Account]]])
+
+(m/=> get-context getContext)
 
 (defn get-context []
   *context*)

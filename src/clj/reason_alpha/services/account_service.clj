@@ -1,4 +1,4 @@
-(ns reason-alpha.services.account
+(ns reason-alpha.services.account-service
   (:require [medley.core :as medley]))
 
 (defn get-account [fn-get-ctx fn-repo-get-acc-by-uid]
@@ -12,7 +12,4 @@
         updated-acc  (if existing-acc
                        (medley/deep-merge existing-acc acc)
                        acc)]
-    (clojure.pprint/pprint {::save! {:ACC          acc
-                                     :EXISTING-ACC existing-acc
-                                     :UPDATED-ACC  updated-acc}})
     (fn-repo-save! updated-acc)))

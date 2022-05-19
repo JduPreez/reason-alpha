@@ -3,9 +3,13 @@
                     [clojure.java.io :as io]
                     [clojure.string :as str]
                     [taoensso.timbre :as timbre :refer-macros (tracef debugf infof warnf errorf)])
+
      :cljs (:require [clojure.string :as str]
                      [cljs-uuid-utils.core :as uuid]
-                     [taoensso.timbre :as timbre :refer-macros (infof warnf errorf)])))
+                     [goog.string :as gstring]
+                     [goog.string.format]
+                     [taoensso.timbre :as timbre :refer-macros (infof warnf errorf)]))
+  #?(:clj (:import [java.math BigDecimal])))
 
 (defn maybe->uuid [v]
   #?(:clj (try
@@ -35,6 +39,12 @@
 (defn str-keys [items]
   (map #(into {} (for [[k v] %]
                    [(keyword->str k) v])) items))
+
+#?(:cljs
+   (defn format
+     "Supported substitutions s, f, d, i and u"
+     [& args]
+     (apply gstring/format args)))
 
 (defn kw-keys [item]
   (into {} (for [[k v] item]
@@ -76,3 +86,18 @@
 (defn str->bool [s]
   (if (= s "true") true
       false))
+
+#?(:clj
+   (defn round [number & [dec-places]]
+     (let [dec-places (or dec-places 2)]
+       (-> number
+           BigDecimal/valueOf
+           (.setScale dec-places BigDecimal/ROUND_HALF_UP)
+           .floatValue))))
+
+#?(:cljs
+   (defn maybe-parse-number [nr]
+     (cond
+       (re-find #"^-?\d+\.\d+$" nr) (js/parseFloat nr)
+       (re-find #"^-?\d+$" nr)      (js/parseInt nr)
+       :else                        nr)))

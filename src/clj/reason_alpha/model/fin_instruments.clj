@@ -1,82 +1,130 @@
 (ns reason-alpha.model.fin-instruments
-  (:require [reason-alpha.model.core :as model :refer [def-model]]
-            [reason-alpha.model.utils :as model.utils]))
+  (:require [reason-alpha.model.core :as model :refer [def-model]]))
 
 (def-model Symbol
   :model/symbol
   [:map
    [:symbol/ticker {:min 1} string?]
-   [:symbol/instrument-id {:optional true} uuid?]
+   [:symbol/holding-id {:optional true} uuid?]
    [:symbol/provider
-    [:enum {:enum/titles {:yahoo-finance "Yahoo! Finance"
-                          :saxo-dma      "Saxo/DMA"
-                          :easy-equities "Easy Equities"}}
-                         :yahoo-finance :saxo-dma :easy-equities]]])
+    [:enum {:enum/titles {:eod-historical-data "EOD Historical Data"
+                          :saxo-dma            "Saxo/DMA"
+                          :easy-equities       "Easy Equities"}}
+                         :eod-historical-data :saxo-dma :easy-equities]]])
 
 (def-model Price
-  :model/instrument-price
+  :model/price
   [:map
    [:price/creation-id uuid?]
    [:price/id uuid?]
    [:price/symbol Symbol] ;; Symbol or Instrument ID?
-   [:price/date inst?]
+   [:price/time inst?]
    [:price/open float?]
    [:price/close float?]
+   [:price/previous-close float?]
    [:price/high float?]
    [:price/low float?]
    [:price/adj-close float?]
-   [:price/volume int?]])
+   [:price/volume int?]
+   [:price/change float?]])
 
-(def-model Instrument
-  :model/instrument
+(def-model PriceDto
+  :model/price-dto
   [:map
-   [:instrument/creation-id uuid?]
-   [:instrument/id {:optional true} uuid?]
-   [:instrument/name [:string {:min 1}]]
-   [:instrument/symbols {:optional true} [:sequential Symbol]]
-   [:instrument/type [:enum
-                      {:enum/titles {:share    "Share"
-                                     :etf      "ETF"
-                                     :currency "Currency"
-                                     :crypto   "Crypto"}}
-                      :share :etf :currency :crypto]]
-   [:instrument/currency-instrument-id uuid?]
-   [:instrument/prices {:optional true} [:sequential Price]]
-   [:instrument/account-id {:optional true} uuid?]])
+   [:price-id {:optional true} uuid?]
+   [:price-creation-id uuid?]
+   [:symbol-ticker string?]
+   [:symbol-provider keyword?]
+   [:holding-id uuid?]
+   [:price-time inst?]
+   [:price-open float?]
+   [:price-close float?]
+   [:price-high float?]
+   [:price-low float?]
+   [:price-previous-close float?]
+   [:price-volume int?]
+   [:price-change float?]])
 
-(let [{{ptitles :enum/titles} :properties
-       providers              :members} (model.utils/get-model-members-of
-                                         Symbol
-                                         :symbol/provider)
-      symbols-schema                    (for [p    providers
-                                              :let [t (get ptitles p)]]
-                                          [p {:title        t
-                                              :optional     true
-                                              :pivot        :symbol/provider
-                                              :command-path [:instrument/symbols 0 :symbol/ticker]}
-                                           string?])]
-  (def-model InstrumentDto
-    :model/instrument-dto
-    (into
-     [:map
-      [:instrument-id {:optional     true
-                       :command-path [:instrument/id]}
-       uuid?]
-      [:instrument-creation-id {:command-path [:instrument/creation-id]}
-       uuid?]
-      [:instrument-name {:title        "Instrument"
-                         :optional     true
-                         :command-path [:instrument/name]} string?]]
-     cat
-     [symbols-schema
-      [[:instrument-type {:title        "Type"
-                          :optional     true
-                          :ref          :instrument/type
-                          :command-path [[:instrument/type]
-                                         [:instrument/type-name]]}
-        [:tuple keyword? string?]]]])))
+(def-model Currency
+  :model/currency
+  [:enum {:enum/titles {:AED "AED",
+                        :AUD "AUD",
+                        :BRL "BRL",
+                        :CAD "CAD",
+                        :CHF "CHF",
+                        :CLP "CLP",
+                        :CNY "CNY",
+                        :COP "COP",
+                        :CZK "CZK",
+                        :DKK "DKK",
+                        :EUR "EUR",
+                        :GBP "GBP",
+                        :HKD "HKD",
+                        :HUF "HUF",
+                        :IDR "IDR",
+                        :ILS "ILS",
+                        :INR "INR",
+                        :JPY "JPY",
+                        :KRW "KRW",
+                        :MXN "MXN",
+                        :MYR "MYR",
+                        :NOK "NOK",
+                        :NZD "NZD",
+                        :PHP "PHP",
+                        :PLN "PLN",
+                        :RON "RON",
+                        :RUB "RUB",
+                        :SAR "SAR",
+                        :SEK "SEK",
+                        :SGD "SGD",
+                        :THB "THB",
+                        :TRY "TRY",
+                        :TWD "TWD",
+                        :USD "USD",
+                        :ZAR "ZAR"}}
+   :USD :EUR :JPY :GBP :AUD :CAD :CHF :CNY :HKD :NZD :SEK
+   :KRW :SGD :NOK :MXN :INR :RUB :ZAR :TRY :BRL :TWD :DKK
+   :PLN :THB :IDR :HUF :CZK :ILS :CLP :PHP :AED :COP :SAR
+   :MYR :RON])
 
 (comment
+  (let [x {:USD "USD"
+           :EUR "EUR"
+           :JPY "JPY"
+           :GBP "GBP"
+           :AUD "AUD"
+           :CAD "CAD"
+           :CHF "CHF"
+           :CNY "CNY"
+           :HKD "HKD"
+           :NZD "NZD"
+           :SEK "SEK"
+           :KRW "KRW"
+           :SGD "SGD"
+           :NOK "NOK"
+           :MXN "MXN"
+           :INR "INR"
+           :RUB "RUB"
+           :ZAR "ZAR"
+           :TRY "TRY"
+           :BRL "BRL"
+           :TWD "TWD"
+           :DKK "DKK"
+           :PLN "PLN"
+           :THB "THB"
+           :IDR "IDR"
+           :HUF "HUF"
+           :CZK "CZK"
+           :ILS "ILS"
+           :CLP "CLP"
+           :PHP "PHP"
+           :AED "AED"
+           :COP "COP"
+           :SAR "SAR"
+           :MYR "MYR"
+           :RON "RON"}]
+    (into (sorted-map) x))
+
   (letfn [(get-model-members-of [schema member-k]
             (let [member        (->> schema
                                      rest

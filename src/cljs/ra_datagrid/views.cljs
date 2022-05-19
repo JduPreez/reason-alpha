@@ -1,15 +1,15 @@
 (ns ra-datagrid.views
-    (:require [accountant.core :as accountant]
-              [cljs-time.coerce :as coerce]
-              [cljs-time.format :as fmt]
-              [cljs.pprint :as pprint]
-              [ra-datagrid.events]
-              [ra-datagrid.schema :as ds]
-              [ra-datagrid.subs]
-              [re-frame.core :as rf]
-              [reagent.core :as r]
-              [schema.core :as s
-               :include-macros true]))
+  (:require [cljs-time.coerce :as coerce]
+            [cljs-time.format :as fmt]
+            [cljs.pprint :as pprint]
+            [ra-datagrid.events]
+            [ra-datagrid.schema :as ds]
+            [ra-datagrid.subs]
+            [ra-datagrid.utils :as utils]
+            [re-frame.core :as rf]
+            [reagent.core :as r]
+            [schema.core :as s
+             :include-macros true]))
 
 (defn clean-formatted-keys
   [r]
@@ -267,7 +267,10 @@
           [:input.form-control {:type      "number"
                                 :value     v
                                 :on-change #(rf/dispatch [:datagrid/update-edited-record id pk
-                                                          (:name field) (.-target.value ^js %)])}]]]))))
+                                                          (:name field) (-> %
+                                                                            .-target
+                                                                            .-value
+                                                                            cljs.reader/read-string)])}]]]))))
 
 (defmethod edit-cell :custom
   [id field pk]
@@ -390,6 +393,7 @@
                                                      @options)))}
                                formatted-value]
                               formatted-value)]
+
         [:td (cond-> {:key       fieldname
                       :className align}
                indent? (assoc :style {:padding-left "30px"}))
@@ -441,13 +445,16 @@
   (let [options (rf/subscribe [:datagrid/options id])
         fields  (rf/subscribe [:datagrid/fields id])]
     (fn [id record]
-      (let [{{:keys [member-key]} :group-by
-             :keys                [id-field
-                                   checkbox-select]} @options
-            pk                                       (get record id-field)
-            k                                        (if (or (= "" pk) (nil? pk))
-                                                       "editing"
-                                                       pk)
+      (let [group-by            (some (fn [{:keys [type name]}]
+                                        (when (= type :indent-group) name))
+                                      @fields)
+            {:keys
+             [id-field
+              checkbox-select]} @options
+            pk                  (get record id-field)
+            k                   (if (or (= "" pk) (nil? pk))
+                                  "editing"
+                                  pk)
 
             classNames (if (:row-formatter @options)
                          ((:row-formatter @options) record)
@@ -468,9 +475,9 @@
 
             cells (cond->> (doall
                             (map (fn [{:keys [name] :as f}]
-                                   (let [indent? (and member-key
+                                   (let [indent? (and group-by
                                                       (= name first-f)
-                                                      (get record member-key))]
+                                                      (get record group-by))]
                                      ^{:key name}
                                      [table-cell id f record indent?])) @fields))
                     checkbox-select
@@ -517,20 +524,20 @@
            (and max-rows
                 (not @expanded?)
                 (> (count @all-records) max-rows))
-           (concat [^{:key -2}
-                    [:tr
-                     [:td
-                      [:button.btn.btn-primary
-                       {:on-click #(rf/dispatch [:datagrid/toggle-expand id])} "Toon meer"]]]])
+           , (concat [^{:key -2}
+                      [:tr
+                       [:td
+                        [:button.btn.btn-primary
+                         {:on-click #(rf/dispatch [:datagrid/toggle-expand id])} "Show more"]]]])
 
            (and max-rows
                 @expanded?
                 (> (count @all-records) max-rows))
-           (concat [^{:key -3}
-                    [:tr
-                     [:td
-                      [:button.btn.btn-primary
-                       {:on-click #(rf/dispatch [:datagrid/toggle-expand id])} "Toon minder"]]]]))]))))
+           , (concat [^{:key -3}
+                      [:tr
+                       [:td
+                        [:button.btn.btn-primary
+                         {:on-click #(rf/dispatch [:datagrid/toggle-expand id])} "Show less"]]]]))]))))
 
 (defn table-footer
   [id fields records]

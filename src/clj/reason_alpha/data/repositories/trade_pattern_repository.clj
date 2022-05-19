@@ -1,4 +1,4 @@
-(ns reason-alpha.data.repositories.trade-pattern
+(ns reason-alpha.data.repositories.trade-pattern-repository
   (:require [reason-alpha.data.model :as data.model]
             [reason-alpha.model.mapping :as mapping]
             [reason-alpha.model.portfolio-management :as portfolio-management]))

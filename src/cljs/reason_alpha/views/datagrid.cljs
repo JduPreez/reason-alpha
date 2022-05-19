@@ -1,10 +1,9 @@
 (ns reason-alpha.views.datagrid
-  (:require [ra-datagrid.views :as ra-datagrid]
+  (:require [clojure.string :as str]
+            [medley.core :as medley]
+            [ra-datagrid.views :as ra-datagrid]
             [re-frame.core :as rf]
-            [reagent.core :as r]
-            ;;[reason-alpha.views :as views]
-
-            [clojure.string :as str]))
+            [reagent.core :as r]))
 
 (def default-opts
   {;;:grid-id                    :my-grid
@@ -12,7 +11,7 @@
    :id-field                   :id
    ;;:header-filters             true
    ;;:progressive-loading        true
-   :can-sort                   true
+   :can-sort                   false
    :can-edit                   true
    ;;:can-reorder                true
    :can-create                 true
@@ -58,8 +57,6 @@
   (fn [fields {:keys [grid-id title] :as options}]
     (let[*options (rf/subscribe [:datagrid/options grid-id])
          opts     (or options @*options)]
-      (cljs.pprint/pprint {:O (merge default-opts opts)
-                           :F fields})
       [:div.card
        [history-list grid-id title]
        [:div.card-body {:style {:padding-top    0
@@ -67,29 +64,37 @@
         [ra-datagrid/datagrid (merge default-opts opts) fields]]])))
 
 (defn model-member->field
-  [[member-nm & schema] & [{:keys [ref-suffix enum-titles]
-                            :as   field-opts}]]
-  (let [id-member            (-> member-nm
-                                 name
-                                 (str/ends-with? "-id"))
-        field-def            (cond-> field-opts
-                               (not (contains? field-opts :can-sort))
-                               , (assoc :can-sort true)
-                               :default
-                               , (dissoc field-opts :ref-suffix))
-        props-or-type        (first schema)
-        has-props?           (map? props-or-type)
-        {:keys [title ref]}  props-or-type
-        field-def            (merge field-def {:title title
-                                               :name  member-nm})
-        ref-nm               (when ref
-                               (name ref))
-        ref-ns               (when ref
-                               (namespace ref))
-        [type tuple-id-type] (some #(when (not (map? %))
-                                      (if (sequential? %)
-                                        %
-                                        [%])) schema)]
+  [[member-nm & schema] & [{:keys [enum-titles] :as field-opts}]]
+  (let [ref-suffix             "ref"
+        ref-suffix-list        (str ref-suffix "-list")
+        id-member              (-> member-nm
+                                   name
+                                   (str/ends-with? "-id"))
+        field-def              (cond-> field-opts
+                                 (not (contains? field-opts :can-sort))
+                                 , (assoc :can-sort true)
+                                 :default
+                                 , (dissoc field-opts :ref-suffix))
+        props-or-type          (first schema)
+        has-props?             (map? props-or-type)
+        {:keys [title ref
+                command-path]} props-or-type
+        field-def              (merge field-def {:title title
+                                                 :name  member-nm})
+        ref-nm                 (when ref
+                                 (name ref))
+        ref-ns                 (when ref
+                                 (namespace ref))
+        [type tuple-id-type]   (some #(when (not (map? %))
+                                        (if (sequential? %)
+                                          %
+                                          [%])) schema)
+        data-subscr            (if ref-ns
+                                 (keyword ref-ns (str ref-nm "-" ref-suffix-list))
+                                 (keyword ref-nm ref-suffix-list))
+        parent-subscr          (if ref-ns
+                                 (keyword ref-ns (str ref-nm "-" ref-suffix))
+                                 (keyword ref-nm ref-suffix))]
     (cond
       ;; Id members are either the current entity's `:id` or `:creation-id` fields
       ;; or they should be 'foreign keys' with a `:ref` pointing to another entity
@@ -98,22 +103,30 @@
            (not ref))
       , nil
 
-      (and ref-ns
-           ref)
+      (str/blank? title)
+      , nil
+
+      (nil? command-path)
+      , (assoc field-def :type :no-edit)
+
+      (and ref
+           (not id-member))
       , (merge
          (cond-> {:type              :select
-                  :data-subscription [(keyword ref-ns (str ref-nm "-" ref-suffix))]}
+                  :data-subscription [data-subscr]}
            (= tuple-id-type keyword?) (assoc :enum-titles enum-titles))
          field-def)
 
-      ref
-      , (merge
-         (cond-> {:type              :select
-                  :data-subscription [(keyword ref-nm ref-suffix)]}
-           (= tuple-id-type keyword?) (assoc :enum-titles enum-titles))
-         field-def)
+      (and ref
+           id-member)
+      , (medley/deep-merge field-def
+                           {:type              :indent-group
+                            :data-subscription [data-subscr]
+                            :indent-group
+                            {:parent-subscription parent-subscr}})
 
-      (= type (-> #'float? meta :name))
+      (or (= type (-> #'number? meta :name))
+          (= type (-> #'float? meta :name)))
       , (merge field-def {:type :number})
 
       (= type (-> #'inst? meta :name))
@@ -123,13 +136,8 @@
       :default
       , field-def)))
 
-(defn model->fields [[_ & members] & [{fields-opts :fields-opts
-                                       ref-suffix  :ref-suffix
-                                       :or         {ref-suffix "ref-list"}}]]
+(defn model->fields [[_ & members] & [{fields-opts :fields-opts}]]
   (->> members
        (mapv (fn [[membr-k & _ :as m]]
-               (let [fo (-> fields-opts
-                            (get membr-k)
-                            (assoc :ref-suffix "ref-list"))]
-                 (model-member->field m fo))))
+               (model-member->field m (get fields-opts membr-k))))
        (remove nil?)))

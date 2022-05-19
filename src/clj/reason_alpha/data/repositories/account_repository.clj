@@ -1,4 +1,4 @@
-(ns reason-alpha.data.repositories.account
+(ns reason-alpha.data.repositories.account-repository
   (:require [malli.core :as m]
             [reason-alpha.data.model :as data.model]
             [reason-alpha.model.accounts :as accounts]

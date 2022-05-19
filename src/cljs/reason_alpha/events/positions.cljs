@@ -1,5 +1,6 @@
 (ns reason-alpha.events.positions
-  (:require [day8.re-frame.tracing :refer-macros [fn-traced defn-traced]]
+  (:require [clojure.set :as set]
+            [day8.re-frame.tracing :refer-macros [fn-traced defn-traced]]
             [re-frame.core :as rf]
             [reason-alpha.data :as data]
             [reason-alpha.model.mapping :as mapping]
@@ -9,18 +10,19 @@
 (rf/reg-event-fx
  :position/load
  (fn [{:keys [db]} _]
-   {:position.query/getn   nil
-    :instrument.query/getn nil
-    :dispatch              [:model.query/getn
-                            [:model/position :model/position-dto]]}))
+   {:position/get-holdings-positions nil
+    :holding/get-holdings            nil
+    :trade-pattern.query/getn        nil
+    :dispatch                        [:model.query/getn
+                                      [:model/position :model/position-dto]]}))
 
 (rf/reg-fx
- :position.query/getn
+ :position/get-holdings-positions
  (fn [_]
-   (api-client/chsk-send! [:position.query/getn])))
+   (api-client/chsk-send! [:holding.query/get-holdings-positions])))
 
 (rf/reg-event-db
- :position.query/getn-result
+ :holding.query/get-holdings-positions-result
  (fn [db [evt {:keys [result type] :as r}]]
    (utils/log evt r)
    (if (= :success type)
@@ -30,13 +32,12 @@
      db)))
 
 (rf/reg-fx
- :position.query/get1
+ :position/get-holding-positions
  (fn [pos-id]
-   (cljs.pprint/pprint {:position.query/get1 pos-id})
-   (api-client/chsk-send! [:position.query/get1 pos-id])))
+   (api-client/chsk-send! [:holding.query/get-holding-positions pos-id])))
 
 (rf/reg-event-db
- :position.query/get1-result
+ :holding.query/get-holding-positions-result
  (fn [db [evt {:keys [result type] :as r}]]
    (utils/log evt r)
    (if (= :success type)
@@ -46,51 +47,62 @@
      db)))
 
 (rf/reg-event-fx
- :position.command/create
- (fn [{:keys [db]} [_ {:keys [creation-id] :as new-pos}]]
+ :position/create
+ (fn [{:keys [db]} [_ {:keys [creation-id close-price] :as new-pos}]]
    (let [new-pos         (if creation-id
                            new-pos
                            (assoc new-pos
                                   :position-creation-id
                                   (utils/new-uuid)))
+         new-pos         (if close-price
+                           (assoc new-pos :status :closed)
+                           (assoc new-pos :status :open))
          query-dto-model (get-in db (data/model :model/position-dto))
          cmd-pos         (mapping/query-dto->command-ent query-dto-model new-pos)
          db              (data/save-local! {:model-type :position
                                             :data       new-pos
                                             :db         db})]
-     (cljs.pprint/pprint {:position.command/create {:M  query-dto-model
-                                                    :NP new-pos
+     (cljs.pprint/pprint {:position.command/create {:NP new-pos
                                                     :CP cmd-pos}})
-     {:db                     db
-      :position.command/save! cmd-pos})))
+     {:db             db
+      :position/save! cmd-pos})))
 
 (rf/reg-event-fx
- :position.command/update
- (fn [{:keys [db]} [_ {:keys [creation-id] :as pos}]]
-   (let [query-dto-model (get-in db (data/model :model/position-dto))
-         cmd-pos         (mapping/query-dto->command-ent query-dto-model pos)
-         db              (data/save-local! {:model-type :position
-                                            :data       pos
-                                            :db         db})]
-     {:db                     db
-      :position.command/save! cmd-pos})))
+ :position/update
+ (fn [{:keys [db]} [_ {:keys [creation-id close-price position-id] :as pos}]]
+   (let [{cur-close-pr :close-price} (data/get-entity db :position {:position-id position-id})
+         status                      (if (and close-price
+                                              (not= close-price cur-close-pr))
+                                       :closed
+                                       :open)
+         pos                         (assoc pos :status status)
+         _                           (cljs.pprint/pprint {:position/update {:CP  close-price
+                                                                            :CCP cur-close-pr
+                                                                            :P   pos}})
+         query-dto-model             (get-in db (data/model :model/position-dto))
+         cmd-pos                     (mapping/query-dto->command-ent query-dto-model pos)
+         db                          (data/save-local! {:model-type :position
+                                                        :data       pos
+                                                        :db         db})]
+     {:db             db
+      :position/save! cmd-pos})))
 
 (rf/reg-event-fx
- :position.command/save!-result
+ :holding.command/save-position!-result
  (fn [_ [evt {:keys [type result] :as r}]]
    (utils/log evt r)
    (when (= :success type)
-     {:position.query/get1 (:position/id result)})))
+     {:position/get-holding-positions (:position/id result)})))
 
 (rf/reg-fx
- :position.command/save!
+ :position/save!
  (fn [pos]
-   (utils/log :position.command/save! pos)
-   (data/save-remote! {:command :position.command/save!
+   (utils/log :holding.command/save-position! pos)
+   (data/save-remote! {:command :holding.command/save-position!
                        :data    pos})))
 
 (rf/reg-event-fx
- :position.command/delete!-result
+ :holding.command/delete-positions!-result
  (fn [{:keys [db]} [evt result]]
    (utils/log evt result)
    (data/delete-local! {:db         db
@@ -98,7 +110,23 @@
                         :data       result})))
 
 (rf/reg-fx
- :position.command/delete!
+ :position/delete!
  (fn [db]
    (let [del-ids (data/get-selected-ids :position db)]
-     (api-client/chsk-send! [:position.command/delete! del-ids]))))
+     (api-client/chsk-send! [:holding.command/delete-positions! del-ids]))))
+
+#_(rf/reg-event-db
+ :price/quotes
+ (fn [db [evt result]]
+   (let [prices    (into {} (map (fn [{:keys [holding-id price-close]}]
+                                   [holding-id price-close]) result))
+         positions (->> data/positions
+                        (get-in db)
+                        (map (fn [{[price-hid _] :holding
+                                   status        :status
+                                   :as           pos}]
+                               (if-let [price-close (and (#{:open} status)
+                                                         (get prices price-hid))]
+                                 (assoc pos :close-price price-close)
+                                 pos))))]
+     (assoc-in db data/positions positions))))

@@ -19,8 +19,7 @@
                  [com.outpace/config "0.13.5"]
                  [compojure "1.6.2"]
                  [com.taoensso/sente "1.16.2"]
-                 [day8.re-frame/http-fx "0.2.3"]
-                 [functionalbytes/mount-lite "2.1.1"]
+                 [day8.re-frame/http-fx "0.2.4"]
                  [http-kit "2.5.3"]
                  [integrant "0.8.0"]
                  [cljsjs/jquery "3.2.1-0"]
@@ -35,6 +34,7 @@
                  [metosin/ring-http-response "0.9.1"]
                  [migratus "1.2.6"]
                  [nrepl "0.6.0"]
+                 [org.babashka/sci "0.3.5"]
                  [org.clojure/clojure "1.10.3"]
                  [org.clojure/clojurescript "1.10.879" :scope "provided"]
                  [org.clojure/core.async "0.4.500"]
@@ -58,8 +58,8 @@
                  [ring-ttl-session "0.3.1"]
                  [selmer "1.12.17"]
                  [thheller/shadow-cljs "2.15.2" :scope "provided"]
-                 [traversy "0.5.0"]
-                 [venantius/accountant "0.2.5"]]
+                 [tick "0.5.0-RC5"]
+                 [traversy "0.5.0"]]
 
   :main ^:skip-aot reason-alpha.core
 

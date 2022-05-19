@@ -124,7 +124,7 @@
 (rf/reg-event-db
  :datagrid/update-edited-record
  (fn [db [_ id pk k v]]
-   (assoc-in db [:datagrid/data  id :edit-rows pk k] v)))
+   (assoc-in db [:datagrid/data id :edit-rows pk k] v)))
 
 ;;rec-with-only-grid-fields (if is-update?
  ;;                           (assoc (remove-keys-not-in-gridfields @edit-record fields)

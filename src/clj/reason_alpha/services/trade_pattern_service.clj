@@ -1,4 +1,4 @@
-(ns reason-alpha.services.trade-pattern
+(ns reason-alpha.services.trade-pattern-service
   (:require [malli.core :as m]
             [reason-alpha.model.accounts :as accounts]
             [reason-alpha.model.common :as common]
@@ -6,7 +6,7 @@
             [reason-alpha.model.portfolio-management :as portfolio-management]
             [taoensso.timbre :as timbre :refer (errorf)]))
 
-(defn getn [fn-repo-getn fn-get-account _args]
+(defn getn [fn-repo-getn fn-get-account]
   (let [{acc-id :account/id} (fn-get-account)
         tpatterns            (fn-repo-getn acc-id)]
     {:result tpatterns
@@ -41,10 +41,11 @@
                         :account/id
                         (assoc trade-pattern :trade-pattern/account-id)))]
     (try
-      {:result (-> tpattern
-                   fn-repo-save!
-                   (as-> tp (mapping/command-ent->query-dto
-                             portfolio-management/TradePatternDto tp)))
+      {:result (->> tpattern
+                    fn-repo-save!
+                    (conj [])
+                    (mapping/command-ent->query-dto
+                     portfolio-management/TradePatternDto))
        :type   :success}
       (catch Exception e
         (let [err-msg "Error saving Trade Pattern"]

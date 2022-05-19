@@ -17,7 +17,7 @@
 (defn model [model-k]
   (conj models model-k))
 
-(def ^:const instruments [:data :instrument])
+(def ^:const holdings [:data :holding])
 
 (defn entity-data [type]
   [:data type])
@@ -65,6 +65,14 @@
                                             (get cid)
                                             (get id-k)))))]
     ids))
+
+(defn get-entity [db model-type qry]
+  (let [k (-> qry keys first)
+        v (get qry k)]
+    (->> model-type
+         entity-data
+         (get-in db)
+         (some #(when (= (k %) v))))))
 
 (defn save-local!
   [{db :db, type :model-type, data :data}]

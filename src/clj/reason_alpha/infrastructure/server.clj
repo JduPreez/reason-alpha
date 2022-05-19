@@ -13,7 +13,7 @@
             [taoensso.sente :as sente]
             [taoensso.sente.packers.transit :as sente-transit]
             [taoensso.sente.server-adapters.http-kit :refer (get-sch-adapter)]
-            [taoensso.timbre :as timbre :refer (tracef debugf infof warnf errorf)]))
+            [taoensso.timbre :as timbre :refer (tracef debugf infof warnf errorf info)]))
 
 (defconfig allowed-origins)
 
@@ -59,7 +59,7 @@
 
 (defn login-handler
   [{{:keys [fn-save-account!]} :account-svc}
-   {:keys [request-method] :as request}]
+   {:keys [request-method session] :as request}]
   (when (not= request-method :options)
     (let [{:keys [is-valid? error userUuid email]} (-> request
                                                        auth/tokens
@@ -69,10 +69,11 @@
       (debugf "Verified login of user %s (%s): %b" userUuid email is-valid?)
 
       (if is-valid?
-        (let [acc (auth/account request)]
-          (fn-save-account! acc)
-          {:status 200
-           :body   {:result "Access granted"}})
+        (let [acc               (auth/account request)
+              {aid :account/id} (fn-save-account! acc)]
+          {:status  200
+           :session (assoc session :uid aid)
+           :body    {:result "Access granted"}})
         (do
           (debugf "Error verifying login %s" error)
           {:status 401
@@ -102,9 +103,9 @@
       ring.middleware.session/wrap-session
       (wrap-cors allowed-origins)))
 
-(defonce broadcast-enabled?_ (atom true))
+#_(defonce broadcast-enabled?_ (atom true))
 
-(defn start-example-broadcaster!
+#_(defn start-example-broadcaster!
   "As an example of server>user async pushes, setup a loop to broadcast an
   event to all connected users every 10 seconds"
   []
@@ -125,6 +126,15 @@
       (when @broadcast-enabled?_ (broadcast! i))
       (recur (inc i)))))
 
+(defn start-broadcasting! [broadcasters]
+  (info "Starting broadcasters")
+  (doseq [[name fn-broadcast] broadcasters]
+    (try
+      (fn-broadcast {:send-message     chsk-send!
+                     :*connected-users connected-uids})
+      (catch Exception e
+        (errorf e "Failed to start broadcaster '%s'" name)))))
+
 (defn server-event-msg-handler
   "Wraps `-event-msg-handler` with logging, error catching, etc."
   [handlers {:as ev-msg :keys [id ?data event ?reply-fn ring-req uid]}]
@@ -137,14 +147,21 @@
                                                     :uri :request-method :scheme])}}))
 
   (let [fun     (get handlers id)
-        account (auth/account ring-req)
-        data    (or ?data {})]
+        account (-> ring-req
+                    auth/account
+                    (assoc :account/id uid))]
       ;;future
         (if fun
-          (binding [common/*context* {:user-account account
-                                      :send-message #(chsk-send! uid %)}]
-            (let [_      (debugf "Event handler found: %s" id) ;; Log before calling `fun` might throw exception
-                  result (fun data)]
+          (binding [common/*context* {:*connected-users connected-uids
+                                      :user-account     account
+                                      :send-message     #(chsk-send! uid %)}]
+            (let [_      (debugf "Event handler found: %s" id ) ;; Log before calling `fun` might throw exception
+                  result (if ?data
+                           (do
+                             (clojure.pprint/pprint {::server-event-msg-handler-2 ?data})
+                             (fun ?data))
+                           (fun))]
+              (clojure.pprint/pprint {::server-event-msg-handler-3 {id result}})
               (when ?reply-fn
                 (?reply-fn result))))
           (do
@@ -169,7 +186,7 @@
 ;;;; Init stuff
 (defonce *web-server (atom nil)) ; (fn stop [])
 (defn stop-web-server! [] (when-let [stop-fn @*web-server] (stop-fn)))
-(defn start-web-server! [{:keys [port] :as conf}]
+(defn start-web-server! [{:keys [port broadcasters] :as conf}]
   (stop-web-server!)
   (let [port         (or port 0)              ; 0 => Choose any available port
         ring-handler (main-ring-handler conf) #_ (var main-ring-handler)
@@ -183,7 +200,10 @@
 
     (infof "Web server is running at `%s`" uri)
     (reset! *web-server stop-fn)
+    (start-broadcasting! broadcasters)
     *web-server))
+
+
 
 (defn stop!  []
   (stop-router!)
@@ -192,7 +212,4 @@
 (defn start! [{:keys [handlers]
                :as   conf}]
   (start-router! handlers)
-  (start-web-server! conf)
-  #_(let [*ws (start-web-server! 5000)]
-    (start-example-broadcaster!)
-    *ws))
+  (start-web-server! conf))

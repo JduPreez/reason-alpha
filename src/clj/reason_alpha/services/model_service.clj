@@ -1,4 +1,4 @@
-(ns reason-alpha.services.model
+(ns reason-alpha.services.model-service
   (:require [malli.edn :as medn]
             [reason-alpha.model.core :as mdl]))
 

@@ -1,7 +1,6 @@
 (ns reason-alpha.infrastructure.auth
   (:require [buddy.core.keys :as keys] ;; You need to use [buddy/buddy-core "1.5.0-SNAPSHOT"]
             [buddy.sign.jwt :as jwt]
-            [cheshire.core :as json]
             [clojure.data.codec.base64 :as b64]
             [clojure.java.io :as io]
             [clojure.string :as str]

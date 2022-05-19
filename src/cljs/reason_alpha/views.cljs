@@ -1,9 +1,8 @@
 (ns reason-alpha.views
-  (:require [accountant.core :as accountant]
-            [re-frame.core :as rf]
+  (:require [re-frame.core :as rf]
             [reagent.dom :as r.dom]
             [reason-alpha.views.datagrid :as datagrid]
-            [reason-alpha.views.instruments :as instruments]
+            [reason-alpha.views.holdings :as holdings]
             [reason-alpha.views.main :as main]
             [reason-alpha.views.positions :as positions]
             [reason-alpha.views.trade-patterns :as trade-patterns]
@@ -37,10 +36,10 @@
                       :view       trade-patterns/view
                       :model      :trade-pattern
                       :load-event [:trade-pattern/load]}]
-   ["instruments" {:name       ::instruments/view
-                   :view       instruments/view
-                   :model      :instrument
-                   :load-event [:instrument/load]}]])
+   ["holdings" {:name       ::holdings/view
+                :view       holdings/view
+                :model      :holding
+                :load-event [:holding/load]}]])
 
 (defn on-navigate [new-match]
   (when new-match

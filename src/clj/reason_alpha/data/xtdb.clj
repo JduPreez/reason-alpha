@@ -230,14 +230,29 @@
   (def db (xtdb-start!))
 
   (xt/q (xt/db db)
-        '{:find  [(pull pos [*]) (pull instr [*])]
+        '{:find  [(pull pos [*])
+                  (pull hold [*])
+                  (pull tpattern [*])]
+          :where [[pos :position/account-id account-id]
+                  [(get-attr pos :position/holding-id nil) [hold ...]]
+                  [(get-attr pos :position/trade-pattern-id nil) [tpattern ...]]]
+          :in    [account-id]}
+        #uuid "017f87dc-59d1-7beb-9e1d-7a2a354e5a49")
+
+  (xt/q (xt/db db)
+        '{:find  [(pull hpos [*])
+                  (pull hold [*])
+                  (pull tpattern [*])]
           :where [[pos :position/id id]
-                  [pos :position/instrument-id instr]
-                  [instr :instrument/name instr-nm]]
+                  [pos :position/holding-position-id hid]
+                  (or [hpos :position/id hid]
+                      [hpos :position/holding-position-id hid])
+                  [(get-attr hpos :position/holding-id nil) [hold ...]]
+                  [(get-attr hpos :position/trade-pattern-id nil) [tpattern ...]]]
           :in    [id]}
-        #uuid "017ff387-c800-fad0-b481-43f1fcbb4e39")
+        #uuid "0180098b-e65e-d7ce-645b-41eef737fa0c")
 
-
+  [pos :position/holding-id hold]
   (entities-owners
    db
    [#:instrument{:id

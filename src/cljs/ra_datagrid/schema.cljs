@@ -122,4 +122,5 @@
    (s/optional-key :excel-formatter)              s/Any
    (s/optional-key :menu)                         s/Any
    (s/optional-key :data-subscription)            s/Any
-   (s/optional-key :enum-titles)                  s/Any})
+   (s/optional-key :enum-titles)                  s/Any
+   (s/optional-key :indent-group)                 s/Any})
