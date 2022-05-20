@@ -77,7 +77,7 @@
    [:position/holding-position-id {:optional true} uuid?]])
 
 (def position-dto-formulas
-  {:percent-loss "TPERCENT(stop-total-loss/(quantity * open-price))" })
+  {:stop-percent-loss "TPERCENT(stop-total-loss/(quantity * open-price))" })
 
 (comment
   (let [f-str (:percent-loss position-dto-formulas)
