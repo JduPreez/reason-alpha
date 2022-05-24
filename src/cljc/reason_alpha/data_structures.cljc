@@ -1,4 +1,5 @@
-(ns reason-alpha.data-structures)
+(ns reason-alpha.data-structures
+  (:require [clojure.zip :as z]))
 
 (defn- get-ancestors-path
   ([item indexed find-parent path-val]
@@ -25,40 +26,20 @@
            (assoc item
                   (or ancestors-path-key :ancestors-path)
                   (get-ancestors-path item indexed find-parent path-val)))
-         items)))
+          items)))
 
-(comment
-  (let [x '({:crux.db/id                   #uuid "0174bb78-bc4d-8faa-731f-73a1b2ac2c0f"
-             :trade-pattern/description    "",
-             :trade-pattern/creation-id    nil,
-             :trade-pattern/name           "Breakout",
-             :trade-pattern/user-id        #uuid "8ffd2541-0bbf-4a4b-adee-f3a2bd56d83f",
-             :trade-pattern/ancestors-path (),
-             :trade-pattern/id             #uuid "0174bb78-bc4d-8faa-731f-73a1b2ac2c0f",
-             :trade-pattern/parent-id      nil}
-            {:trade-pattern/description    "",
-             :trade-pattern/creation-id    nil,
-             :trade-pattern/name           "Pullback",
-             :trade-pattern/user-id        #uuid "8ffd2541-0bbf-4a4b-adee-f3a2bd56d83f",
-             :trade-pattern/ancestors-path (),
-             :trade-pattern/id             #uuid "32429cdf-99d6-4893-ae3a-891f8c22aec6",
-             :crux.db/id                   #uuid "32429cdf-99d6-4893-ae3a-891f8c22aec6",
-             :trade-pattern/parent-id      nil}
-            { :trade-pattern/description   "",
-             :trade-pattern/creation-id    nil,
-             :trade-pattern/name           "Buy Support or Short Resistance",
-             :trade-pattern/user-id        #uuid "8ffd2541-0bbf-4a4b-adee-f3a2bd56d83f",
-             :trade-pattern/ancestors-path (),
-             :trade-pattern/id             #uuid "3c2d368f-aae5-4d13-a5bd-c5b340f09016",
-             :crux.db/id                   #uuid "3c2d368f-aae5-4d13-a5bd-c5b340f09016",
-             :trade-pattern/parent-id      #uuid "32429cdf-99d6-4893-ae3a-891f8c22aec6"})]
-    #_(->> (map (fn [{:keys [id] :as itm}] ;; Index items into map by ID
-                  {(keyword (str id)) itm})
-              x)
-         (apply merge))
-    (conj-ancestors-path x
-                         :trade-pattern/parent-id
-                         :trade-pattern/name
-                         :trade-pattern/id
-                         :trade-pattern/ancestors-path))
- )
+(defn hierarchy->nested-maps [items & [{:keys [group-ref-key
+                                               id-key sub-items-key]}]]
+  (let [group-ref-key (or group-ref-key :parent-id)
+        id-key        (or id-key :id)
+        sub-items-key (or sub-items-key :sub-items)
+        by-parent     (group-by group-ref-key items)]
+    (pmap (fn [root]
+            (loop [n (z/zipper some?
+                               #(by-parent (id-key %))
+                               #(assoc %1 sub-items-key (vec %2))
+                               root)]
+             (if (z/end? n)
+               (z/root n)
+               (recur (z/next (z/edit n identity))))))
+          (by-parent nil))))
