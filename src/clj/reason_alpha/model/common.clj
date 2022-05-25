@@ -58,12 +58,22 @@
   [data {:keys [computations group-ref-key id-key sub-items-key]
          :as   opts}]
   (let [data (if group-ref-key
-               (data-struct/hierarchy->nested-maps data {:group-ref-key group-ref-key
-                                                         :id-key        id-key})
+               (data-structs/hierarchy->nested-maps data {:group-ref-key group-ref-key
+                                                          :id-key        id-key})
                data)]
     (->> data
          (reduce (fn [data [comp-k {:keys [deps function]}]]
                    (let []))))))
+
+(defn process-with-transducers [files]
+  (transduce (comp (mapcat parse-json-file-reducible)
+                   (filter valid-entry?)
+                   (keep transform-entry-if-relevant)
+                   (partition-all 1000)
+                   (map save-into-database))
+             (constantly nil)
+             nil
+             files))
 
 
 (comment
@@ -78,7 +88,21 @@
                                #(-> % computations :require)
                                identity
                                root)
-        comp-paths   (loop [n          zcomps
+        comps-seq    (fn comps-seq [n]
+                       (lazy-seq
+                        (when-not (z/end? n)
+                          (cons n (comps-seq (z/next n))))))
+        comp-paths   (reduce (fn [leaf-paths n]
+                               (if (z/branch? n)
+                                 leaf-paths
+                                 (->> n
+                                      z/node
+                                      (conj (z/path n))
+                                      reverse
+                                      (conj leaf-paths))))
+                             []
+                             (comps-seq zcomps))
+        #_           (loop [n          zcomps
                             leaf-paths []]
                        (if (z/end? n)
                          leaf-paths
@@ -98,13 +122,22 @@
                                   (if (< c max-path)
                                     (concat (repeat (- max-path c) nil) %)
                                     %))))
-        comp-path    (->> (apply interleave comp-paths2)
+        comp-path    ((comp distinct
+                            (partial remove nil?)
+                            (partial apply interleave))
+                      comp-paths2)
+        #_           (->> comp-paths
+                          (apply interleave)
                           (remove nil?)
                           distinct)]
+    ;;(-> zcomps z/next z/next z/next z/next)
+    #_(->> zcomps
+         comps-seq
+         (map z/node))
     {:CPS  comp-paths
      :CPS2 comp-paths2
      :CP   comp-path}
     )
-
+ 
 
    )
