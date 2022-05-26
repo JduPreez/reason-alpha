@@ -1,5 +1,7 @@
 (ns reason-alpha.model.common
-  (:require [clojure.zip :as z]
+  (:require [axel-f.excel :as axel-f]
+            [clojure.set :as s]
+            [clojure.zip :as z]
             [malli.core :as m]
             [pact.core :refer [then error]]
             [reason-alpha.data-structures :as data-structs]
@@ -35,109 +37,149 @@
 ;; ^: Columns will not have a path. So we can match `:free-variables` with column names & build
 ;; a dependency graph that way to determine the sequence of calculations to apply
 
-(defn compute-order [current-comp computations]
-  (let [zcomps      (z/zipper #(some? (-> % computations :require))
-                              #(-> % computations :require)
-                              identity
-                              current-comp)
-        comp-orders (loop [n          zcomps
-                           leaf-paths []]
-                      (if (z/end? n)
-                        leaf-paths
-                        (recur (z/next n)
-                               (if (z/branch? n)
-                                 (reverse leaf-paths)
-                                 (->> n
-                                      z/node
-                                      (conj (z/path n))
-                                      (conj leaf-paths))
-                                 ))))]
-    comp-orders))
+(defn compute-order [computations]
+  (let [get-root-comps         (comp #(s/difference (set (keys computations)) %)
+                                     set
+                                     #(mapcat (fn [[k {reqr :require}]]
+                                                reqr) %))
+        root-comps             (get-root-comps computations)
+        root-k                 ::*root*
+        computations           (assoc computations root-k {:require (vec root-comps)})
+        zcomps                 (z/zipper #(some? (-> % computations :require))
+                                         #(-> % computations :require)
+                                         identity
+                                         root-k)
+        comps-seq              (fn comps-seq [n]
+                                 (lazy-seq
+                                  (when-not (z/end? n)
+                                    (cons n (comps-seq (z/next n))))))
+        {:keys [comp-paths
+                longest-path]} (->> (comps-seq zcomps)
+                                    (reduce (fn [{:keys [longest-path comp-paths] :as reslt} n]
+                                              (if (z/branch? n)
+                                                reslt
+                                                (let [p            (->> n
+                                                                        z/node
+                                                                        (conj (z/path n))
+                                                                        reverse)
+                                                      plength      (count p)
+                                                      longest-path (if (> plength longest-path)
+                                                                     plength
+                                                                     longest-path)]
+                                                  (merge reslt
+                                                         {:comp-paths   (conj comp-paths p)
+                                                          :longest-path longest-path}))))
+                                            {:comp-paths   []
+                                             :longest-path 0}))
+        get-comp-order         (comp #(remove #{root-k} %)
+                                     distinct
+                                     #(remove nil? %)
+                                     #(apply interleave %)
+                                     #(map (fn [p]
+                                             (let [c (count p)]
+                                               (if (< c longest-path)
+                                                 (concat (repeat (- longest-path c) nil) p)
+                                                 p))) %))
+        comp-order             (get-comp-order comp-paths)]
+    comp-order))
+
+;; TODO: (memoize ...)
+;; TODO: Add try-catch for compile
+(def compile-str #(let [fn-str (format "WITH(PERCENT, FN(n, ROUND(n * 100, 2)),
+                                             TPERCENT, FN(n, PERCENT(n) & '%%'), %s)" %)]
+                    (axel-f/compile fn-str)))
 
 (defn compute
   [data {:keys [computations group-ref-key id-key sub-items-key]
          :as   opts}]
-  (let [data (if group-ref-key
-               (data-structs/hierarchy->nested-maps data {:group-ref-key group-ref-key
-                                                          :id-key        id-key})
-               data)]
+  (let [data       (if group-ref-key
+                     (data-structs/hierarchy->nested-maps data {:group-ref-key group-ref-key
+                                                                :id-key        id-key})
+                     data)
+        comp-order (compute-order computations)]
     (->> data
-         (reduce (fn [data [comp-k {:keys [deps function]}]]
-                   (let []))))))
-
-(defn process-with-transducers [files]
-  (transduce (comp (mapcat parse-json-file-reducible)
-                   (filter valid-entry?)
-                   (keep transform-entry-if-relevant)
-                   (partition-all 1000)
-                   (map save-into-database))
-             (constantly nil)
-             nil
-             files))
-
+         (map
+          #(reduce (fn [d comp-k]
+                     (let [{comp-str :function} (computations comp-k)
+                           fn-comp              (compile-str comp-str)
+                           comp-v               (fn-comp d)]
+                       (assoc d comp-k comp-v)))
+                   %
+                   comp-order)))))
 
 (comment
-  (let [computations {:column1 {:require  [:column2 :column3]
-                                :function ""}
-                      :column2 {:function ""}
-                      :column3 {:require [:column4 :column5]}
-                      :column4 {:require [:column5]}
-                      :column5 {}}
-        root         :column1
-        zcomps       (z/zipper #(some? (-> % computations :require))
-                               #(-> % computations :require)
-                               identity
-                               root)
-        comps-seq    (fn comps-seq [n]
-                       (lazy-seq
-                        (when-not (z/end? n)
-                          (cons n (comps-seq (z/next n))))))
-        comp-paths   (reduce (fn [leaf-paths n]
-                               (if (z/branch? n)
-                                 leaf-paths
-                                 (->> n
-                                      z/node
-                                      (conj (z/path n))
-                                      reverse
-                                      (conj leaf-paths))))
-                             []
-                             (comps-seq zcomps))
-        #_           (loop [n          zcomps
-                            leaf-paths []]
-                       (if (z/end? n)
-                         leaf-paths
-                         (recur (z/next n)
-                                (if (z/branch? n)
-                                  leaf-paths
-                                  (->> n
-                                       z/node
-                                       (conj (z/path n))
-                                       reverse
-                                       (conj leaf-paths))))))
-        max-path     (->> comp-paths
-                          (map #(count %))
-                          (apply max))
-        comp-paths2  (->> comp-paths
-                          (map #(let [c (count %)]
-                                  (if (< c max-path)
-                                    (concat (repeat (- max-path c) nil) %)
-                                    %))))
-        comp-path    ((comp distinct
-                            (partial remove nil?)
-                            (partial apply interleave))
-                      comp-paths2)
-        #_           (->> comp-paths
-                          (apply interleave)
-                          (remove nil?)
-                          distinct)]
-    ;;(-> zcomps z/next z/next z/next z/next)
-    #_(->> zcomps
-         comps-seq
-         (map z/node))
-    {:CPS  comp-paths
-     :CPS2 comp-paths2
-     :CP   comp-path}
+  (let [data  [{:stop-total-loss -760
+                :quantity        152
+                :open-price      71.83}
+               {:stop-total-loss -7878
+                :quantity        344
+                :open-price      562}
+               {:stop-total-loss -901
+                :quantity        23
+                :open-price      184.8}
+               {:stop-total-loss -215
+                :quantity        512
+                :open-price      87.11}]
+        comps {:stop-percent-loss
+               {:function
+                "PERCENT(stop-total-loss/(quantity * open-price))"}
+               :xyz
+               {:require [:stop-percent-loss]
+                :function
+                "100 - IF(stop-percent-loss < 0, stop-percent-loss * -1, stop-percent-loss)"}}]
+    (compute data {:computations comps})
     )
- 
+
+  (let [computations           {:column1 {:require  [:column2 :column3]
+                                          :function ""}
+                                :column2 {:function ""}
+                                :column3 {:require [:column4 :column5]}
+                                :column4 {:require [:column5]}
+                                :column5 {}}
+        get-root-comps         (comp #(s/difference (set (keys computations)) %)
+                                     set
+                                     #(mapcat (fn [[k {reqr :require}]]
+                                                reqr) %))
+        root-comps             (get-root-comps computations)
+        root-k                 ::*root*
+        computations           (assoc computations root-k {:require (vec root-comps)})
+        zcomps                 (z/zipper #(some? (-> % computations :require))
+                                         #(-> % computations :require)
+                                         identity
+                                         root-k)
+        comps-seq              (fn comps-seq [n]
+                                 (lazy-seq
+                                  (when-not (z/end? n)
+                                    (cons n (comps-seq (z/next n))))))
+        {:keys [comp-paths
+                longest-path]} (->> (comps-seq zcomps)
+                                    (reduce (fn [{:keys [longest-path comp-paths] :as reslt} n]
+                                              (if (z/branch? n)
+                                                reslt
+                                                (let [p            (->> n
+                                                                        z/node
+                                                                        (conj (z/path n))
+                                                                        reverse)
+                                                      plength      (count p)
+                                                      longest-path (if (> plength longest-path)
+                                                                     plength
+                                                                     longest-path)]
+                                                  (merge reslt
+                                                         {:comp-paths   (conj comp-paths p)
+                                                          :longest-path longest-path}))))
+                                            {:comp-paths   []
+                                             :longest-path 0}))
+        get-comp-order         (comp #(remove #{root-k} %)
+                                     distinct
+                                     #(remove nil? %)
+                                     #(apply interleave %)
+                                     #(map (fn [p]
+                                             (let [c (count p)]
+                                               (if (< c longest-path)
+                                                 (concat (repeat (- longest-path c) nil) p)
+                                                 p))) %))
+        comp-order             (get-comp-order comp-paths)]
+    comp-order
+    )
 
    )
