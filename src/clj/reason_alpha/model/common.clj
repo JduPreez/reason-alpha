@@ -83,29 +83,36 @@
         comp-order             (get-comp-order comp-paths)]
     comp-order))
 
-;; TODO: (memoize ...)
-;; TODO: Add try-catch for compile
-(def compile-str #(let [fn-str (format "WITH(PERCENT, FN(n, ROUND(n * 100, 2)),
-                                             TPERCENT, FN(n, PERCENT(n) & '%%'), %s)" %)]
-                    (axel-f/compile fn-str)))
+(def compile-str (memoize
+                  #(let [fn-str (format "WITH(PERCENT, FN(n, ROUND(n * 100, 2)),
+                                              TPERCENT, FN(n, PERCENT(n) & '%%'), %s)" %)]
+                             (axel-f/compile fn-str))))
 
 (defn compute
   [data {:keys [computations group-ref-key id-key sub-items-key]
          :as   opts}]
-  (let [data       (if group-ref-key
-                     (data-structs/hierarchy->nested-maps data {:group-ref-key group-ref-key
-                                                                :id-key        id-key})
-                     data)
-        comp-order (compute-order computations)]
-    (->> data
-         (map
-          #(reduce (fn [d comp-k]
-                     (let [{comp-str :function} (computations comp-k)
-                           fn-comp              (compile-str comp-str)
-                           comp-v               (fn-comp d)]
-                       (assoc d comp-k comp-v)))
-                   %
-                   comp-order)))))
+  (try
+    (let [data       (if group-ref-key
+                       (data-structs/hierarchy->nested-maps data {:group-ref-key group-ref-key
+                                                                  :id-key        id-key})
+                       data)
+          comp-order (compute-order computations)
+          data       (->> data
+                          (map
+                           #(reduce (fn [d comp-k]
+                                      (let [{comp-str :function} (computations comp-k)
+                                            fn-comp              (compile-str comp-str)
+                                            comp-v               (fn-comp d)]
+                                        (assoc d comp-k comp-v)))
+                                    %
+                                    comp-order)))]
+      {:result data
+       :type   :success})
+    (catch Exception e
+      (let [err-msg "Failed to compute dynamic functions"]
+        {:error       (ex-data e)
+         :description (str err-msg ":" (ex-message e))
+         :type        :error}))))
 
 (comment
   (let [data  [{:stop-total-loss -760
@@ -126,7 +133,11 @@
                :xyz
                {:require [:stop-percent-loss]
                 :function
-                "100 - IF(stop-percent-loss < 0, stop-percent-loss * -1, stop-percent-loss)"}}]
+                "100 - IF(stop-percent-loss < 0, stop-percent-loss * -1, stop-percent-loss)"}
+               :multiply-by-2
+               {:require [:stop-percent-loss :xyz]
+                :function
+                "ROUND((xyz + stop-percent-loss) * 2, 2)"}}]
     (compute data {:computations comps})
     )
 
