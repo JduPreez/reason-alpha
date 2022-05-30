@@ -73,27 +73,38 @@
                                           :type   :success}])))
 
 (defn- aggregate-holding-positions [positions]
-  (let [holding-pos   (-> positions
-                          (lens/view-single
-                           (lens/only
-                            #(nil?
-                              (:holding-position-id %)))))
-        sub-positions (-> positions
-                          (lens/view
-                           (lens/only
-                            :holding-position-id)))
-        holding-pos   (when holding-pos
-                        (portfolio-management/assoc-stop-total-loss
-                         holding-pos sub-positions))
-        sub-positions (when (seq sub-positions)
-                        (map portfolio-management/assoc-stop-total-loss
-                             sub-positions))]
-    (cond-> []
-      (seq sub-positions) (into sub-positions)
-      holding-pos         (conj holding-pos))))
+  (clojure.pprint/pprint {::aggregate-holding-positions positions})
+  (let [holding-pos    (-> positions
+                           (lens/view
+                            (lens/only
+                             #(nil?
+                               (:holding-position-id %))))
+                           first)
+        sub-positions  (-> positions
+                           (lens/view
+                            (lens/only
+                             :holding-position-id)))
+        holding-pos    (when holding-pos
+                         (portfolio-management/assoc-stop-total-loss
+                          holding-pos sub-positions))
+        sub-positions  (when (seq sub-positions)
+                         (map portfolio-management/assoc-stop-total-loss
+                              sub-positions))
+        pos-with-comps (cond-> []
+                         (seq sub-positions) (into sub-positions)
+                         holding-pos         (conj holding-pos)
+                         :always             (common/compute
+                                              {:computations
+                                               portfolio-management/position-dto-functions}))]
+    pos-with-comps))
 
-(defn- assoc-close-prices-fn [fn-repo-get-acc-by-uid fn-quote-live-prices account-id & [{:keys [batch-size]}]]
-  (fn [positions]
+(comment
+  (-> [] (lens/view-single (lens/xth 1)))
+  (first [])
+  )
+
+(defn- assoc-close-prices-fn [fn-repo-get-acc-by-uid fn-quote-live-prices & [{:keys [batch-size]}]]
+  (fn [account-id positions]
     (let [api-token         (-> account-id
                                 fn-repo-get-acc-by-uid
                                 :account/subscriptions
@@ -122,19 +133,25 @@
 
 (defn get-holding-positions-fn
   [fn-repo-get-holding-positions fn-repo-get-acc-by-uid fn-quote-live-prices fn-get-ctx]
-  (let [fn-assoc-close-prices (partial assoc-close-prices-fn fn-repo-get-acc-by-uid
-                                       fn-quote-live-prices)]
+  (let [fn-assoc-close-prices (assoc-close-prices-fn fn-repo-get-acc-by-uid
+                                                     fn-quote-live-prices)]
     (fn [id]
       (let [{send-message         :send-message
              {acc-id :account/id} :user-account} (fn-get-ctx)
-            positions                            (-> id
-                                                     fn-repo-get-holding-positions
-                                                     aggregate-holding-positions
-                                                     (as-> p (fn-assoc-close-prices acc-id p)))]
-
+            x                                    (fn-repo-get-holding-positions id)
+            y                                    (fn-assoc-close-prices acc-id x)
+            _                                    (clojure.pprint/pprint {:id     id
+                                                                         :acc-id acc-id
+                                                                         :x      x
+                                                                         :y      y})
+            z                                    (aggregate-holding-positions y)
+            _                                    (clojure.pprint/pprint {:z z})
+            result                               z #_ (->> id
+                                                           fn-repo-get-holding-positions
+                                                           (fn-assoc-close-prices acc-id)
+                                                           aggregate-holding-positions)]
         (send-message [:holding.query/get-holding-positions-result
-                       {:result positions
-                        :type   :success}])))))
+                       result])))))
 
 (def *broadcast-holdings-positions (atom #{}))
 
@@ -152,8 +169,7 @@
         send-msg              (or send-msg
                                   #(send-message acc-id %))
         fn-assoc-close-prices (assoc-close-prices-fn fn-repo-get-acc-by-uid
-                                                     fn-quote-live-prices
-                                                     acc-id)
+                                                     fn-quote-live-prices)
         gpositions            (->> {:account-id acc-id
                                     :role       (if account-id
                                                   :system
@@ -167,12 +183,11 @@
     (doseq [[_gpos-id posns] gpositions]
       (future
         (try
-          (let [positions (->> posns
-                               aggregate-holding-positions
-                               fn-assoc-close-prices)]
+          (let [result (->> posns
+                            (fn-assoc-close-prices acc-id)
+                            aggregate-holding-positions)]
             (send-msg
-             [:holding.query/get-holdings-positions-result {:result positions
-                                                            :type   :success}]))
+             [:holding.query/get-holdings-positions-result result]))
           (catch Exception e
             (let [err-msg "Error getting holdings positions"]
               (errorf e err-msg)

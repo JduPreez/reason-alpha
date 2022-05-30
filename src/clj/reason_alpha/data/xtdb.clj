@@ -240,17 +240,20 @@
         #uuid "017f87dc-59d1-7beb-9e1d-7a2a354e5a49")
 
   (xt/q (xt/db db)
-        '{:find  [(pull hpos [*])
+        '{:find  [(pull pos [*])
                   (pull hold [*])
                   (pull tpattern [*])]
-          :where [[pos :position/id id]
-                  [pos :position/holding-position-id hid]
-                  (or [hpos :position/id hid]
-                      [hpos :position/holding-position-id hid])
-                  [(get-attr hpos :position/holding-id nil) [hold ...]]
-                  [(get-attr hpos :position/trade-pattern-id nil) [tpattern ...]]]
-          :in    [id]}
-        #uuid "0180098b-e65e-d7ce-645b-41eef737fa0c")
+          :where [;;[pos :position/id id]
+                  ;;[pos :position/holding-position-id hid]
+                  (or [pos :position/id id]
+                      [pos :position/holding-position-id id])
+                  [(get-attr pos :position/holding-id nil) [hold ...]]
+                  [(get-attr pos :position/trade-pattern-id nil) [tpattern ...]]]
+          :in    [[id ...]]}
+        [#uuid "0180ae8d-abff-be83-dcde-a31bfe42ab41"
+         #uuid "0180098b-e65e-d7ce-645b-41eef737fa0c"])
+
+  #uuid "0180ae8d-abff-be83-dcde-a31bfe42ab41"
 
   [pos :position/holding-id hold]
   (entities-owners

@@ -76,8 +76,8 @@
    [:position/stop {:optional true} number?]
    [:position/holding-position-id {:optional true} uuid?]])
 
-(def position-dto-formulas
-  {:stop-percent-loss "TPERCENT(stop-total-loss/(quantity * open-price))"})
+(def position-dto-functions
+  {:stop-loss-percent {:function "TPERCENT(stop-total-loss/(quantity * open-price))"}})
 
 (comment
   (let [f-str (:stop-percent-loss position-dto-formulas)
@@ -157,15 +157,8 @@
    [:holding-id {:optional     true
                  :command-path [:position/holding-id]}
     uuid?]
-   [:stop-percent-loss {:optional true
-                        :title    "Percent Loss"} float?]])
-
-(comment
-  (= 'fn* (first '#([{:keys [x y]}] (> x y))))
-
-  (sequential? '#([{:keys [x y]}] (> x y)))
-
-  )
+   [:stop-loss-percent {:optional true
+                        :title    "Stop Loss % of Allocation"} float?]])
 
 (def-model Holding
   :model/holding

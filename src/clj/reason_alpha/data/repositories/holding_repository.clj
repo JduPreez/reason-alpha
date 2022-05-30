@@ -57,28 +57,53 @@
        (data.model/query db)
        (mapping/command-ents->query-dtos portfolio-management/PositionDto)))
 
+;; (defn get-holding-positions [db id]
+;;   (clojure.pprint/pprint {::get-holding-positions (->> {:spec '{:find  [(pull hpos [*])
+;;                                                                         (pull hold [*])
+;;                                                                         (pull tpattern [*])]
+;;                                                                 :where [[pos :position/id id]
+;;                                                                         [pos :position/holding-position-id hid]
+;;                                                                         (or [hpos :position/id hid]
+;;                                                                             [hpos :position/holding-position-id hid])
+;;                                                                         [(get-attr hpos :position/holding-id nil) [hold ...]]
+;;                                                                         [(get-attr hpos :position/trade-pattern-id nil) [tpattern ...]]]
+;;                                                                 :in    [id]}
+;;                                                         :args [id]}
+;;                                                        (data.model/query db))})
+;;   (->> {:spec '{:find  [(pull hpos [*])
+;;                         (pull hold [*])
+;;                         (pull tpattern [*])]
+;;                 :where [[pos :position/id id]
+;;                         [pos :position/holding-position-id hid]
+;;                         (or [hpos :position/id hid]
+;;                             [hpos :position/holding-position-id hid])
+;;                         [(get-attr hpos :position/holding-id nil) [hold ...]]
+;;                         [(get-attr hpos :position/trade-pattern-id nil) [tpattern ...]]]
+;;                 :in    [id]}
+;;         :args [id]}
+;;        (data.model/query db)
+;;        (mapping/command-ents->query-dtos portfolio-management/PositionDto)))
+
 (defn get-holding-positions [db id]
-  (clojure.pprint/pprint {::get-holdings-positions (->> {:spec '{:find  [(pull hpos [*])
-                                                                         (pull hold [*])
-                                                                         (pull tpattern [*])]
-                                                                 :where [[pos :position/id id]
-                                                                         [pos :position/holding-position-id hid]
-                                                                         (or [hpos :position/id hid]
-                                                                             [hpos :position/holding-position-id hid])
-                                                                         [(get-attr hpos :position/holding-id nil) [hold ...]]
-                                                                         [(get-attr hpos :position/trade-pattern-id nil) [tpattern ...]]]
-                                                                 :in    [id]}
-                                                         :args [id]}
-                                                        (data.model/query db))})
-  (->> {:spec '{:find  [(pull hpos [*])
+  (clojure.pprint/pprint {::get-holding-positions (->> {:spec '{:find  [(pull pos [*])
+                                                                        (pull hold [*])
+                                                                        (pull tpattern [*])]
+                                                                :where [[pos :position/id id]
+                                                                        (or [pos :position/id id]
+                                                                            [pos :position/holding-position-id id])
+                                                                        [(get-attr pos :position/holding-id nil) [hold ...]]
+                                                                        [(get-attr pos :position/trade-pattern-id nil) [tpattern ...]]]
+                                                                :in    [id]}
+                                                        :args [id]}
+                                                       (data.model/query db))})
+  (->> {:spec '{:find  [(pull pos [*])
                         (pull hold [*])
                         (pull tpattern [*])]
                 :where [[pos :position/id id]
-                        [pos :position/holding-position-id hid]
-                        (or [hpos :position/id hid]
-                            [hpos :position/holding-position-id hid])
-                        [(get-attr hpos :position/holding-id nil) [hold ...]]
-                        [(get-attr hpos :position/trade-pattern-id nil) [tpattern ...]]]
+                        (or [pos :position/id id]
+                            [pos :position/holding-position-id id])
+                        [(get-attr pos :position/holding-id nil) [hold ...]]
+                        [(get-attr pos :position/trade-pattern-id nil) [tpattern ...]]]
                 :in    [id]}
         :args [id]}
        (data.model/query db)
