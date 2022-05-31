@@ -46,8 +46,4 @@
 
 (comment
   (clojure.test/run-tests 'reason-alpha.model.portfolio-management-test)
-
-  (class 30.4)
-  
-
   )

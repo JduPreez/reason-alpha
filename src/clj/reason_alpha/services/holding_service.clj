@@ -10,7 +10,8 @@
             [reason-alpha.model.portfolio-management :as portfolio-management]
             [reason-alpha.utils :as utils]
             [taoensso.timbre :as timbre :refer (errorf)]
-            [traversy.lens :as lens]))
+            [traversy.lens :as lens]
+            [reason-alpha.integration.fake-eod-api-client :as eod]))
 
 (m/=> save-holding! [:=>
                      [:cat
@@ -73,7 +74,6 @@
                                           :type   :success}])))
 
 (defn- aggregate-holding-positions [positions]
-  (clojure.pprint/pprint {::aggregate-holding-positions positions})
   (let [holding-pos    (-> positions
                            (lens/view
                             (lens/only
@@ -98,11 +98,6 @@
                                                portfolio-management/position-dto-functions}))]
     pos-with-comps))
 
-(comment
-  (-> [] (lens/view-single (lens/xth 1)))
-  (first [])
-  )
-
 (defn- assoc-close-prices-fn [fn-repo-get-acc-by-uid fn-quote-live-prices & [{:keys [batch-size]}]]
   (fn [account-id positions]
     (let [api-token         (-> account-id
@@ -115,7 +110,7 @@
                                         (when (and holding-id eod-historical-data)
                                           [holding-id eod-historical-data])))
                                  (remove nil?)
-                                 dedupe)
+                                 distinct)
           prices            (fn-quote-live-prices api-token tickers {:batch-size batch-size})
           pos-with-close-pr (->> prices
                                  (pmap #(deref %))
@@ -131,25 +126,119 @@
                                                           p)))))))]
       pos-with-close-pr)))
 
+(comment
+
+  (require '[reason-alpha.integration.fake-eod-api-client :as eod])
+  (let [fun (assoc-close-prices-fn (fn [aid]
+                                     {:account/subscriptions
+                                      {:subscription/eod-historical-data
+                                       {:api-token "djhjdhd"}}})
+                                   eod/quote-live-prices)
+        p   [{:holding
+              [#uuid "018004b9-3a7f-df48-4c96-c63d6aea78b5"
+               "Sony"],
+              :open-price 33,
+              :open-time
+              #inst "2022-05-18T00:00:00.000-00:00",
+              :stop       20,
+              :position-creation-id
+              #uuid "ab5e3c79-3334-4e52-86e5-e1eec94eaccc",
+              :status     :open,
+              :position-id
+              #uuid "01811a3f-638f-d0de-4ddd-ec224bc81cf1",
+              :holding-position-id
+              #uuid "0180098b-e65e-d7ce-645b-41eef737fa0c",
+              :holding-id
+              #uuid "018004b9-3a7f-df48-4c96-c63d6aea78b5",
+              :quantity   23,
+              :eod-historical-data
+              "6758.TSE",
+              :long-short [:long ""]}
+             {:trade-pattern
+              [#uuid "01800865-9069-63c7-9c6c-4d24cdcefc9a"
+               "Breakout"],
+              :holding
+              [#uuid "018004bb-227c-d6de-69ac-bc1eab688ab5"
+               "Walt Disney"],
+              :open-price  23,
+              :open-time
+              #inst "2022-04-06T00:00:00.000-00:00",
+              :stop        56,
+              :position-creation-id
+              #uuid "74e921b2-fe79-454d-b47c-08c43b298019",
+              :status      :closed,
+              :close-price 95.86,
+              :position-id
+              #uuid "0180098b-e65e-d7ce-645b-41eef737fa0c",
+              :holding-id
+              #uuid "018004bb-227c-d6de-69ac-bc1eab688ab5",
+              :quantity    676,
+              :eod-historical-data
+              "DIS.US",
+              :long-short  [:long ""]}
+             {:holding
+              [#uuid "01809f38-c167-6811-e9ef-c2edd166236d"
+               "Unity"],
+              :open-price          34,
+              :open-time
+              #inst "2022-05-05T00:00:00.000-00:00",
+              :stop                34,
+              :position-creation-id
+              #uuid "9f91f95c-43c3-46e6-a661-5409959a42b2",
+              :status              :closed,
+              :close-price         46.72,
+              :position-id
+              #uuid "0180ae8d-abff-be83-dcde-a31bfe42ab41",
+              :holding-position-id
+              #uuid "0180098b-e65e-d7ce-645b-41eef737fa0c",
+              :holding-id
+              #uuid "01809f38-c167-6811-e9ef-c2edd166236d",
+              :quantity            33,
+              :eod-historical-data "U.US",
+              :long-short          [:long ""]}
+             {:trade-pattern
+              [#uuid "0180088d-aa18-6709-de16-4d2e56126947"
+               "zzzzzz"],
+              :holding
+              [#uuid "018004b9-3a7f-df48-4c96-c63d6aea78b5"
+               "Sony"],
+              :open-price  23,
+              :open-time
+              #inst "2022-04-20T00:00:00.000-00:00",
+              :stop        2342,
+              :position-creation-id
+              #uuid "0d4a7fdf-5ab0-4d08-a35a-c5b23fa46c6e",
+              :status      :closed,
+              :close-price 8.07,
+              :position-id
+              #uuid "018008e1-a0db-2638-b2e2-4e9f0e332d11",
+              :holding-position-id
+              #uuid "0180098b-e65e-d7ce-645b-41eef737fa0c",
+              :holding-id
+              #uuid "018004b9-3a7f-df48-4c96-c63d6aea78b5",
+              :quantity    50,
+              :eod-historical-data
+              "6758.TSE",
+              :long-short  [:long ""]}
+             ]
+        ]
+    #_(-> (fun "test" p) first deref)
+    (fun "test" p))
+
+  )
+
 (defn get-holding-positions-fn
   [fn-repo-get-holding-positions fn-repo-get-acc-by-uid fn-quote-live-prices fn-get-ctx]
   (let [fn-assoc-close-prices (assoc-close-prices-fn fn-repo-get-acc-by-uid
                                                      fn-quote-live-prices)]
-    (fn [id]
-      (let [{send-message         :send-message
+    (fn [{:keys [position/id position/holding-position-id]}]
+      (let [pos-id                               (or holding-position-id id)
+            {send-message         :send-message
              {acc-id :account/id} :user-account} (fn-get-ctx)
-            x                                    (fn-repo-get-holding-positions id)
-            y                                    (fn-assoc-close-prices acc-id x)
-            _                                    (clojure.pprint/pprint {:id     id
-                                                                         :acc-id acc-id
-                                                                         :x      x
-                                                                         :y      y})
-            z                                    (aggregate-holding-positions y)
-            _                                    (clojure.pprint/pprint {:z z})
-            result                               z #_ (->> id
-                                                           fn-repo-get-holding-positions
-                                                           (fn-assoc-close-prices acc-id)
-                                                           aggregate-holding-positions)]
+            result                               (->> pos-id
+                                                      fn-repo-get-holding-positions
+                                                      (fn-assoc-close-prices acc-id)
+                                                      aggregate-holding-positions)]
         (send-message [:holding.query/get-holding-positions-result
                        result])))))
 
@@ -178,6 +267,7 @@
                                    (group-by (fn [{:keys [position-id holding-position-id]}]
                                                (or holding-position-id
                                                    position-id))))]
+
     (when broadcast? (swap! *broadcast-holdings-positions conj acc-id))
 
     (doseq [[_gpos-id posns] gpositions]
@@ -257,7 +347,7 @@
            [:holding.command/save-position!-result
             {:result (-> pos
                          fn-repo-save!
-                         (select-keys [:position/creation-id :position/id]))
+                         (select-keys [:position/creation-id :position/id :position/holding-position-id]))
              :type   :success}]))
         (catch Exception e
           (let [err-msg "Error saving position"]
@@ -267,93 +357,3 @@
               {:error       (ex-data e)
                :description (str err-msg ": " (ex-message e))
                :type        :error}]))))))
-
-(comment
-  (let [p '({:holding
-             [#uuid "018004b9-3a7f-df48-4c96-c63d6aea78b5"
-              "AAA"],
-             :open-price  23,
-             :open-time
-             #inst "2022-05-12T00:00:00.000-00:00",
-             :stop        3.2,
-             :position-creation-id
-             #uuid "bdc2bfb6-dcd4-4674-bc91-dc56b0a93276",
-             :status      :open,
-             :close-price 33.3,
-             :position-id
-             #uuid "01808fb9-4f61-999f-6a3b-58f29b27acee",
-             :quantity    22.44,
-             :long-short  [:long ""]}
-            {:trade-pattern
-             [#uuid "01800865-9069-63c7-9c6c-4d24cdcefc9a"
-              "Breakout"],
-             :holding
-             [#uuid "018004bb-227c-d6de-69ac-bc1eab688ab5"
-              "BBB"],
-             :open-price  "333",
-             :open-time
-             #inst "2022-04-06T00:00:00.000-00:00",
-             :stop        "3333",
-             :position-creation-id
-             #uuid "74e921b2-fe79-454d-b47c-08c43b298019",
-             :close-price 36.85,
-             :position-id
-             #uuid "0180098b-e65e-d7ce-645b-41eef737fa0c",
-             :holding-position-id
-             #uuid "018008e1-a0db-2638-b2e2-4e9f0e332d11",
-             :quantity    "3333",
-             :long-short  [:long ""]}
-            {:trade-pattern
-             [#uuid "0180088d-aa18-6709-de16-4d2e56126947"
-              "zzzzzz"],
-             :holding
-             [#uuid "018004b9-3a7f-df48-4c96-c63d6aea78b5"
-              "AAA"],
-             :open-price  "23",
-             :open-time
-             #inst "2022-04-20T00:00:00.000-00:00",
-             :stop        "2342",
-             :position-creation-id
-             #uuid "0d4a7fdf-5ab0-4d08-a35a-c5b23fa46c6e",
-             :close-price 83.33,
-             :position-id
-             #uuid "018008e1-a0db-2638-b2e2-4e9f0e332d11",
-             :quantity    "454",
-             :long-short  [:long ""]})]
-    (->> p
-         (group-by (fn [{:keys [position-id holding-position-id]}]
-                     (or holding-position-id
-                         position-id)))
-         (mapcat (fn [[_ hs]]
-                   (aggregate-holding-positions hs)))))
-
-
-
-  (let [id        2
-        positions [{:position/id 1}
-                   {:position/id                  2
-                    :position/holding-position-id 1}
-                   {:position/id                  3
-                    :position/holding-position-id 1}
-                   {:position/id 4}
-                   {:position/id                  5
-                    :position/holding-position-id 4}
-                   {:position/id                  6
-                    :position/holding-position-id 4}]]
-    (->> positions
-         (group-by (fn [{:keys [position/id position/holding-position-id]}]
-                    (or holding-position-id
-                        id)))))
-
-  (let [x {1
-           [#:position{:id 1}
-            #:position{:id 2, :holding-position-id 1}
-            #:position{:id 3, :holding-position-id 1}],
-           4
-           [#:position{:id 4}
-            #:position{:id 5, :holding-position-id 4}
-            #:position{:id 6, :holding-position-id 4}]}]
-    (map (fn [y] y) x))
-
-
-  )

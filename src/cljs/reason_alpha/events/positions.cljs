@@ -62,8 +62,6 @@
          db              (data/save-local! {:model-type :position
                                             :data       new-pos
                                             :db         db})]
-     (cljs.pprint/pprint {:position.command/create {:NP new-pos
-                                                    :CP cmd-pos}})
      {:db             db
       :position/save! cmd-pos})))
 
@@ -92,7 +90,7 @@
  (fn [_ [evt {:keys [type result] :as r}]]
    (utils/log evt r)
    (when (= :success type)
-     {:position/get-holding-positions (:position/id result)})))
+     {:position/get-holding-positions result})))
 
 (rf/reg-fx
  :position/save!
