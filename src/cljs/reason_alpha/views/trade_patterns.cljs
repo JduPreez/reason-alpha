@@ -68,6 +68,5 @@
                     {:trade-pattern-parent-id
                      {:indent-group {:group-path        [:trade-pattern-id]
                                      :display-name-path [:trade-pattern-name]}}}})]
-      (cljs.pprint/pprint {::view fields})
       [datagrid/view fields options])))
 

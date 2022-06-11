@@ -34,7 +34,7 @@
     [string? {:min 1}]]
    [:trade-pattern-parent-id {:title        "Sub-Pattern"
                               :optional     true
-                              :ref          :trade-pattern
+                              :ref          :trade-pattern/parent
                               :command-path [:trade-pattern/parent-id]}
     uuid?]])
 
