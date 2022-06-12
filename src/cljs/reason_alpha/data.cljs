@@ -72,7 +72,7 @@
     (->> model-type
          entity-data
          (get-in db)
-         (some #(when (= (k %) v))))))
+         (some #(when (= (k %) v) %)))))
 
 (defn save-local!
   [{db :db, type :model-type, data :data}]

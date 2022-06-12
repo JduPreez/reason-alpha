@@ -74,9 +74,6 @@
                                        :closed
                                        :open)
          pos                         (assoc pos :status status)
-         _                           (cljs.pprint/pprint {:position/update {:CP  close-price
-                                                                            :CCP cur-close-pr
-                                                                            :P   pos}})
          query-dto-model             (get-in db (data/model :model/position-dto))
          cmd-pos                     (mapping/query-dto->command-ent query-dto-model pos)
          db                          (data/save-local! {:model-type :position
