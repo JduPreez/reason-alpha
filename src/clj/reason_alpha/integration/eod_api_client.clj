@@ -5,11 +5,9 @@
             [outpace.config :refer [defconfig]]))
 
 ;; TODO: Get this to each user's own profile
-;;(defconfig api-token)
-(def api-token' "~~~~~~~~~")
+(defconfig api-token)
 
-;;(defconfig live-stock-prices-api)
-(def live-stock-prices-api "https://eodhistoricaldata.com/api/real-time/%s")
+(defconfig live-stock-prices-api)
 
 (defn- handle-quote-live-price [*result idx-hid-tkrs response]
   (clojure.pprint/pprint {::handle-quote-live-price response})
@@ -26,7 +24,7 @@
             :description (str "something bad happened: " status " " status-text)
             :type        :error}))
 
-(defn- quote-live-prices* [api-token ticker-promises]
+(defn- quote-live-prices* [api-token' ticker-promises]
   (for [[tkrs *res] ticker-promises
         :let        [idx-hid-tkrs   (->> tkrs
                                          (map (fn [[hid t]][t hid]))
@@ -39,7 +37,7 @@
                                       (str/join ","
                                                 adtnl-syms))]]
     {:uri     uri
-     :request {:params          (cond-> {:api_token api-token
+     :request {:params          (cond-> {:api_token api-token'
                                          :fmt       "json"}
                                   adtnl-syms-str (assoc :s adtnl-syms-str))
                :handler         #(handle-quote-live-price *res idx-hid-tkrs %)
@@ -48,13 +46,13 @@
                :keywords?       true}}))
 
 (defn quote-live-prices
-  [api-token tickers & [{:keys [batch-size]}]]
+  [api-token' tickers & [{:keys [batch-size]}]]
   (let [batch-size (or batch-size 2)
         parts      (if (< (count tickers) batch-size)
                      [tickers]
                      (vec (partition-all batch-size tickers)))
         tkr-parts  (mapv (fn [tickers] [tickers (promise)]) parts)
-        requests   (quote-live-prices* api-token tkr-parts)
+        requests   (quote-live-prices* api-token' tkr-parts)
         *results   (mapv second tkr-parts)]
     (doall
      (for [{:keys [uri request]} requests]
@@ -83,7 +81,7 @@
                       [8 "TDOC.US"]
                       [9 "9988.HK"]
                       [10 "ABI.BR"]]
-        results      (quote-live-prices api-token' tickers {:batch-size 3})]
+        results      (quote-live-prices api-token tickers {:batch-size 3})]
     (doall
      (for [*r results]
        @*r)))
