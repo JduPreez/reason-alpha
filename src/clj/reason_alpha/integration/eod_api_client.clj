@@ -12,11 +12,8 @@
 (defconfig live-stock-prices-api)
 
 (defn- handle-quote-live-price [*result idx-hid-tkrs response]
-  ;; (clojure.pprint/pprint {::handle-quote-live-price response})
-
   (let [r (map (fn [{:keys [code timestamp open previousClose
                             high low volume change close] :as quote}]
-                 (clojure.pprint/pprint quote)
                  (let [ptime (-> timestamp
                                  (tick/new-duration :seconds)
                                  tick/inst)]
@@ -34,14 +31,12 @@
                     :price-volume         volume
                     :price-change         change})) response)]
     (deliver *result
-             {:result {:response     r
-                       :idx-hid-tkrs idx-hid-tkrs}
+             {:result r
               :type   :success})))
 
 (defn- handle-quote-live-price-err
   [*result idx-hid-tkrs {:keys [status status-text]
                          :as   response}]
-  (clojure.pprint/pprint {::handle-quote-live-price-err response})
   (deliver *result
            {:error       response
             :description (str "something bad happened: " status " " status-text)
