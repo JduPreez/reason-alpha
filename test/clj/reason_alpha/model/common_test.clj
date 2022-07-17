@@ -3,25 +3,25 @@
             [clojure.test :refer :all]))
 
 (deftest compute-dependent-fields
-  (let [data          [{:id              1
-                        :stop-total-loss -760
-                        :quantity        152
-                        :open-price      71.83}
-                       {:id              2
-                        :stop-total-loss -7878
-                        :quantity        344
-                        :open-price      562}
-                       {:id              3
-                        :stop-total-loss -901
-                        :quantity        23
-                        :open-price      184.8}
-                       {:id              4
-                        :stop-total-loss -215
-                        :quantity        512
-                        :open-price      87.11}]
+  (let [data          [{:id         1
+                        :stop-loss  -760
+                        :quantity   152
+                        :open-price 71.83}
+                       {:id         2
+                        :stop-loss  -7878
+                        :quantity   344
+                        :open-price 562}
+                       {:id         3
+                        :stop-loss  -901
+                        :quantity   23
+                        :open-price 184.8}
+                       {:id         4
+                        :stop-loss  -215
+                        :quantity   512
+                        :open-price 87.11}]
         comps         {:stop-percent-loss
                        {:function
-                        "PERCENT(stop-total-loss/(quantity * open-price))"}
+                        "PERCENT(stop-loss/(quantity * open-price))"}
                        :xyz
                        {:require [:stop-percent-loss]
                         :function

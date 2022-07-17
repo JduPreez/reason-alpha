@@ -6815,8 +6815,11 @@ ul.dropdown-menu li.dropdown ul.dropdown-menu .dropdown-plus-title {
 	border: 1px solid transparent;
 	border-radius: 3px;
 }
+div.alert-card {
+  margin-bottom: 0;
+}
 .alert:first-child{
-	margin-bottom: 1rem !important;
+	margin-bottom: 1rem;
 }
 .alert:last-child{
 	margin-bottom: 0;
@@ -20494,5 +20497,5 @@ svg {
 }
 
 .commands {
-	text-align: right;
+	  text-align : right ;
 }

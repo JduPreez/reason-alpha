@@ -424,8 +424,8 @@
                                               :ref          :position/holding-position
                                               :command-path [:position/holding-position-id]}
                         uuid?]
-                       [:stop-total-loss {:title    "Stop Total Loss"
-                                          :optional true}
+                       [:stop-loss {:title    "Stop Total Loss"
+                                    :optional true}
                         float?]
                        [:eod-historical-data {:optional     true
                                               :fn-value     {:arg :symbol/provider

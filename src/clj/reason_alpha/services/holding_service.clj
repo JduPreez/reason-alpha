@@ -85,10 +85,10 @@
                             (lens/only
                              :holding-position-id)))
         holding-pos    (when holding-pos
-                         (portfolio-management/assoc-stop-total-loss
+                         (portfolio-management/assoc-aggregate-fields
                           holding-pos sub-positions))
         sub-positions  (when (seq sub-positions)
-                         (map portfolio-management/assoc-stop-total-loss
+                         (map portfolio-management/assoc-aggregate-fields
                               sub-positions))
         pos-with-comps (cond-> []
                          (seq sub-positions) (into sub-positions)

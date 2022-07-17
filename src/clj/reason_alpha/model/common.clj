@@ -115,21 +115,21 @@
          :type        :error}))))
 
 (comment
-  (let [data  [{:stop-total-loss -760
-                :quantity        152
-                :open-price      71.83}
-               {:stop-total-loss -7878
-                :quantity        344
-                :open-price      562}
-               {:stop-total-loss -901
-                :quantity        23
-                :open-price      184.8}
-               {:stop-total-loss -215
-                :quantity        512
-                :open-price      87.11}]
+  (let [data  [{:stop-loss  -760
+                :quantity   152
+                :open-price 71.83}
+               {:stop-loss  -7878
+                :quantity   344
+                :open-price 562}
+               {:stop-loss  -901
+                :quantity   23
+                :open-price 184.8}
+               {:stop-loss  -215
+                :quantity   512
+                :open-price 87.11}]
         comps {:stop-percent-loss
                {:function
-                "PERCENT(stop-total-loss/(quantity * open-price))"}
+                "PERCENT(stop-loss/(quantity * open-price))"}
                :xyz
                {:require [:stop-percent-loss]
                 :function
