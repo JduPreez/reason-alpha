@@ -122,7 +122,8 @@
                                 :trade-transaction/price]}
     number?]
    [:open-total {:title    "Open Total"
-                 :optional true}]
+                 :optional true}
+    number?]
    [:close-price {:title        "Close"
                   :optional     true
                   :command-path [:position/close

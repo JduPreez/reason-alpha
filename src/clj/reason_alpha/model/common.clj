@@ -12,8 +12,13 @@
 
 (defn result-schema [result-schema]
   [:map
+   [:result-id {:description (str "A result that must be "
+                                  "displayed on the UI must "
+                                  "have a unique id")
+                :optional?   true} uuid?]
    [:result {:optional true} result-schema]
    [:type [:enum :error :success :warn :info :failed-validation]]
+   [:title {:optional true} string?]
    [:error {:optional true} any?]
    [:description {:optional true} string?]
    [:nr-items {:optional true} int?]])

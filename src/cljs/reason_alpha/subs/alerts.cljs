@@ -2,8 +2,12 @@
   (:require [re-frame.core :as rf]
             [reason-alpha.data :as data]))
 
-(ref/reg-sub
+(rf/reg-sub
  :alert/list
  (fn [db _]
-   (get-in db data/alerts)))
+   #_(get-in db data/alerts)
+   [{:type        :error
+     :title       "Some error"
+     :description "dhjdjhjhd"
+     :error       "dddd"}]))
 

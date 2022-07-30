@@ -36,15 +36,16 @@
  (fn [pos-id]
    (api-client/chsk-send! [:holding.query/get-holding-positions pos-id])))
 
-(rf/reg-event-db
+(rf/reg-event-fx
  :holding.query/get-holding-positions-result
  (fn [db [evt {:keys [result type] :as r}]]
    (utils/log evt r)
    (if (= :success type)
-     (data/save-local! {:db         db
-                        :model-type :position
-                        :data       result})
-     db)))
+     {:db (data/save-local! {:db         db
+                             :model-type :position
+                             :data       result})}
+     {:db       db
+      :dispatch [:alert/send r]})))
 
 (rf/reg-event-fx
  :position/create

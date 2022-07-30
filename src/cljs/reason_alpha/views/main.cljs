@@ -50,10 +50,7 @@
       [:a.nav-link {:href "#"}
        [:i.fas.fa-undo-alt] [:span "CANCEL"]]]]]
    [:div.container.full-height>div.hor-content.full-height
-    [:div.row {:style {:margin-top "10px"}}
-     [:div.alert-card.card
-      [:div.alert.alert-danger {:margin-bottom "0 !important"}
-       "blah"]]]
+    [alerts-view]
     [:div.row.full-height {:style {:margin-top "10px"}}
      [child-view]
      #_[:div.card

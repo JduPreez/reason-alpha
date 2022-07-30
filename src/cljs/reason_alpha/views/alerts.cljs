@@ -3,10 +3,38 @@
 
 (defn view []
   (fn []
-    (let[*alerts (rf/subscribe [:alerts/list grid-id])
-         opts    (or options @*options)]
-      [:div.card
-       [history-list grid-id title]
-       [:div.card-body {:style {:padding-top    0
-                                :padding-bottom 0}}
-        [ra-datagrid/datagrid (merge default-opts opts) fields]]])))
+    (let[*alerts (rf/subscribe [:alert/list])]
+      [:<>
+       (for [{:keys [type description
+                     error title result-id]} @*alerts]
+         ^{:key (str result-id)}
+         [:div.row {:style {:margin-top "10px"}}
+          (case type
+            (:error
+             :failed-validation) [:div.alert-card.card
+                                  [:div.alert.alert-danger
+                                   {:margin-bottom "0 !important"}
+                                   [:strong description]
+                                   [:a.btn.btn-xs.btn-danger.float-right
+                                    {:href     "#"
+                                     :on-click #(do (.preventDefault %)
+                                                    (rf/dispatch [:alert/close result-id]))}
+                                    title]]]
+            (:success :info)     [:div.alert-card.card
+                                  [:div.alert.alert-success
+                                   {:margin-bottom "0 !important"}
+                                   [:strong description]
+                                   [:a.btn.btn-xs.btn-success.float-right
+                                    {:href     "#"
+                                     :on-click #(do (.preventDefault %)
+                                                    (rf/dispatch [:alert/close result-id]))}
+                                    title]]]
+            [:div.alert-card.card
+             [:div.alert.alert-warning
+              {:margin-bottom "0 !important"}
+              [:strong description]
+              [:a.btn.btn-xs.btn-warning.float-right
+               {:href     "#"
+                :on-click #(do (.preventDefault %)
+                               (rf/dispatch [:alert/close result-id]))}
+               title]]])])])))

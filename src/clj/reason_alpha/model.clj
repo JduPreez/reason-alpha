@@ -51,8 +51,8 @@
      :fn-save-account! #(account-svc/save! fn-repo-get-by-uid
                                            fn-repo-save! %)}))
 
-(defmethod ig/halt-key! ::db [_ _]
-  (data.model/disconnect xtdb/db))
+(defmethod ig/halt-key! ::db [_ db]
+  (data.model/disconnect db))
 
 (defmethod ig/init-key ::aggregates [_ {db                       :db
                                         {:keys [fn-get-account]} :account-svc}]

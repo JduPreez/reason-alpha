@@ -1,6 +1,7 @@
 (ns reason-alpha.views
   (:require [re-frame.core :as rf]
             [reagent.dom :as r.dom]
+            [reason-alpha.views.alerts :as alerts]
             [reason-alpha.views.datagrid :as datagrid]
             [reason-alpha.views.holdings :as holdings]
             [reason-alpha.views.main :as main]
@@ -60,7 +61,9 @@
 (defn router-component [{:keys [router]}]
   (let [current-route @(rf/subscribe [:current-route])]
     (when current-route
-      [main/view (-> current-route :data :view)])))
+      [main/view
+       (-> current-route :data :view)
+       alerts/view])))
 
 (defn init []
   (init-routes!)
