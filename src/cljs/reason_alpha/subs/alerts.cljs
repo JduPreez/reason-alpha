@@ -5,9 +5,5 @@
 (rf/reg-sub
  :alert/list
  (fn [db _]
-   #_(get-in db data/alerts)
-   [{:type        :error
-     :title       "Some error"
-     :description "dhjdjhjhd"
-     :error       "dddd"}]))
+   (get-in db data/alerts)))
 

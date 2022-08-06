@@ -138,7 +138,8 @@
   (handlers aggregates))
 
 (defmethod ig/init-key ::broadcasters [_ {:keys [aggregates]}]
-  {:broadcast-holdings-positions (get-in aggregates [:holding :queries :broadcast-holdings-positions])})
+  {:broadcast-holdings-positions {:fn-start (get-in aggregates [:holding :queries :broadcast-holdings-positions])
+                                  :fn-stop  holding-svc/stop-broadcast-holdings-positions}})
 
 (defmethod ig/init-key ::server [_ conf]
   (server/start! conf))

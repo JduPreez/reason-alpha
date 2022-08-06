@@ -21,15 +21,16 @@
  (fn [_]
    (api-client/chsk-send! [:holding.query/get-holdings-positions])))
 
-(rf/reg-event-db
+(rf/reg-event-fx
  :holding.query/get-holdings-positions-result
- (fn [db [evt {:keys [result type] :as r}]]
+ (fn [{:keys [db]} [evt {:keys [result type] :as r}]]
    (utils/log evt r)
    (if (= :success type)
-     (data/save-local! {:db         db
-                        :model-type :position
-                        :data       result})
-     db)))
+     {:db (data/save-local! {:db         db
+                             :model-type :position
+                             :data       result})}
+     {:db       db
+      :dispatch [:alert/send r]})))
 
 (rf/reg-fx
  :position/get-holding-positions
@@ -38,7 +39,7 @@
 
 (rf/reg-event-fx
  :holding.query/get-holding-positions-result
- (fn [db [evt {:keys [result type] :as r}]]
+ (fn [{:keys [db]} [evt {:keys [result type] :as r}]]
    (utils/log evt r)
    (if (= :success type)
      {:db (data/save-local! {:db         db

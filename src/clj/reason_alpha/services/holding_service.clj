@@ -281,11 +281,15 @@
           (catch Exception e
             (let [err-msg "Error getting holdings positions"]
               (errorf e err-msg)
-              (send-message
+              (send-msg
                [:holding.query/get-holdings-positions-result
-                {:error       (ex-data e)
-                 :description (str err-msg ": " (ex-message e))
+                {:result-id   (utils/new-uuid)
+                 :error       (ex-data e)
+                 :title       err-msg
+                 :description (ex-message e)
                  :type        :error}]))))))))
+
+(defonce *broadcast? (atom true))
 
 (defn broadcast-holdings-positions
   [fn-get-holdings-positions {:keys [send-message *connected-users]}]
@@ -312,7 +316,12 @@
       (println "Broadcast holdings positions " i)
       (<! (async/timeout quote-interval))
       (broadcast! i)
-      (recur (inc i)))))
+      (when @*broadcast?
+        (recur (inc i))))))
+
+(defn stop-broadcast-holdings-positions []
+  (println "Stop broadcasting holdings positions")
+  (reset! *broadcast? false))
 
 (defn save-position!
   [fn-repo-save! fn-get-account fn-get-ctx

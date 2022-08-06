@@ -4,6 +4,7 @@
 (defn view []
   (fn []
     (let[*alerts (rf/subscribe [:alert/list])]
+      (cljs.pprint/pprint {::view @*alerts})
       [:<>
        (for [{:keys [type description
                      error title result-id]} @*alerts]

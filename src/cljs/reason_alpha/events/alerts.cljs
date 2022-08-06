@@ -8,7 +8,7 @@
    (-> db
        (get-in data/alerts)
        (as-> a (take 2 a))
-       list
+       (as-> a (apply list a))
        (conj alert)
        (as-> a (assoc-in db data/alerts a)))))
 
