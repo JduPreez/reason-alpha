@@ -51,8 +51,8 @@
      :fn-save-account! #(account-svc/save! fn-repo-get-by-uid
                                            fn-repo-save! %)}))
 
-(defmethod ig/halt-key! ::db [_ _]
-  (data.model/disconnect xtdb/db))
+(defmethod ig/halt-key! ::db [_ db]
+  (data.model/disconnect db))
 
 (defmethod ig/init-key ::aggregates [_ {db                       :db
                                         {:keys [fn-get-account]} :account-svc}]
@@ -138,7 +138,8 @@
   (handlers aggregates))
 
 (defmethod ig/init-key ::broadcasters [_ {:keys [aggregates]}]
-  {:broadcast-holdings-positions (get-in aggregates [:holding :queries :broadcast-holdings-positions])})
+  {:broadcast-holdings-positions {:fn-start (get-in aggregates [:holding :queries :broadcast-holdings-positions])
+                                  :fn-stop  holding-svc/stop-broadcast-holdings-positions}})
 
 (defmethod ig/init-key ::server [_ conf]
   (server/start! conf))

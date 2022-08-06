@@ -128,12 +128,20 @@
 
 (defn start-broadcasting! [broadcasters]
   (info "Starting broadcasters")
-  (doseq [[name fn-broadcast] broadcasters]
+  (doseq [[name {:keys [fn-start]}] broadcasters]
     (try
-      (fn-broadcast {:send-message     chsk-send!
-                     :*connected-users connected-uids})
+      (fn-start {:send-message     chsk-send!
+                 :*connected-users connected-uids})
       (catch Exception e
         (errorf e "Failed to start broadcaster '%s'" name)))))
+
+(defn stop-broadcasting! [broadcasters]
+  (info "Stopping broadcasters")
+  (doseq [[name {:keys [fn-stop]}] broadcasters]
+    (try
+      (fn-stop)
+      (catch Exception e
+        (errorf e "Failed to stop broadcaster '%s'" name)))))
 
 (defn server-event-msg-handler
   "Wraps `-event-msg-handler` with logging, error catching, etc."
@@ -185,8 +193,11 @@
 
 ;;;; Init stuff
 (defonce *web-server (atom nil)) ; (fn stop [])
-(defn stop-web-server! [] (when-let [stop-fn @*web-server] (stop-fn)))
-(defn start-web-server! [{:keys [port broadcasters] :as conf}]
+(defn stop-web-server! []
+  (when-let [stop-fn @*web-server] (stop-fn)))
+
+(defn start-web-server!
+  [{:keys [port broadcasters] :as conf}]
   (stop-web-server!)
   (let [port         (or port 0)              ; 0 => Choose any available port
         ring-handler (main-ring-handler conf) #_ (var main-ring-handler)
@@ -195,7 +206,9 @@
                                       ring-handler
                                       {:port port})]
                          [(:local-port (meta stop-fn))
-                          (fn [] (stop-fn :timeout 100))])
+                          (fn []
+                            (stop-fn :timeout 100)
+                            (stop-broadcasting! broadcasters))])
         uri            (format "http://localhost:%s/" port)]
 
     (infof "Web server is running at `%s`" uri)

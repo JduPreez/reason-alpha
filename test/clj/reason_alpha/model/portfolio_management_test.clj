@@ -3,8 +3,8 @@
             [reason-alpha.model.portfolio-management :as sut]
             [reason-alpha.utils :as utils]))
 
-(deftest test-assoc-stop-total-loss
-  (testing (str "`assoc-stop-total-loss` should calculate correctly for empty holding position"
+(deftest test-assoc-aggregate-fields
+  (testing (str "`assoc-aggregate-fields` should calculate correctly for empty holding position"
                 "with sub-positions with partial stops")
     (let [open-price     (rand 100)
           holding-pos-id (utils/new-uuid)
@@ -39,15 +39,11 @@
                            :open-price           57.84}]
           {:keys [open-price stop
                   total-stop-loss]
-           :as   pos}    (sut/assoc-stop-total-loss holding-pos sub-positions)]
+           :as   pos}    (sut/assoc-aggregate-fields holding-pos sub-positions)]
       (is (= (float 67.70) open-price))
       (is (= (float 34.60) stop))
       (is (= (float -4303.55) total-stop-loss)))))
 
 (comment
   (clojure.test/run-tests 'reason-alpha.model.portfolio-management-test)
-
-  (class 30.4)
-  
-
   )

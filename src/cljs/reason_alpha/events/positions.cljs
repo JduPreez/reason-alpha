@@ -21,30 +21,32 @@
  (fn [_]
    (api-client/chsk-send! [:holding.query/get-holdings-positions])))
 
-(rf/reg-event-db
+(rf/reg-event-fx
  :holding.query/get-holdings-positions-result
- (fn [db [evt {:keys [result type] :as r}]]
+ (fn [{:keys [db]} [evt {:keys [result type] :as r}]]
    (utils/log evt r)
    (if (= :success type)
-     (data/save-local! {:db         db
-                        :model-type :position
-                        :data       result})
-     db)))
+     {:db (data/save-local! {:db         db
+                             :model-type :position
+                             :data       result})}
+     {:db       db
+      :dispatch [:alert/send r]})))
 
 (rf/reg-fx
  :position/get-holding-positions
  (fn [pos-id]
    (api-client/chsk-send! [:holding.query/get-holding-positions pos-id])))
 
-(rf/reg-event-db
+(rf/reg-event-fx
  :holding.query/get-holding-positions-result
- (fn [db [evt {:keys [result type] :as r}]]
+ (fn [{:keys [db]} [evt {:keys [result type] :as r}]]
    (utils/log evt r)
    (if (= :success type)
-     (data/save-local! {:db         db
-                        :model-type :position
-                        :data       result})
-     db)))
+     {:db (data/save-local! {:db         db
+                             :model-type :position
+                             :data       result})}
+     {:db       db
+      :dispatch [:alert/send r]})))
 
 (rf/reg-event-fx
  :position/create
@@ -62,8 +64,6 @@
          db              (data/save-local! {:model-type :position
                                             :data       new-pos
                                             :db         db})]
-     (cljs.pprint/pprint {:position.command/create {:NP new-pos
-                                                    :CP cmd-pos}})
      {:db             db
       :position/save! cmd-pos})))
 
@@ -76,9 +76,6 @@
                                        :closed
                                        :open)
          pos                         (assoc pos :status status)
-         _                           (cljs.pprint/pprint {:position/update {:CP  close-price
-                                                                            :CCP cur-close-pr
-                                                                            :P   pos}})
          query-dto-model             (get-in db (data/model :model/position-dto))
          cmd-pos                     (mapping/query-dto->command-ent query-dto-model pos)
          db                          (data/save-local! {:model-type :position
@@ -92,7 +89,7 @@
  (fn [_ [evt {:keys [type result] :as r}]]
    (utils/log evt r)
    (when (= :success type)
-     {:position/get-holding-positions (:position/id result)})))
+     {:position/get-holding-positions result})))
 
 (rf/reg-fx
  :position/save!

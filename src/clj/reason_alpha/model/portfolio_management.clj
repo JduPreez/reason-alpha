@@ -34,7 +34,7 @@
     [string? {:min 1}]]
    [:trade-pattern-parent-id {:title        "Sub-Pattern"
                               :optional     true
-                              :ref          :trade-pattern
+                              :ref          :trade-pattern/parent
                               :command-path [:trade-pattern/parent-id]}
     uuid?]])
 
@@ -76,17 +76,18 @@
    [:position/stop {:optional true} number?]
    [:position/holding-position-id {:optional true} uuid?]])
 
-(def position-dto-formulas
-  {:percent-loss "TPERCENT(stop-total-loss/(quantity * open-price))" })
+(def position-dto-functions
+  {:stop-loss-percent {:function "TPERCENT(stop-loss/(quantity * open-price))"}
+   :open-total        {:function "quantity * open-price"}})
 
 (comment
-  (let [f-str (:percent-loss position-dto-formulas)
+  (let [f-str (:stop-percent-loss position-dto-formulas)
         f-str (format "WITH(PERCENT, FN(n, ROUND(n * 100, 2)),
                             TPERCENT, FN(n, PERCENT(n) & '%%'), %s)" f-str)
         f     (axel-f/compile f-str)
-        data  {:stop-total-loss -760
-               :quantity        152
-               :open-price      71.83}]
+        data  {:stop-loss  -760
+               :quantity   152
+               :open-price 71.83}]
     (f data))
 
 )
@@ -103,10 +104,6 @@
               :command-path [[:position/holding-id]
                              [:holding/instrument-name]]}
     [:tuple uuid? string?]]
-   [:quantity {:title        "Quantity"
-               :command-path [:position/open
-                              :trade-transaction/quantity]}
-    number?]
    [:long-short {:title        "Long/Short (Hedge)"
                  :ref          :position/long-short
                  :command-path [[:position/long-short]
@@ -116,9 +113,16 @@
                 :command-path [:position/open
                                :trade-transaction/date]}
     inst?]
+   [:quantity {:title        "Quantity"
+               :command-path [:position/open
+                              :trade-transaction/quantity]}
+    number?]
    [:open-price {:title        "Open"
                  :command-path [:position/open
                                 :trade-transaction/price]}
+    number?]
+   [:open-total {:title    "Open Total"
+                 :optional true}
     number?]
    [:close-price {:title        "Close"
                   :optional     true
@@ -143,8 +147,8 @@
                           :ref          :position/holding-position
                           :command-path [:position/holding-position-id]}
     uuid?]
-   [:stop-total-loss {:title    "Stop Total Loss"
-                      :optional true}
+   [:stop-loss {:title    "Stop Loss"
+                :optional true}
     float?]
    [:eod-historical-data {:optional     true
                           :fn-value     {:arg :symbol/provider
@@ -157,15 +161,8 @@
    [:holding-id {:optional     true
                  :command-path [:position/holding-id]}
     uuid?]
-   [:stop-percent-loss {:optional true
-                        :title    "Percent Loss"} float?]])
-
-(comment
-  (= 'fn* (first '#([{:keys [x y]}] (> x y))))
-
-  (sequential? '#([{:keys [x y]}] (> x y)))
-
-  )
+   [:stop-loss-percent {:optional true
+                        :title    "Stop Loss % of Allocation"} float?]])
 
 (def-model Holding
   :model/holding
@@ -223,7 +220,7 @@
                                        [:holding/instrument-type-name]]}
       [:tuple keyword? string?]]]])))
 
-(defn assoc-stop-total-loss
+(defn assoc-aggregate-fields
   ([{:keys [stop open-price quantity] :as position}]
    ;; TODO: Remove this conversion once validation has been fixed
    (let [stop       (if (string? stop)
@@ -239,7 +236,7 @@
          (- open-price)
          (* quantity)
          utils/round
-         (as-> a (assoc position :stop-total-loss a)))))
+         (as-> a (assoc position :stop-loss a)))))
   ([{:keys [stop open-price quantity] :as position}
     sub-positions]
 
@@ -276,70 +273,19 @@
          avg-cost-stop (if (string? avg-cost-stop)
                          (read-string avg-cost-stop)
                          avg-cost-stop)
+         ;; TODO: When we add support for short positions, the holding position's
+         ;;       `:stop-loss` should be simple sum of sub positions `:stop-loss`
+         ;;       and the `:stop`'s `avg-cost-stop` should be derived only from the
+         ;;       long sub positions.
          position      (-> position
                            (merge {:open-price avg-cost-open
                                    :stop       avg-cost-stop
                                    :quantity   total-quantity})
-                           assoc-stop-total-loss
+                           assoc-aggregate-fields
                            (merge {:open-price (utils/round avg-cost-open)
                                    :stop       (utils/round avg-cost-stop)
                                    :quantity   total-quantity}))]
      position)))
-
-(comment
-
-  (let [fn-avg-cost    (fn [quantity amount]
-                         (when (and quantity
-                                    amount
-                                    (not= 0 quantity))
-                           (/ amount quantity)))
-        open-price     (rand 100)
-        holding-pos-id (utils/new-uuid)
-        holding-pos    {:position-creation-id (utils/new-uuid)
-                        :position-id          holding-pos-id
-                        :long-short           :long}
-        sub-positions  [{:position-creation-id (utils/new-uuid)
-                         :position-id          (utils/new-uuid)
-                         :holding-position-id  holding-pos-id
-                         :long-short           :long
-                         :quantity             35.0
-                         :open-price           73.77
-                         :stop                 68.5}
-                        {:position-creation-id (utils/new-uuid)
-                         :position-id          (utils/new-uuid)
-                         :holding-position-id  holding-pos-id
-                         :long-short           :long
-                         :quantity             35.0
-                         :open-price           61.04}
-                        {:position-creation-id (utils/new-uuid)
-                         :position-id          (utils/new-uuid)
-                         :holding-position-id  holding-pos-id
-                         :long-short           :long
-                         :quantity             30.0
-                         :open-price           78.25
-                         :stop                 70.0}
-                        {:position-creation-id (utils/new-uuid)
-                         :position-id          (utils/new-uuid)
-                         :holding-position-id  holding-pos-id
-                         :long-short           :long
-                         :quantity             30.0
-                         :open-price           57.84}]
-        total-quantity (->> sub-positions
-                            (map :quantity)
-                            (remove nil?)
-                            (reduce +))]
-    (assoc-stop-total-loss holding-pos sub-positions)
-    #_(->> sub-positions
-           (reduce (fn [total {:keys [stop quantity]}]
-                   (if stop
-                     (-> quantity
-                         (* stop)
-                         (+ (or total 0)))
-                     
-                     total)) nil))
-    )
-
-  )
 
 ;; (defn position-total-return
 ;;   "Also know as the Holding Period Yield"

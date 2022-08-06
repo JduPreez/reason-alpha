@@ -1,7 +1,7 @@
 (ns reason-alpha.views.main
   (:require [re-frame.core :as rf]))
 
-(defn view [child-view]
+(defn view [child-view alerts-view]
   [:div.page-main
    [:div#headerMenuCollapse.ren-navbar>div.container
     [:ul.nav
@@ -50,6 +50,7 @@
       [:a.nav-link {:href "#"}
        [:i.fas.fa-undo-alt] [:span "CANCEL"]]]]]
    [:div.container.full-height>div.hor-content.full-height
+    ;;[alerts-view]
     [:div.row.full-height {:style {:margin-top "10px"}}
      [child-view]
      #_[:div.card

@@ -8,7 +8,7 @@
         job-time-sec (or job-time-sec 2)
         parts        (if (< (count tickers) batch-size)
                        [tickers]
-                       (vec (partition batch-size tickers)))
+                       (vec (partition-all batch-size tickers)))
         tkr-parts    (mapv (fn [p] [p (promise)]) parts)
         results      (mapv #(second %) tkr-parts)]
     (doall
@@ -41,16 +41,18 @@
   (let [tickers [[1 "ADS.XETRA"]
                  [2 "0700.HK"]
                  [3 "NXFIL.AS"]
-                 [4 "TDOC.US"]
-                 [5 "FB.US"]
-                 [6 "RTX.US"]
-                 [7 "ARKK.US"]
-                 [8 "ARKG.US"]
-                 [9 "ARKF.US"]
-                 [10 "KO.US"]]
-        results (quote-live-prices nil tickers {:partition-size 2})]
-    (doall
-     (for [*r results]
+                 ;; [4 "TDOC.US"]
+                 ;; [5 "FB.US"]
+                 ;; [6 "RTX.US"]
+                 ;; [7 "ARKK.US"]
+                 ;; [8 "ARKG.US"]
+                 ;; [9 "ARKF.US"]
+                 ;; [10 "KO.US"]
+                 ]
+        results (quote-live-prices nil tickers)]
+    (partition-all 2 tickers)
+    #_(doall
+       (for [*r results]
        @*r)))
 
   (let [f          (rand 100)

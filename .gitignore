@@ -21,3 +21,4 @@ sqlite.5.db
 /data
 jwt.key
 *.~undo-tree~
+.envrc

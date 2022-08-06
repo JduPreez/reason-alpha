@@ -14,10 +14,12 @@
 
 (def ^:const models [:data :model])
 
-(defn model [model-k]
-  (conj models model-k))
+(def ^:const alerts [:data :alert])
 
 (def ^:const holdings [:data :holding])
+
+(defn model [model-k]
+  (conj models model-k))
 
 (defn entity-data [type]
   [:data type])
@@ -72,7 +74,7 @@
     (->> model-type
          entity-data
          (get-in db)
-         (some #(when (= (k %) v))))))
+         (some #(when (= (k %) v) %)))))
 
 (defn save-local!
   [{db :db, type :model-type, data :data}]
