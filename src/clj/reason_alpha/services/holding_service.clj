@@ -1,5 +1,5 @@
 (ns reason-alpha.services.holding-service
-  (:require [clojure.core.async :as async  :refer (<! go-loop)]
+  (:require [clojure.core.async :as async  :refer (<! go-loop close!)]
             [malli.core :as m]
             [outpace.config :refer [defconfig]]
             [reason-alpha.integration.eod-api-client :as eod-api-client]
@@ -290,6 +290,7 @@
                  :type        :error}]))))))))
 
 (defonce *broadcast? (atom true))
+(def *holdings-positions-ch (atom nil))
 
 (defn broadcast-holdings-positions
   [fn-get-holdings-positions {:keys [send-message *connected-users]}]
@@ -311,13 +312,20 @@
               (println (str i ") Broadcast holdings positions " acc-id))
               (fn-get-holdings-positions {:send-message send-message
                                           :account-id   acc-id}))))]
+    (reset!
+     *holdings-positions-ch
+     (go-loop [i 0]
+       (println "Broadcast holdings positions " i)
+       (<! (async/timeout quote-interval))
+       (broadcast! i)
+       (when @*broadcast?
+         (recur (inc i)))))
 
-    (go-loop [i 0]
-      (println "Broadcast holdings positions " i)
-      (<! (async/timeout quote-interval))
-      (broadcast! i)
-      (when @*broadcast?
-        (recur (inc i))))))
+    (.addShutdownHook (Runtime/getRuntime)
+                      (Thread.
+                       #(do (println (str "Shutting down broadcast "
+                                          "holdings positions channel"))
+                            (close! @*holdings-positions-ch))))))
 
 (defn stop-broadcast-holdings-positions []
   (println "Stop broadcasting holdings positions")

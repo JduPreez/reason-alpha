@@ -183,11 +183,11 @@
   )
 
 ;;;; Sente event router (our `event-msg-handler` loop)
-(defonce router_ (atom nil))
-(defn stop-router! [] (when-let [stop-fn @router_] (stop-fn)))
+(defonce *router (atom nil))
+(defn stop-router! [] (when-let [stop-fn @*router] (stop-fn)))
 (defn start-router! [handlers]
   (stop-router!)
-  (reset! router_
+  (reset! *router
     (sente/start-server-chsk-router!
      ch-chsk #(server-event-msg-handler handlers %))))
 
@@ -207,16 +207,14 @@
                                       {:port port})]
                          [(:local-port (meta stop-fn))
                           (fn []
-                            (stop-fn :timeout 100)
-                            (stop-broadcasting! broadcasters))])
+                            (stop-broadcasting! broadcasters)
+                            (stop-fn :timeout 100))])
         uri            (format "http://localhost:%s/" port)]
 
     (infof "Web server is running at `%s`" uri)
     (reset! *web-server stop-fn)
     (start-broadcasting! broadcasters)
     *web-server))
-
-
 
 (defn stop!  []
   (stop-router!)
