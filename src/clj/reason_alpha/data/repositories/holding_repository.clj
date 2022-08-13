@@ -70,6 +70,18 @@
        (data.model/query db)
        (mapping/command-ents->query-dtos portfolio-management/PositionDto)))
 
+(defn get-holding-positions-by-holding [db holding-id]
+  (->> {:spec '{:find  [(pull pos [*])
+                        (pull hold [*])
+                        (pull tpattern [*])]
+                :where [[pos :position/holding-id holding-id]
+                        [(get-attr pos :position/holding-id nil) [hold ...]]
+                        [(get-attr pos :position/trade-pattern-id nil) [tpattern ...]]]
+                :in    [holding-id]}
+        :args [holding-id]}
+       (data.model/query db)
+       (mapping/command-ents->query-dtos portfolio-management/PositionDto)))
+
 (defn delete-positions! [db ids]
   (let [del-result (data.model/delete!
                     db
