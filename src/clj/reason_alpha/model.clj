@@ -90,10 +90,12 @@
                :delete-holdings!  (as-> db d
                                     (partial holding-repo/delete-holdings! d)
                                     (svc.common/delete-msg-fn
-                                     {:fn-repo-delete!    d
-                                      :model-type         :instrument
-                                      :fn-get-ctx         common/get-context
-                                      :response-msg-event :holding.command/delete-holdings!-result}))
+                                     {:fn-repo-delete!       d
+                                      :model-type            :instrument
+                                      :fn-get-ctx            common/get-context
+                                      :response-msg-event    :holding.command/delete-holdings!-result
+                                      :fn-get-referenced-ids (holding-svc/get-holding-ids-with-positions-fn
+                                                              #(holding-repo/get-holdings-with-positions db %))}))
                :delete-positions! (as-> db d
                                     (partial holding-repo/delete-positions! d)
                                     (svc.common/delete-msg-fn
@@ -101,27 +103,27 @@
                                       :model-type         :position
                                       :fn-get-ctx         common/get-context
                                       :response-msg-event :holding.command/delete-positions!-result}))}
-    :queries  {:get-holdings                 (as-> db d
-                                               (partial holding-repo/get-holdings d)
-                                               (partial holding-svc/get-holdings d
-                                                        fn-get-account
-                                                        common/get-context))
-               :get-holding                  (as-> db d
-                                               (partial holding-repo/get-holding d)
-                                               (partial holding-svc/get-holding d
-                                                        common/get-context))
-               :get-holdings-positions       (as-> db d
-                                               (partial holding-repo/get-holdings-positions d)
-                                               (partial holding-svc/get-holdings-positions d
-                                                        #(account-repo/get-by-user-id db %)
-                                                        eod/quote-live-prices
-                                                        true
-                                                        {:fn-get-ctx common/get-context}))
-               :get-holding-positions        (holding-svc/get-holding-positions-fn
-                                              #(holding-repo/get-holding-positions db %)
-                                              #(account-repo/get-by-user-id db %)
-                                              eod/quote-live-prices
-                                              common/get-context)
+    :queries  {:get-holdings           (as-> db d
+                                         (partial holding-repo/get-holdings d)
+                                         (partial holding-svc/get-holdings d
+                                                  fn-get-account
+                                                  common/get-context))
+               :get-holding            (as-> db d
+                                         (partial holding-repo/get-holding d)
+                                         (partial holding-svc/get-holding d
+                                                  common/get-context))
+               :get-holdings-positions (as-> db d
+                                         (partial holding-repo/get-holdings-positions d)
+                                         (partial holding-svc/get-holdings-positions d
+                                                  #(account-repo/get-by-user-id db %)
+                                                  eod/quote-live-prices
+                                                  true
+                                                  {:fn-get-ctx common/get-context}))
+               :get-holding-positions  (holding-svc/get-holding-positions-fn
+                                        #(holding-repo/get-holding-positions db %)
+                                        #(account-repo/get-by-user-id db %)
+                                        eod/quote-live-prices
+                                        common/get-context)
 
                :broadcast-holdings-positions (as-> db d
                                                (partial holding-repo/get-holdings-positions d)

@@ -73,6 +73,13 @@
      [:holding.query/get-holdings-result {:result holdings
                                           :type   :success}])))
 
+(defn get-holding-ids-with-positions-fn
+  [fn-repo-get-holdings-with-positions]
+  (fn [holding-ids]
+      (->> holding-ids
+           fn-repo-get-holdings-with-positions
+           (map :holding-id))))
+
 (defn- aggregate-holding-positions [positions]
   (let [holding-pos    (-> positions
                            (lens/view
