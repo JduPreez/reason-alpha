@@ -91,10 +91,10 @@
                            (lens/view
                             (lens/only
                              :holding-position-id)))
-        holding-pos    (when holding-pos
+        #_#_holding-pos    (when holding-pos
                          (portfolio-management/assoc-aggregate-fields
                           holding-pos sub-positions))
-        sub-positions  (when (seq sub-positions)
+        #_#_sub-positions  (when (seq sub-positions)
                          (map portfolio-management/assoc-aggregate-fields
                               sub-positions))
         pos-with-comps (cond-> []

@@ -32,7 +32,7 @@
               ids       (if refed-ids
                           (set/difference (set ids) refed-ids)
                           ids)
-              deleted   (when (seq ids) [fn-repo-delete! ids])]
+              deleted   (when (seq ids) (fn-repo-delete! ids))]
           (send-message
            [response-msg-event {:result-id (utils/new-uuid)
                                 :result    {:deleted            deleted

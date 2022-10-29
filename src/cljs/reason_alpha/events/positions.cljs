@@ -3,6 +3,7 @@
             [day8.re-frame.tracing :refer-macros [fn-traced defn-traced]]
             [re-frame.core :as rf]
             [reason-alpha.data :as data]
+            [reason-alpha.events.common :as common]
             [reason-alpha.model.mapping :as mapping]
             [reason-alpha.utils :as utils]
             [reason-alpha.web.api-client :as api-client]))
@@ -100,11 +101,7 @@
 
 (rf/reg-event-fx
  :holding.command/delete-positions!-result
- (fn [{:keys [db]} [evt result]]
-   (utils/log evt result)
-   (data/delete-local! {:db         db
-                        :model-type :position
-                        :data       result})))
+ (common/handle-delete!-result-fn "positions" :position))
 
 (rf/reg-fx
  :position/delete!

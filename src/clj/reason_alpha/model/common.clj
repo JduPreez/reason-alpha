@@ -6,7 +6,8 @@
             [pact.core :refer [then error]]
             [reason-alpha.data-structures :as data-structs]
             [reason-alpha.model.accounts :as accounts]
-            [reason-alpha.model.core :as model :refer [def-model]]))
+            [reason-alpha.model.core :as model :refer [def-model]]
+            [taoensso.timbre :as timbre :refer (warnf errorf debug)]))
 
 (def ^:dynamic *context* {})
 
@@ -102,13 +103,19 @@
                                                                   :id-key        id-key})
                        data)
           comp-order (compute-order computations)
+          _          (println "TEST!!!")
           data       (->> data
-                          (map
+                          (mapv
                            #(reduce (fn [d comp-k]
                                       (let [{comp-str :function} (computations comp-k)
                                             fn-comp              (compile-str comp-str)
+                                            _                    (debug {:D   d
+                                                                         :K   comp-k
+                                                                         :CS  comp-str
+                                                                         :FNC fn-comp})
                                             comp-v               (fn-comp d)]
-                                        (assoc d comp-k comp-v)))
+                                        #_(assoc d comp-k comp-v)
+                                        d))
                                     %
                                     comp-order)))]
       {:result data
@@ -120,6 +127,22 @@
          :type        :error}))))
 
 (comment
+  (let [fn-comp (compile-str "TPERCENT(stop-loss/(quantity * open-price))")
+        d       {:holding              [#uuid "01809f38-c167-6811-e9ef-c2edd166236d" "Unity"], 
+                 :open-price           33, 
+                 :open-time            #inst "2022-09-23T00:00:00.000-00:00", 
+                 :position-creation-id #uuid "4daabc0e-7c8b-45c6-a1b5-6a8b53a7fc64", 
+                 :status               :open, 
+                 :close-price          27.39, 
+                 :position-id          #uuid "0183094e-11b0-aa9b-1cc5-2e5fdd6d5c76", 
+                 :holding-position-id  #uuid "0182e013-fc70-acc3-3366-5e9617cceb8a", 
+                 :holding-id           #uuid "01809f38-c167-6811-e9ef-c2edd166236d", 
+                 :quantity             33, 
+                 :eod-historical-data  "U.US",
+                 :stop-loss            898.78
+                 :long-short           [:long ""]}]
+    (fn-comp d))
+
   (let [data  [{:stop-loss  -760
                 :quantity   152
                 :open-price 71.83}

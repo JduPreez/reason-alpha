@@ -2,6 +2,7 @@
   (:require [day8.re-frame.tracing :refer-macros [fn-traced defn-traced]]
             [re-frame.core :as rf]
             [reason-alpha.data :as data]
+            [reason-alpha.events.common :as common]
             [reason-alpha.model.mapping :as mapping]
             [reason-alpha.model.utils :as model.utils]
             [reason-alpha.utils :as utils]
@@ -86,28 +87,7 @@
 
 (rf/reg-event-fx
  :holding.command/delete-holdings!-result
- (fn [{:keys [db]} [evt {type                                 :type
-                         {:keys [deleted referenced-not-del]} :result
-                         :as                                  r}]]
-   (utils/log evt r)
-
-   (if (= type :success)
-     (let [{del-db   :db
-            del-disp :dispatch} (when deleted
-                                  (data/delete-local! {:db         db
-                                                       :model-type :holding
-                                                       :data       deleted}))
-           not-del-disp         (when referenced-not-del
-                                  [:alert/send (merge r {:title       "Unable to delete some holdings"
-                                                         :description (str "Some holdings are still referenced, "
-                                                                           "and couldn't be deleted")
-                                                         :type        :warn})])]
-       {:db         (or del-db db)
-        :dispatch-n (cond-> []
-                      deleted            (conj del-disp)
-                      referenced-not-del (conj not-del-disp))})
-     {:db       db
-      :dispatch [:alert/send r]})))
+ (common/handle-delete!-result-fn "holdings" :holding))
 
 (rf/reg-fx
  :holding/delete!
