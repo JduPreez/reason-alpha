@@ -77,8 +77,10 @@
    [:position/holding-position-id {:optional true} uuid?]])
 
 (def position-dto-functions
-  {:stop-loss-percent {:function "TPERCENT(stop-loss/(quantity * open-price))"}
-   :open-total        {:function "quantity * open-price"}})
+  {:stop-loss-percent {:function "TPERCENT(stop-loss/(quantity * open-price))"
+                       :use      [:stop-loss :quantity :open-price]}
+   :open-total        {:function "quantity * open-price"
+                       :use      [:quantity :open-price]}})
 
 (comment
   (let [f-str (:stop-percent-loss position-dto-formulas)
@@ -89,7 +91,7 @@
                :quantity   152
                :open-price 71.83}]
     (f data))
-
+  
 )
 
 (def-model PositionDto

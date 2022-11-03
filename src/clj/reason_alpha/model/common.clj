@@ -41,7 +41,7 @@
 ;; (meta (axel-f/compile "SUM(1, 2, AVERAGE({4,5,6}), foo.bar, foo.baz[*].x)"))
 ;; ;; => {:free-variables (("foo" "bar") ("foo" "baz" "*" "x")) ... }
 ;; ^: Columns will not have a path. So we can match `:free-variables` with column names & build
-;; a dependency graph that way to determine the sequence of calculations to apply
+;; a dependency graph that way, to determine the sequence of calculations to apply.
 
 (defn compute-order [computations]
   (let [get-root-comps         (comp #(s/difference (set (keys computations)) %)
@@ -103,19 +103,23 @@
                                                                   :id-key        id-key})
                        data)
           comp-order (compute-order computations)
-          _          (println "TEST!!!")
           data       (->> data
                           (mapv
                            #(reduce (fn [d comp-k]
-                                      (let [{comp-str :function} (computations comp-k)
-                                            fn-comp              (compile-str comp-str)
-                                            _                    (debug {:D   d
-                                                                         :K   comp-k
-                                                                         :CS  comp-str
-                                                                         :FNC fn-comp})
-                                            comp-v               (fn-comp d)]
-                                        #_(assoc d comp-k comp-v)
-                                        d))
+                                      (let [{comp-str :function
+                                             use'     :use} (computations comp-k)
+                                            fn-comp         (compile-str comp-str)
+                                            any-nils?       (->> use'
+                                                                 (map (fn [u] (get d %)))
+                                                                 (not-every? some?))
+                                            _               (debug {:D   d
+                                                                    :K   comp-k
+                                                                    :AN  any-nils?
+                                                                    :CS  comp-str
+                                                                    :FNC fn-comp})
+                                            comp-v          (when-not any-nils?
+                                                              (fn-comp d))]
+                                        (assoc d comp-k comp-v)))
                                     %
                                     comp-order)))]
       {:result data
@@ -127,6 +131,27 @@
          :type        :error}))))
 
 (comment
+  (let [d         {:holding              [#uuid "01809f38-c167-6811-e9ef-c2edd166236d" "Unity"],
+                   :open-price           33,
+                   :open-time            #inst "2022-09-23T00:00:00.000-00:00",
+                   :position-creation-id #uuid "4daabc0e-7c8b-45c6-a1b5-6a8b53a7fc64",
+                   :status               :open,
+                   :close-price          84.86,
+                   :position-id          #uuid "0183094e-11b0-aa9b-1cc5-2e5fdd6d5c76",
+                   :holding-position-id  #uuid "0182e013-fc70-acc3-3366-5e9617cceb8a",
+                   :holding-id           #uuid "01809f38-c167-6811-e9ef-c2edd166236d",
+                   :quantity             33,
+                   :eod-historical-data  "U.US",
+                   :long-short           [:long ""]}
+        use'      [:stop-loss :quantity :open-price] 
+        any-nils? (-> d
+                      (select-keys use')
+                      vals
+                      (as-> v (not-every? some? v)))
+        fn-comp   (compile-str "TPERCENT(stop-loss/(quantity * open-price))")]
+    (when-not any-nils? (fn-comp d)))
+  
+
   (let [fn-comp (compile-str "TPERCENT(stop-loss/(quantity * open-price))")
         d       {:holding              [#uuid "01809f38-c167-6811-e9ef-c2edd166236d" "Unity"], 
                  :open-price           33, 
@@ -170,6 +195,7 @@
     )
 
   (let [computations           {:column1 {:require  [:column2 :column3]
+                                          :use      [:column1 :column4]
                                           :function ""}
                                 :column2 {:function ""}
                                 :column3 {:require [:column4 :column5]}
