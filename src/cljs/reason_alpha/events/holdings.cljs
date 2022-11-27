@@ -2,6 +2,7 @@
   (:require [day8.re-frame.tracing :refer-macros [fn-traced defn-traced]]
             [re-frame.core :as rf]
             [reason-alpha.data :as data]
+            [reason-alpha.events.common :as common]
             [reason-alpha.model.mapping :as mapping]
             [reason-alpha.model.utils :as model.utils]
             [reason-alpha.utils :as utils]
@@ -86,11 +87,7 @@
 
 (rf/reg-event-fx
  :holding.command/delete-holdings!-result
- (fn [{:keys [db]} [evt result]]
-   (utils/log evt result)
-   (data/delete-local! {:db         db
-                        :model-type :holding
-                        :data       result})))
+ (common/handle-delete!-result-fn "holdings" :holding))
 
 (rf/reg-fx
  :holding/delete!

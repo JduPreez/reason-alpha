@@ -53,3 +53,10 @@
           {:error       (ex-data e)
            :description (str err-msg ": " (ex-message e))
            :type        :error})))))
+
+(defn get-trade-pattern-ids-with-positions-fn
+  [fn-repo-get-trade-patterns-with-positions]
+  (fn [trade-pattern-ids]
+    (->> trade-pattern-ids
+         fn-repo-get-trade-patterns-with-positions
+         (map :trade-pattern-id))))

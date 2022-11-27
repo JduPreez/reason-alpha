@@ -14,7 +14,7 @@
             (:error
              :failed-validation) [:div.alert-card.card
                                   [:div.alert.alert-danger
-                                   {:margin-bottom "0 !important"}
+                                   ;;{:margin-bottom "0 !important"}
                                    [:strong description]
                                    [:a.btn.btn-xs.btn-danger.float-right
                                     {:href     "#"
@@ -23,7 +23,7 @@
                                     title]]]
             (:success :info)     [:div.alert-card.card
                                   [:div.alert.alert-success
-                                   {:margin-bottom "0 !important"}
+                                   ;;{:margin-bottom "0 !important"}
                                    [:strong description]
                                    [:a.btn.btn-xs.btn-success.float-right
                                     {:href     "#"
@@ -32,7 +32,7 @@
                                     title]]]
             [:div.alert-card.card
              [:div.alert.alert-warning
-              {:margin-bottom "0 !important"}
+              ;;{:margin-bottom "0 !important"}
               [:strong description]
               [:a.btn.btn-xs.btn-warning.float-right
                {:href     "#"

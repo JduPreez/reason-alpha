@@ -32,6 +32,15 @@
        (data.model/any db)
        (mapping/command-ent->query-dto portfolio-management/HoldingDto)))
 
+(defn get-holdings-with-positions [db holding-ids]
+  (->> {:spec '{:find  [(pull h [*])]
+                :where [[h :holding/id holding-id]
+                        [p :position/holding-id holding-id]]
+                :in    [[holding-id ...]]}
+        :args [holding-ids]}
+       (data.model/query db)
+       (mapping/command-ents->query-dtos portfolio-management/HoldingDto)))
+
 (defn delete-holdings! [db ids]
   (let [del-result (data.model/delete!
                     db
@@ -44,7 +53,14 @@
          (mapv (fn [id] {:holding/id id}))
          (assoc del-result :deleted-items))))
 
-(defn get-holdings-positions [db {:keys [account-id role]}]
+(defmulti get-holdings-positions
+  (fn [_ args]
+    (clojure.pprint/pprint {::get-holdings-positions args})
+    (->> args keys sort vec)))
+
+(defmethod get-holdings-positions :default
+  [db {:keys [account-id role] :as x}]
+  (clojure.pprint/pprint {::get-holdings-positions-default x})
   (->> {:spec '{:find  [(pull pos [*])
                         (pull hold [*])
                         (pull tpattern [*])]
@@ -54,6 +70,20 @@
                 :in    [account-id]}
         :args [account-id]
         :role (or role :member)}
+       (data.model/query db)
+       (mapping/command-ents->query-dtos portfolio-management/PositionDto)))
+
+(defmethod get-holdings-positions [:position-ids]
+  [db {:keys [position-ids]}]
+  (->> {:spec '{:find  [(pull pos [*])
+                        (pull hold [*])
+                        (pull tpattern [*])]
+                :where [(or [pos :position/id pid]
+                            [pos :position/holding-position-id pid])
+                        [(get-attr pos :position/holding-id nil) [hold ...]]
+                        [(get-attr pos :position/trade-pattern-id nil) [tpattern ...]]]
+                :in    [[pid ...]]}
+        :args [position-ids]}
        (data.model/query db)
        (mapping/command-ents->query-dtos portfolio-management/PositionDto)))
 
@@ -73,10 +103,11 @@
 (defn delete-positions! [db ids]
   (let [del-result (data.model/delete!
                     db
-                    {:spec '{:find  [e acc-id]
-                             :where [[e :position/id id]
-                                     [e :position/account-id acc-id]]
-                             :in    [[id ...]]}
+                    {:spec '{:find  [pos acc-id]
+                             :where [(or [pos :position/id pid]
+                                         [pos :position/holding-position-id pid])
+                                     [pos :position/account-id acc-id]]
+                             :in    [[pid ...]]}
                      :args [ids]})]
     (->> ids
          (mapv (fn [id] {:position/id id}))

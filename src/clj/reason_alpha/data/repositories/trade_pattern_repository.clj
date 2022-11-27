@@ -38,3 +38,13 @@
         (as-> cdn (map #(select-keys % [:trade-pattern/id]) cdn))
         (into (map (fn [id] {:trade-pattern/id id}) ids))
         (as-> di (assoc del-result :deleted-items di)))))
+
+(defn get-trade-patterns-with-positions [db trade-pattern-ids]
+  (->> {:spec '{:find  [(pull tp [*])]
+                :where [(or [tp :trade-pattern/id tpid]
+                            [tp :trade-pattern/parent-id tpid])
+                        [p :position/trade-pattern-id tpid]]
+                :in    [[tpid ...]]}
+        :args [trade-pattern-ids]}
+       (data.model/query db)
+       (mapping/command-ents->query-dtos portfolio-management/TradePatternDto)))
