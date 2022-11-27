@@ -112,11 +112,6 @@
                                             any-nils?       (->> use'
                                                                  (map (fn [u] (get d %)))
                                                                  (not-every? some?))
-                                            _               (debug {:D   d
-                                                                    :K   comp-k
-                                                                    :AN  any-nils?
-                                                                    :CS  comp-str
-                                                                    :FNC fn-comp})
                                             comp-v          (when-not any-nils?
                                                               (fn-comp d))]
                                         (assoc d comp-k comp-v)))

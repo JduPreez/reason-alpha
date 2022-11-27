@@ -2,6 +2,7 @@
   (:require [re-frame.core :as rf]
             [reason-alpha.data :as data]
             [reason-alpha.events :as events]
+            [reason-alpha.events.common :as common]
             [reason-alpha.model.mapping :as mapping]
             [reason-alpha.utils :as utils]
             [reason-alpha.web.api-client :as api-client]))
@@ -99,7 +100,7 @@
      db)))
 
 (rf/reg-fx
- :trade-pattern.command/delete!
+ :trade-pattern/delete!
  (fn [db]
    (let [del-ids (data/get-selected-ids :trade-pattern db)]
      (api-client/chsk-send! [:trade-pattern.command/delete! del-ids]
@@ -107,11 +108,4 @@
 
 (rf/reg-event-fx
  :trade-pattern.command/delete!-result
- (fn [{:keys [db]} [_ data]]
-   (data/delete-local! {:db         db
-                        :model-type :trade-pattern
-                        :data       data})))
-
-
-
-
+ (common/handle-delete!-result-fn "trade patterns" :trade-pattern))

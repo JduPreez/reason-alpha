@@ -5,17 +5,29 @@
             [reason-alpha.utils :as utils]
             [taoensso.timbre :as timbre :refer (errorf)]))
 
-(defn delete-fn [fn-repo-delete! model-type]
+(defn delete-fn
+  [{:keys [fn-repo-delete! model-type fn-get-referenced-ids]}]
   (fn [ids]
-      (try
-        {:result (fn-repo-delete! ids)
-         :type   :success}
-        (catch Exception e
-          (let [err-msg (str "Error deleting " model-type)]
-            (errorf e err-msg)
-            {:error       (ex-data e)
-             :description (str err-msg ": " (ex-message e))
-             :type        :error})))))
+    (try
+      (let [refed-ids (when fn-get-referenced-ids
+                        (->> ids
+                             fn-get-referenced-ids
+                             set))
+            ids       (if (seq refed-ids)
+                        (set/difference (set ids) refed-ids)
+                        ids)
+            deleted   (when (seq ids) (fn-repo-delete! ids))]
+        {:result-id (utils/new-uuid)
+         :result    {:deleted            deleted
+                     :referenced-not-del refed-ids}
+         :type      :success})
+      (catch Exception e
+        (let [err-msg (str "Error deleting " model-type)]
+          (errorf e err-msg)
+          {:result-id   (utils/new-uuid)
+           :error       (ex-data e)
+           :description (str err-msg ": " (ex-message e))
+           :type        :error})))))
 
 (defn delete-msg-fn
   [{:keys [fn-repo-delete! model-type fn-get-ctx response-msg-event
@@ -28,8 +40,7 @@
                           (->> ids
                                fn-get-referenced-ids
                                set))
-              _         (clojure.pprint/pprint {:REFED-IDS refed-ids})
-              ids       (if refed-ids
+              ids       (if (seq refed-ids)
                           (set/difference (set ids) refed-ids)
                           ids)
               deleted   (when (seq ids) (fn-repo-delete! ids))]

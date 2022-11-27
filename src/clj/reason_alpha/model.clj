@@ -64,8 +64,10 @@
                :delete! (as-> db d
                           (partial trade-pattern-repo/delete! d)
                           (svc.common/delete-fn
-                           d
-                           :trade-pattern))}
+                           {:fn-repo-delete!       d
+                            :model-type            :trade-pattern
+                            :fn-get-referenced-ids (trade-pattern-svc/get-trade-pattern-ids-with-positions-fn
+                                                    #(trade-pattern-repo/get-trade-patterns-with-positions db %))}))}
     :queries  {:getn (as-> db d
                        (partial trade-pattern-repo/getn d)
                        (partial trade-pattern-svc/getn d
