@@ -37,6 +37,37 @@
 (defn get-context []
   *context*)
 
+;; TODO: Memoize this
+(defn schema
+  ([model]
+   (schema model nil))
+  ([model registry]
+   (m/schema [:schema (when registry
+                        {:registry registry})
+              model])))
+
+(def schema-m (memoize schema))
+
+(defn computations [model]
+  (let [s (schema-m model)]
+    (m/walk
+     s
+     (fn walk-schema
+       [schema' path children {::keys [*definitions] :as opts}]
+       (let [s-type (m/type schema')]
+         (if (and (= s-type :map)
+                  (seq children))
+           (->> children
+                (reduce
+                 (fn [reduced' [k opts s]]
+                   (let [c (get opts :compute)]
+                     (if c
+                       (assoc! reduced' k c)
+                       reduced')))
+                 (transient {}))
+                (persistent!))
+           (first children)))))))
+
 ;; ;; metadata of compiled functions has information about used variables
 ;; (meta (axel-f/compile "SUM(1, 2, AVERAGE({4,5,6}), foo.bar, foo.baz[*].x)"))
 ;; ;; => {:free-variables (("foo" "bar") ("foo" "baz" "*" "x")) ... }

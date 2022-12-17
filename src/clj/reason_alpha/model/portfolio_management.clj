@@ -111,6 +111,7 @@
                  :command-path [[:position/long-short]
                                 [:position/long-short-name]]}
     [:tuple keyword? string?]]
+   ;; Currency (should be obtained from the share)
    [:open-time {:title        "Open Time"
                 :command-path [:position/open
                                :trade-transaction/date]}
@@ -124,13 +125,26 @@
                                 :trade-transaction/price]}
     number?]
    [:open-total {:title    "Open Total"
-                 :optional true}
+                 :optional true
+                 :compute  {:function "quantity * open-price"
+                            :use      [:quantity :open-price]}}
     number?]
+   ;; Open Total Main Currency
    [:close-price {:title        "Close"
                   :optional     true
                   :command-path [:position/close
                                  :trade-transaction/price]}
     number?]
+   ;; Profit/Loss Amount
+   ;; Profit/Loss Amount Main Currency
+   ;; Profit/Loss %
+   ;; Profit/Loss Long
+   ;; Profit/Loss Long Main Currency
+   ;; PRofit/Loss Long %
+   ;; Target Price
+   ;; Target Profit
+   ;; Target Profit Main Currency
+   ;; Target Profit %
    [:status {:optional     true
              :command-path [:position/status]}
     keyword?]
@@ -138,6 +152,18 @@
            :title        "Stop"
            :command-path [:position/stop]}
     number?]
+   [:stop-loss {:title    "Stop Loss"
+                :optional true}
+    float?]
+   ;; Stop Loss Main Currency
+   [:stop-loss-percent {:optional true
+                        :title    "Stop Loss % of Allocation"
+                        :compute  {:function "TPERCENT(stop-loss/(quantity * open-price))"
+                                   :use      [:stop-loss :quantity :open-price]}} float?]
+   ;; 1st Deviation
+   ;; 1st Deviation Amount Open
+   ;; 1st Deviation Amount Close
+   ;; Exchange Rate Main Currency
    [:trade-pattern {:title        "Trade Pattern"
                     :optional     true
                     :ref          :trade-pattern
@@ -149,9 +175,6 @@
                           :ref          :position/holding-position
                           :command-path [:position/holding-position-id]}
     uuid?]
-   [:stop-loss {:title    "Stop Loss"
-                :optional true}
-    float?]
    [:eod-historical-data {:optional     true
                           :fn-value     {:arg :symbol/provider
                                          :fun '(fn [{p :symbol/provider
@@ -162,9 +185,7 @@
     string?]
    [:holding-id {:optional     true
                  :command-path [:position/holding-id]}
-    uuid?]
-   [:stop-loss-percent {:optional true
-                        :title    "Stop Loss % of Allocation"} float?]])
+    uuid?]])
 
 (def-model Holding
   :model/holding

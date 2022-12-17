@@ -256,7 +256,7 @@ th {
 }
 label {
 	display: inline-block;
-	margin-bottom: 0.5rem;
+	/*margin-bottom: 0.5rem;*/
 }
 button {
 	border-radius: 0;
@@ -1487,7 +1487,7 @@ pre code {
 	opacity: 0.3;
 }
 select.form-control:not([size]):not([multiple]) {
-	height: 2.375rem;
+	height: 2.6rem;
 }
 
 select.form-control:focus::-ms-value {
@@ -2718,10 +2718,10 @@ input[type="submit"].btn-block, input[type="reset"].btn-block, input[type="butto
 }
 .table td {
 	padding: 0.75rem;
-	vertical-align: top;
+	vertical-align: middle;
 }
 .table thead th, .text-wrap table thead th {
-	vertical-align: bottom;
+	vertical-align: middle;
 	border-bottom: 1px solid rgba(231, 239, 252,0.05);
 }
 .table tbody+tbody, .text-wrap table tbody+tbody {
@@ -2731,7 +2731,7 @@ input[type="submit"].btn-block, input[type="reset"].btn-block, input[type="butto
 	background-color: #f5f7fb;
 }
 .table-sm th, .table-sm td {
-	padding: 0.3rem;
+	padding: 0.1rem;
 }
 .table-bordered, .text-wrap table {
 	border: 1px solid rgba(250, 250, 250, 0.05);
