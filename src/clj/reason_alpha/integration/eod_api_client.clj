@@ -6,7 +6,7 @@
             [reason-alpha.utils :as utils]
             [tick.core :as tick]))
 
-;; TODO: Get this to each user's own profile
+;; TODO: Get this from each user's own profile
 (defconfig api-token)
 
 (defconfig live-stock-prices-api)

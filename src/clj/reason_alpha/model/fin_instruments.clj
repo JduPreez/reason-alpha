@@ -1,5 +1,6 @@
 (ns reason-alpha.model.fin-instruments
-  (:require [reason-alpha.model.core :as model :refer [def-model]]))
+  (:require [malli.core :as m]
+            [reason-alpha.model.core :as model :refer [def-model]]))
 
 (def-model Symbol
   :model/symbol
@@ -87,7 +88,39 @@
    :PLN :THB :IDR :HUF :CZK :ILS :CLP :PHP :AED :COP :SAR
    :MYR :RON])
 
+(def-model ExchangeRate
+  :model/exchange-rate
+  (let [#_#_rates-schema (->> Currency
+                              m/children
+                              (map (fn fx-rate-amount-schema [currency]
+                                     [currency {:optional true} number?]))
+                              (into [:map]))]
+    [:map
+     [:exchange-rate/creation-id uuid?]
+     [:exchange-rate/id {:optional true} uuid?]
+     [:exchange-rate/base-currency Currency]
+     [:exchange-rate/other-currency Currency]
+     [:exchange-rate/rate number?]
+     [:exchange-rate/date-time inst?]]))
+
+(def-model ExchangeRateDto
+  :model/exchange-rate-dto
+  (let [#_#_rates-schema (->> Currency
+                              m/children
+                              (map (fn fx-rate-amount-schema [currency]
+                                     [currency {:optional true} number?]))
+                              (into [:map]))]
+    [:map
+     [:exchange-rate-creation-id uuid?]
+     [:exchange-rate-id {:optional true} uuid?]
+     [:base-currency Currency]
+     [:other-currency Currency]
+     [:rate number?]
+     [:date-time inst?]]))
+
 (comment
+  
+
   (let [x {:USD "USD"
            :EUR "EUR"
            :JPY "JPY"

@@ -1,5 +1,6 @@
 (ns reason-alpha.utils
-  #?(:clj (:require [clojure.edn :as edn]
+  #?(:clj (:require [clojure.core.cache :as cache]
+                    [clojure.edn :as edn]
                     [clojure.java.io :as io]
                     [clojure.string :as str]
                     [taoensso.timbre :as timbre :refer-macros (tracef debugf infof warnf errorf)])
@@ -51,7 +52,8 @@
              [(keyword k) v])))
 
 #?(:cljs
-   (defn log [location {:keys [type description error] :as log}]
+   (defn log
+     [location {:keys [type description error] :as log}]
      (let [l {location log}]
        (case type
          :error
@@ -61,6 +63,20 @@
          , (do (warnf "%s %s" location description)
                (cljs.pprint/pprint {:log/warn l}))
          (cljs.pprint/pprint {:log/info l})))))
+
+#?(:clj
+   (defn ttl-memoize
+     [f & {ttl :ttl, :or {ttl 3600000}}] ;; TTL 1 hour
+     (let [mem (atom (cache/ttl-cache-factory {} :ttl ttl))]
+       (fn [& args]
+         (let [e (cache/lookup @mem args ::nil)]
+           (if (= ::nil e)
+             (let [ret (apply f args)]
+               (swap! mem cache/miss args ret)
+               ret)
+             (do
+               (swap! mem cache/hit args)
+               e)))))))
 
 #?(:clj
    (defn list-resource-files [dir file-type]
