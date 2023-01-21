@@ -39,7 +39,7 @@
                          :as   response}]
   (deliver *result
            {:error       response
-            :description (str "something bad happened: " status " " status-text)
+            :description (str "Error occurred quoting live stock prices: " status " " status-text)
             :type        :error}))
 
 (defn- quote-live-prices* [api-token' ticker-promises]

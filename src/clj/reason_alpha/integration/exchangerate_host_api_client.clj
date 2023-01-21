@@ -1,5 +1,6 @@
 (ns reason-alpha.integration.exchangerate-host-api-client
   (:require [ajax.core :as ajax :refer [GET]]
+            [clojure.core [memoize :as memo]]
             [clojure.instant :as instant]
             [clojure.string :as str]
             [malli.core :as m]
@@ -12,34 +13,30 @@
 
 (defn- latest-success
   [*result {:keys [base date rates] :as response}]
-  ;; Create 2 ExchangeRateDto items
-  ;; USDZAR: 1 USD = 17.105669 ZAR
-  ;; ZARUSD: 1 ZAR = 1/17.105669 USD
   (let [base-k   (keyword base)
         dte-inst (instant/read-instant-date date)
         r        (->> rates
-                      (mapcat
+                      (map
                        (fn map-rates [[currency rate]]
-                         [{:exchange-rate-creation-id (utils/new-uuid)
-                           :exchange-rate-id          (utils/new-uuid)
-                           :base-currency             base-k
-                           :other-currency            currency
-                           :rate                      rate
-                           :date-time                 dte-inst}
-                          {:exchange-rate-creation-id (utils/new-uuid)
-                           :exchange-rate-id          (utils/new-uuid)
-                           :base-currency             other-currency
-                           :other-currency            base-k
-                           :rate                      (/ 1 rate)
-                           :date-time                 dte-inst}])))]
+                         [currency {:exchange-rate-creation-id (utils/new-uuid)
+                                    :exchange-rate-id          (utils/new-uuid)
+                                    :base-currency             base-k
+                                    :other-currency            currency
+                                    :rate                      rate
+                                    :date-time                 dte-inst}]))
+                      (into {}))]
     (deliver *result
              {:result r
               :type   :success})))
 
-;; TODO: Change this into a promise
-;; TODO: Chache results + try to get fx-rate from cache 1st
-(defn- latest*
-  [base-currency other-currency]
+(defn- latest-error
+  [*result response]
+  (deliver *result
+           {:error       response
+            :description "An error occurred fetching fx data"}))
+
+(defn- latest-by-base-currency
+  [base-currency]
   (let [base    (if (keyword? base-currency)
                   (name base-currency)
                   base-currency)
@@ -51,19 +48,34 @@
     (GET latest-uri {:params          {:base    base
                                        :symbols syms
                                        :places  6}
-                     ;; TODO: Deliver result to promise
-                     :handler         #(clojure.pprint/pprint {::exchange-latest-success %})
-                     :error-handler   #(clojure.pprint/pprint {::exchange-latest-failure %})
+                     :handler         #(latest-success *result %)
+                     :error-handler   #(latest-error *result %)
                      :response-format :json
                      :keywords?       true})
+    @*result))
+
+;; Cache for 1 hour
+(def latest-by-base-currency-cached (memo/ttl latest-by-base-currency
+                                              :ttl/threshold 3600000))
+
+(defn latest
+  [base-currency other-currency]
+  (let [*result (promise)]
+    (future
+      (let [{:keys [error result]
+             :as   r} (latest-by-base-currency-cached base-currency)]
+        (if (not error)
+          (deliver *result (get result other-currency))
+          (deliver *result r))))
     *result))
 
+
+
 (comment
-  (latest {:base-currency :ZAR
-           :symbols       [:USD]})
+  @(latest :USD :ZAR)
 
-  (latest {:base-currency :USD
-           :symbols       [:ZAR]})
+  @(latest :USD :SGD)
 
+  @(latest :EUR :ZAR)
 
   )
