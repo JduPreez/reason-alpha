@@ -138,13 +138,20 @@
                           (mapv
                            #(reduce (fn [d comp-k]
                                       (let [{comp-str :function
-                                             use'     :use} (computations comp-k)
-                                            fn-comp         (compile-str comp-str)
-                                            any-nils?       (->> use'
-                                                                 (map (fn [u] (get d %)))
-                                                                 (not-every? some?))
-                                            comp-v          (when-not any-nils?
-                                                              (fn-comp d))]
+                                             use'     :use
+                                             :as      x} (computations comp-k)
+                                            fn-comp      (compile-str comp-str)
+                                            any-nils?    (->> use'
+                                                              (map (fn [u] (get d u)))
+                                                              (not-every? some?))
+                                            _            (clojure.pprint/pprint {:U     use'
+                                                                                 :X     (->> use'
+                                                                                             (map (fn [u]
+                                                                                                    (get d u))))
+                                                                                 :NILS? any-nils?
+                                                                                 :D     d})
+                                            comp-v       (when-not any-nils?
+                                                           (fn-comp d))]
                                         (assoc d comp-k comp-v)))
                                     %
                                     comp-order)))]

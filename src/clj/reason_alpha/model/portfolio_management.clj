@@ -76,12 +76,6 @@
    [:position/stop {:optional true} number?]
    [:position/holding-position-id {:optional true} uuid?]])
 
-(def position-dto-functions
-  {:stop-loss-percent {:function "TPERCENT(stop-loss/(quantity * open-price))"
-                       :use      [:stop-loss :quantity :open-price]}
-   :open-total        {:function "quantity * open-price"
-                       :use      [:quantity :open-price]}})
-
 (comment
   (let [f-str (:stop-percent-loss position-dto-formulas)
         f-str (format "WITH(PERCENT, FN(n, ROUND(n * 100, 2)),
@@ -112,7 +106,7 @@
                                 [:position/long-short-name]]}
     [:tuple keyword? string?]]
    ;; Currency (should be obtained from the share)
-   [:open-time {:title        "Open Time"
+   [:open-time {:title        "Open Date"
                 :command-path [:position/open
                                :trade-transaction/date]}
     inst?]
@@ -135,7 +129,13 @@
                   :command-path [:position/close
                                  :trade-transaction/price]}
     number?]
-   ;; Profit/Loss Amount
+   ;; Close date
+   [:profit-loss-amount {:title    "Profit/Loss"
+                         :optional true
+                         :compute  {:function "(quantity * close-price) - open-total"
+                                    :use      [:quantity :close-price]
+                                    :require  [:open-total]}}
+    number?]
    ;; Profit/Loss Amount Main Currency
    ;; Profit/Loss %
    ;; Profit/Loss Long

@@ -2,7 +2,7 @@
   (:require [re-frame.core :as rf]
             [reason-alpha.views.alerts :as alerts]))
 
-(defn view [child-view]
+(defn view [& {:keys [sheet-view form-view]}]
   [:div.page-main
    [:div#headerMenuCollapse.ren-navbar>div.container
     [:ul.nav
@@ -14,8 +14,10 @@
                                :margin-right "0"}}]
        [:span " "]]
       [:div.dropdown-menu ;;.dropdown-menu-right.dropdown-menu-arrow
-       [:a.dropdown-item {:href "#"}
-        [:i.dropdown-icon.mdi.mdi-account-outline] " Profile"]
+       [:a.dropdown-item {:href     "#"
+                          :on-click #(do (.preventDefault %)
+                                         (rf/dispatch [:account-profile]))}
+        [:i.dropdown-icon.mdi.mdi-account-outline] " Account Profile"]
        [:a.dropdown-item {:href "#"}
         [:i.dropdown-icon.mdi.mdi-settings] " Settings"]
        [:a.dropdown-item {:href "#"}
@@ -53,7 +55,7 @@
    [:div.container.full-height>div.hor-content.full-height
     [alerts/view]
     [:div.row.full-height {:style {:margin-top "10px"}}
-     [child-view]
+     [sheet-view]
      #_[:div.card
       [:div.card-header.bg-gradient-indigo.br-tr-3.br-tl-3
        [:div.btn-list

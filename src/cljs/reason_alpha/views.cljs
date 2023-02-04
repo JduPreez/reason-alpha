@@ -61,7 +61,7 @@
   (let [current-route @(rf/subscribe [:current-route])]
     (when current-route
       [main/view
-       (-> current-route :data :view)])))
+       :sheet-view (-> current-route :data :view)])))
 
 (defn init []
   (init-routes!)

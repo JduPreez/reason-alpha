@@ -1,5 +1,6 @@
 (ns reason-alpha.model.accounts
-  (:require [reason-alpha.model.core :as model :refer [def-model]]))
+  (:require [reason-alpha.model.core :as model :refer [def-model]]
+            [reason-alpha.model.fin-instruments :as fin-instruments]))
 
 (def-model Profile
   :model/profile
@@ -22,6 +23,7 @@
    [:account/id {:optional true} uuid?]
    [:account/user-id string?]
    [:account/user-name string?]
+   [:account/currency fin-instruments/Currency]
    [:account/subscriptions {:optional true} Subscriptions]
    [:account/profile {:optional true} Profile]])
 

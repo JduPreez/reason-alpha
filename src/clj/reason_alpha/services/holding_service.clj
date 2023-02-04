@@ -81,7 +81,8 @@
            (map :holding-id))))
 
 (defn- aggregate-holding-positions [positions]
-  (let [holding-pos    (-> positions
+  (let [comps          (common/computations portfolio-management/PositionDto)
+        holding-pos    (-> positions
                            (lens/view
                             (lens/only
                              #(nil?
@@ -100,10 +101,40 @@
         pos-with-comps (cond-> []
                          (seq sub-positions) (into sub-positions)
                          holding-pos         (conj holding-pos)
-                         :always             (common/compute
-                                              {:computations
-                                               portfolio-management/position-dto-functions}))]
+                         :always             (common/compute {:computations comps}))]
     pos-with-comps))
+
+(comment
+  (defn blah [& {:keys [test1 test2]}]
+    [test1 test2])
+
+  (blah :test1 "11111" :test2 "22222")
+
+  (let [cs {:open-total {:function "quantity * open-price", :use [:quantity :open-price]},
+            :profit-loss-amount
+            {:function "(quantity * close-price) - open-total",
+             :use      [:quantity :close-price],
+             :require  [:open-total]},
+            :stop-loss-percent
+            {:function "TPERCENT(stop-loss/(quantity * open-price))",
+             :use      [:stop-loss :quantity :open-price]}}
+        p  [{:trade-pattern        [#uuid "018153ca-e7aa-3ee1-ad47-1b02e8eba24f" "Pullback"],
+             :holding              [#uuid "01844716-6bbf-1097-1700-23db8db9af42" "ASML"],
+             :open-price           222.0,
+             :open-time            #inst "2022-11-02T00:00:00.000-00:00",
+             :stop-loss            -4884.0,
+             :stop                 0.0,
+             :position-creation-id #uuid "84d374e9-0abe-4d92-9abe-6448c740dd65",
+             :status               :closed,
+             :close-price          93.91,
+             :position-id          #uuid "0184b9ee-6b90-aabd-8c1e-b5a074741e52",
+             :holding-id           #uuid "01844716-6bbf-1097-1700-23db8db9af42",
+             :quantity             22,
+             :eod-historical-data  "ASML.AS",
+             :long-short           [:long ""]}]]
+    (common/compute p {:computations cs}))
+
+  )
 
 (defn- assoc-close-prices-fn [fn-repo-get-acc-by-uid fn-quote-live-prices & [{:keys [batch-size]}]]
   (fn [account-id positions]
