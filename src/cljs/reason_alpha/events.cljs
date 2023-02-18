@@ -6,6 +6,7 @@
             [reason-alpha.model.utils :as model.utils]
             [reason-alpha.utils :as utils]
             [reason-alpha.web.api-client :as api-client]
+            [reitit.core :as r]
             [reitit.frontend.controllers :as rfe-ctrls]
             [reitit.frontend.easy :as rfe-easy]))
 
@@ -18,18 +19,29 @@
 
 (rf/reg-event-fx
  :navigated
- (fn [{:keys [db]} [_ {{:keys [name model
-                               load-event
+ (fn [{:keys [db]} [_ {{:keys [form]} :query-params
+                       {:keys [name model
+                               view load-event
                                load-fx]
-                        :as   d} :data
-                       :as       new-match}]]
-   (cljs.pprint/pprint {::navigated new-match})
-   (let [old-match   (:current-route db)
-         controllers (rfe-ctrls/apply-controllers (:controllers old-match) new-match)
-         updated-db  (-> db
-                         (assoc :current-route (assoc new-match :controllers controllers))
-                         (assoc-in data/active-view-model {:view  name
-                                                           :model model}))]
+                        :as   d}      :data
+                       :as            new-match} router]]
+   (let [{{frm-name  :name
+           frm-model :model
+           frm-view  :view} :data} (when form
+                                     (r/match-by-path router (str "/forms/" form)))
+         old-match                 (:current-route db)
+         controllers               (rfe-ctrls/apply-controllers (:controllers old-match)
+                                                                new-match)
+         view-model                (cond-> {:sheet-view {:name  name
+                                                         :model model
+                                                         :view view}}
+                                     frm-name (assoc :form-view {:name  frm-name
+                                                                 :model frm-model
+                                                                 :view  frm-view}))
+         updated-db                (-> db
+                                       (assoc :current-route (assoc new-match
+                                                                    :controllers controllers))
+                                       (assoc-in data/active-view-model view-model))]
      (cond-> {:db updated-db}
        load-fx          (assoc load-fx [])
        load-event       (assoc :dispatch-n [[:datagrid/update-history name]

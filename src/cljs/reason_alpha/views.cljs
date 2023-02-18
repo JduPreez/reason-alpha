@@ -10,9 +10,12 @@
             [reitit.core :as r]
             [reitit.frontend :as rfe]
             [reitit.frontend.controllers :as rfc]
-            [reitit.frontend.easy :as rfeasy]))
+            [reitit.frontend.easy :as rfeasy]
+            [schema.core :as s]))
 
 ;;; Routes ;;;
+
+(declare router)
 
 (defn href
   "Return relative url for given route. Url can be used in HTML links."
@@ -25,13 +28,16 @@
 
 (def routes
   ["/"
-   ["" {:name       ::positions/view
-        :view       positions/view
-        :model      :position
-        :load-event [:position/load]
+   ["" {:name           ::positions/view
+        :view           positions/view
+        :model          :position
+        :load-event     [:position/load]
+        #_#_:parameters {:query {(s/optional-key :id) s/AnythingSchema}}
         :controllers
-        [{:start (fn [& params] (js/console.log "Entering :positions"))
-          :stop  (fn [& params] (js/console.log "Leaving :positions"))}]}]
+        [{:parameters {:query [:id]}
+          :start      (fn [& params]
+                        (cljs.pprint/pprint ["Entering :positions" params]))
+          :stop       (fn [& params] (js/console.log "Leaving :positions"))}]}]
    ["trade-patterns" {:name       ::trade-patterns/view
                       :view       trade-patterns/view
                       :model      :trade-pattern
@@ -39,16 +45,30 @@
    ["holdings" {:name       ::holdings/view
                 :view       holdings/view
                 :model      :holding
-                :load-event [:holding/load]}]])
+                :load-event [:holding/load]}]
+   ["forms"
+    ["/account-profile" {:name  ::holdings/form-view
+                         :view  holdings/view
+                         :model :test-model}]]])
 
 (defn on-navigate [new-match]
   (when new-match
-    (rf/dispatch [:navigated new-match])))
+    (rf/dispatch [:navigated new-match router])))
 
 (def router
   (rfe/router
    routes
    {:data {:coercion rss/coercion}}))
+
+(comment
+  (r/match-by-path router "/forms/account-profile")
+  (r/routes router)
+
+  (let [{{frm-name  :name
+          frm-model :model} :data} nil]
+    frm-name)
+
+  )
 
 (defn init-routes! []
   (js/console.log "initializing routes")
@@ -58,10 +78,10 @@
    {:use-fragment true}))
 
 (defn router-component [{:keys [router]}]
-  (let [current-route @(rf/subscribe [:current-route])]
-    (when current-route
-      [main/view
-       :sheet-view (-> current-route :data :view)])))
+  (let [{{sv :view} :sheet-view
+         {fv :view} :form-view} @(rf/subscribe [:active-view-model])]
+    (when sv
+      [main/view :sheet-view sv :form-view fv])))
 
 (defn init []
   (init-routes!)

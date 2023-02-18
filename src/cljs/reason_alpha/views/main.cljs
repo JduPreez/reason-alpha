@@ -55,14 +55,4 @@
    [:div.container.full-height>div.hor-content.full-height
     [alerts/view]
     [:div.row.full-height {:style {:margin-top "10px"}}
-     [sheet-view]
-     #_[:div.card
-      [:div.card-header.bg-gradient-indigo.br-tr-3.br-tl-3
-       [:div.btn-list
-        [:button.btn.btn-primary {:type "button"} "Trades"]
-        [:button.btn.btn-outline-primary "Trade Patterns"]]
-       #_[:h2.card-title "Portfolio Trades"]]
-      ;;[:div.card-status.bg-yellow.br-tr-3.br-tl-3]
-        [:div.card-body {:style {:padding-top    0
-                                 :padding-bottom 0}}
-       [child-view]]]]]])
+     [sheet-view]]]])

@@ -23,7 +23,7 @@
    [:account/id {:optional true} uuid?]
    [:account/user-id string?]
    [:account/user-name string?]
-   [:account/currency fin-instruments/Currency]
+   [:account/currency {:optional true} fin-instruments/Currency]
    [:account/subscriptions {:optional true} Subscriptions]
    [:account/profile {:optional true} Profile]])
 
