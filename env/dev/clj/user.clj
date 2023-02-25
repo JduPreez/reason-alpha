@@ -2,7 +2,8 @@
   (:require [reason-alpha.core :as reason-alpha]
             [reason-alpha.dev-data :as dev-data]
             [reason-alpha.infrastructure.server :as server]
-            [reason-alpha.model :as model]))
+            [reason-alpha.model :as model]
+            [shadow.cljs.devtools.api :as shadow]))
 
 (defn start
   ([load-test-data?]
@@ -25,5 +26,7 @@
   @model/*system
 
   (stop)
+
+  (shadow/compile :app)
 
 )

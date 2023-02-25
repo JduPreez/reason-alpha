@@ -6,6 +6,7 @@
             [reason-alpha.views.main :as main]
             [reason-alpha.views.positions :as positions]
             [reason-alpha.views.trade-patterns :as trade-patterns]
+            [reason-alpha.views.account-profile :as acc-profile]
             [reitit.coercion.spec :as rss]
             [reitit.core :as r]
             [reitit.frontend :as rfe]
@@ -28,11 +29,10 @@
 
 (def routes
   ["/"
-   ["" {:name           ::positions/view
-        :view           positions/view
-        :model          :position
-        :load-event     [:position/load]
-        #_#_:parameters {:query {(s/optional-key :id) s/AnythingSchema}}
+   ["" {:name       ::positions/view
+        :view       positions/view
+        :model      :position
+        :load-event [:position/load]
         :controllers
         [{:parameters {:query [:id]}
           :start      (fn [& params]
@@ -47,8 +47,8 @@
                 :model      :holding
                 :load-event [:holding/load]}]
    ["forms"
-    ["/account-profile" {:name  ::holdings/form-view
-                         :view  holdings/view
+    ["/account-profile" {:name  ::acc-profile/form-view
+                         :view  acc-profile/view
                          :model :test-model}]]])
 
 (defn on-navigate [new-match]
@@ -80,6 +80,7 @@
 (defn router-component [{:keys [router]}]
   (let [{{sv :view} :sheet-view
          {fv :view} :form-view} @(rf/subscribe [:active-view-model])]
+    (cljs.pprint/pprint {::router-component fv})
     (when sv
       [main/view :sheet-view sv :form-view fv])))
 

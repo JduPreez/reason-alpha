@@ -25,6 +25,7 @@
                                load-fx]
                         :as   d}      :data
                        :as            new-match} router]]
+   (cljs.pprint/pprint {::navigated new-match})
    (let [{{frm-name  :name
            frm-model :model
            frm-view  :view} :data} (when form

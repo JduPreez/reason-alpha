@@ -54,5 +54,8 @@
        [:i.fas.fa-undo-alt] [:span "CANCEL"]]]]]
    [:div.container.full-height>div.hor-content.full-height
     [alerts/view]
+    (when form-view
+      [:div.row {:style {:margin-top "10px"}}
+       [form-view]])
     [:div.row.full-height {:style {:margin-top "10px"}}
      [sheet-view]]]])
