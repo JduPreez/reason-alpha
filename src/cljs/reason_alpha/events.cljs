@@ -26,28 +26,34 @@
                         :as   d}      :data
                        :as            new-match} router]]
    (cljs.pprint/pprint {::navigated new-match})
-   (let [{{frm-name  :name
-           frm-model :model
-           frm-view  :view} :data} (when form
-                                     (r/match-by-path router (str "/forms/" form)))
-         old-match                 (:current-route db)
-         controllers               (rfe-ctrls/apply-controllers (:controllers old-match)
-                                                                new-match)
-         view-model                (cond-> {:sheet-view {:name  name
-                                                         :model model
-                                                         :view view}}
-                                     frm-name (assoc :form-view {:name  frm-name
-                                                                 :model frm-model
-                                                                 :view  frm-view}))
-         updated-db                (-> db
-                                       (assoc :current-route (assoc new-match
-                                                                    :controllers controllers))
-                                       (assoc-in data/active-view-model view-model))]
-     (cond-> {:db updated-db}
-       load-fx          (assoc load-fx [])
-       load-event       (assoc :dispatch-n [[:datagrid/update-history name]
-                                            load-event])
-       (not load-event) (assoc :dispatch [:datagrid/update-history name])))))
+   (let [{{frm-name       :name
+           frm-model      :model
+           frm-view       :view
+           frm-load-event :load-event} :data} (when form
+                                                (r/match-by-path router (str "/forms/" form)))
+         old-match                            (:current-route db)
+         controllers                          (rfe-ctrls/apply-controllers (:controllers old-match)
+                                                                           new-match)
+         view-model                           (cond-> {:sheet-view {:name  name
+                                                                    :model model
+                                                                    :view view}}
+                                                frm-name (assoc :form-view {:name  frm-name
+                                                                            :model frm-model
+                                                                            :view  frm-view}))
+         updated-db                           (-> db
+                                                  (assoc :current-route (assoc new-match
+                                                                               :controllers controllers))
+                                                  (assoc-in data/active-view-model view-model))
+         efx                                  (cond-> {:db updated-db}
+                                                load-fx          (assoc load-fx [])
+                                                load-event       (assoc :dispatch-n [[:datagrid/update-history name]
+                                                                                     load-event])
+                                                frm-load-event   (update :dispatch-n #(if (seq %)
+                                                                                        (conj % frm-load-event)
+                                                                                        [frm-load-event]))
+                                                (not load-event) (assoc :dispatch [:datagrid/update-history name]))]
+     (cljs.pprint/pprint {::navigated-2 efx})
+     efx)))
 
 (rf/reg-fx
  :push-state!

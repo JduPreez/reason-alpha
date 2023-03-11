@@ -47,9 +47,10 @@
                 :model      :holding
                 :load-event [:holding/load]}]
    ["forms"
-    ["/account-profile" {:name  ::acc-profile/form-view
-                         :view  acc-profile/view
-                         :model :test-model}]]])
+    ["/account-profile" {:name       ::acc-profile/form-view
+                         :view       acc-profile/view
+                         :model      :account
+                         :load-event [:account-profile/load]}]]])
 
 (defn on-navigate [new-match]
   (when new-match

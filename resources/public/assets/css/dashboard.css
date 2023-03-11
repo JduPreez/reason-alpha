@@ -1484,7 +1484,7 @@ pre code {
 	opacity: 0.3;
 }
 .form-control:disabled, .form-control[readonly] {
-	opacity: 0.3;
+	opacity: 1;
 }
 select.form-control:not([size]):not([multiple]) {
 	height: 2.6rem;

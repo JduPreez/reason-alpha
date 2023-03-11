@@ -1,5 +1,6 @@
 (ns reason-alpha.model.utils
-  (:require [clojure.string :as str]))
+  (:require [clojure.string :as str]
+            [malli.core :as m]))
 
 (defn creation-id-key-by-type [type]
   (-> type
@@ -71,3 +72,9 @@
                         (next type-spec))]
     {:properties maybe-props
      :members    child-members}))
+
+(defn enum-titles [enum-schema]
+  (when enum-schema
+    (-> enum-schema
+        m/properties
+        :enum/titles)))

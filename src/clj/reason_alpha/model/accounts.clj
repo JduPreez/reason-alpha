@@ -7,7 +7,8 @@
   [:map
    [:profile/id {:optional true} uuid?]
    [:profile/email string?]
-   [:profile/name {:optional true} string?]
+   [:profile/first-name {:optional true} string?]
+   [:profile/last-name {:optional true} string?]
    [:profile/image {:optional true} string?]])
 
 (def-model Subscriptions
@@ -33,5 +34,6 @@
    [:user-id string?]
    [:user-name string?]
    [:email string?]
-   [:name {:optional true} string?]
+   [:first-name {:optional true} string?]
+   [:last-name {:optional true} string?]
    [:image {:optional true} string?]])
