@@ -54,99 +54,113 @@
 (defmethod ig/halt-key! ::db [_ db]
   (data.model/disconnect db))
 
-(defmethod ig/init-key ::aggregates [_ {db                       :db
-                                        {:keys [fn-get-account]} :account-svc}]
-  {:trade-pattern
-   {:commands {:save!   (as-> db d
-                          (partial trade-pattern-repo/save! d)
-                          (partial trade-pattern-svc/save! d
-                                   fn-get-account))
-               :delete! (as-> db d
-                          (partial trade-pattern-repo/delete! d)
-                          (svc.common/delete-fn
-                           {:fn-repo-delete!       d
-                            :model-type            :trade-pattern
-                            :fn-get-referenced-ids (trade-pattern-svc/get-trade-pattern-ids-with-positions-fn
-                                                    #(trade-pattern-repo/get-trade-patterns-with-positions db %))}))}
-    :queries  {:getn (as-> db d
-                       (partial trade-pattern-repo/getn d)
-                       (partial trade-pattern-svc/getn d
-                                fn-get-account))
-               :get1 (as-> db d
-                       (partial trade-pattern-repo/get1 d)
-                       (partial trade-pattern-svc/get1 d))}}
-   :holding
-   {:commands {:save-holding!     (as-> db d
-                                    (partial holding-repo/save-holding! d)
-                                    (partial holding-svc/save-holding! d
-                                             fn-get-account
-                                             common/get-context))
-               ;; TODO: In future positions should be saved together with the holding
-               ;; (added & removed from a holding) & not as a separate document,
-               ;; because Holding is the root aggregate
-               :save-position!    (as-> db d
-                                    (partial holding-repo/save-position! d)
-                                    (partial holding-svc/save-position! d
-                                             fn-get-account
-                                             common/get-context))
-               :delete-holdings!  (as-> db d
-                                    (partial holding-repo/delete-holdings! d)
-                                    (svc.common/delete-msg-fn
-                                     {:fn-repo-delete!       d
-                                      :model-type            :instrument
-                                      :fn-get-ctx            common/get-context
-                                      :response-msg-event    :holding.command/delete-holdings!-result
-                                      :fn-get-referenced-ids (holding-svc/get-holding-ids-with-positions-fn
-                                                              #(holding-repo/get-holdings-with-positions db %))}))
-               :delete-positions! (as-> db d
-                                    (partial holding-repo/delete-positions! d)
-                                    (svc.common/delete-msg-fn
-                                     {:fn-repo-delete!    d
-                                      :model-type         :position
-                                      :fn-get-ctx         common/get-context
-                                      :response-msg-event :holding.command/delete-positions!-result}))}
-    :queries  {:get-holdings           (as-> db d
-                                         (partial holding-repo/get-holdings d)
-                                         (partial holding-svc/get-holdings d
-                                                  fn-get-account
-                                                  common/get-context))
-               :get-holding            (as-> db d
-                                         (partial holding-repo/get-holding d)
-                                         (partial holding-svc/get-holding d
-                                                  common/get-context))
-               :get-holdings-positions (as-> db d
-                                         (partial holding-repo/get-holdings-positions d)
-                                         (partial holding-svc/get-holdings-positions d
-                                                  #(account-repo/get-by-user-id db %)
-                                                  eod/quote-live-prices
-                                                  true
-                                                  {:fn-get-ctx common/get-context}))
-               :get-holding-positions  (holding-svc/get-holding-positions-fn
-                                        #(holding-repo/get-holding-positions db %)
-                                        #(account-repo/get-by-user-id db %)
-                                        eod/quote-live-prices
-                                        common/get-context)
+(defmethod ig/init-key ::aggregates [_ {db   :db
+                                        #_#_ {:keys [fn-get-account]} :account-svc}]
+  (let [fn-repo-get-acc-by-uid #(account-repo/get-by-user-id db %)
+        fn-get-account         (partial account-svc/get-account
+                                        common/get-context fn-repo-get-acc-by-uid)]
+    {:account
+     {:commands {:save! (as-> db d
+                          (partial account-repo/save! d)
+                          (partial account-svc/save! fn-repo-get-acc-by-uid d))}
+      :queries  {:get1 fn-get-account}}
+     :trade-pattern
+     {:commands {:save!   (as-> db d
+                            (partial trade-pattern-repo/save! d)
+                            (partial trade-pattern-svc/save! d
+                                     fn-get-account))
+                 :delete! (as-> db d
+                            (partial trade-pattern-repo/delete! d)
+                            (svc.common/delete-fn
+                             {:fn-repo-delete!       d
+                              :model-type            :trade-pattern
+                              :fn-get-referenced-ids (trade-pattern-svc/get-trade-pattern-ids-with-positions-fn
+                                                      #(trade-pattern-repo/get-trade-patterns-with-positions db %))}))}
+      :queries  {:getn (as-> db d
+                         (partial trade-pattern-repo/getn d)
+                         (partial trade-pattern-svc/getn d
+                                  fn-get-account))
+                 :get1 (as-> db d
+                         (partial trade-pattern-repo/get1 d)
+                         (partial trade-pattern-svc/get1 d))}}
+     :holding
+     {:commands {:save-holding!     (as-> db d
+                                      (partial holding-repo/save-holding! d)
+                                      (partial holding-svc/save-holding! d
+                                               fn-get-account
+                                               common/get-context))
+                 ;; TODO: In future positions should be saved together with the holding
+                 ;; (added & removed from a holding) & not as a separate document,
+                 ;; because Holding is the root aggregate
+                 :save-position!    (as-> db d
+                                      (partial holding-repo/save-position! d)
+                                      (partial holding-svc/save-position! d
+                                               fn-get-account
+                                               common/get-context))
+                 :delete-holdings!  (as-> db d
+                                      (partial holding-repo/delete-holdings! d)
+                                      (svc.common/delete-msg-fn
+                                       {:fn-repo-delete!       d
+                                        :model-type            :instrument
+                                        :fn-get-ctx            common/get-context
+                                        :response-msg-event    :holding.command/delete-holdings!-result
+                                        :fn-get-referenced-ids (holding-svc/get-holding-ids-with-positions-fn
+                                                                #(holding-repo/get-holdings-with-positions db %))}))
+                 :delete-positions! (as-> db d
+                                      (partial holding-repo/delete-positions! d)
+                                      (svc.common/delete-msg-fn
+                                       {:fn-repo-delete!    d
+                                        :model-type         :position
+                                        :fn-get-ctx         common/get-context
+                                        :response-msg-event :holding.command/delete-positions!-result}))}
+      :queries  {:get-holdings           (as-> db d
+                                           (partial holding-repo/get-holdings d)
+                                           (partial holding-svc/get-holdings d
+                                                    fn-get-account
+                                                    common/get-context))
+                 :get-holding            (as-> db d
+                                           (partial holding-repo/get-holding d)
+                                           (partial holding-svc/get-holding d
+                                                    common/get-context))
+                 :get-holdings-positions (as-> db d
+                                           (partial holding-repo/get-holdings-positions d)
+                                           (partial holding-svc/get-holdings-positions d
+                                                    #(account-repo/get-by-user-id db %)
+                                                    eod/quote-live-prices
+                                                    true
+                                                    {:fn-get-ctx common/get-context}))
+                 :get-holding-positions  (holding-svc/get-holding-positions-fn
+                                          #(holding-repo/get-holding-positions db %)
+                                          #(account-repo/get-by-user-id db %)
+                                          eod/quote-live-prices
+                                          common/get-context)
 
-               :broadcast-holdings-positions (as-> db d
-                                               (partial holding-repo/get-holdings-positions d)
-                                               (partial holding-svc/get-holdings-positions d
-                                                        #(account-repo/get-by-user-id db %)
-                                                        eod/quote-live-prices
-                                                        false)
-                                               (partial holding-svc/broadcast-holdings-positions d))}}
-   :model
-   {:queries {:getn #(model-svc/getn common/get-context %)}}})
+                 :broadcast-holdings-positions (as-> db d
+                                                 (partial holding-repo/get-holdings-positions d)
+                                                 (partial holding-svc/get-holdings-positions d
+                                                          #(account-repo/get-by-user-id db %)
+                                                          eod/quote-live-prices
+                                                          false)
+                                                 (partial holding-svc/broadcast-holdings-positions d))}}
+     :model
+     {:queries {:getn #(model-svc/getn common/get-context %)}}}))
 
-(defmethod ig/init-key ::handlers [_ {:keys [aggregates]}]
+(defmethod ig/init-key ::handlers
+  [_ {:keys [aggregates]}]
   (pprint/pprint {::aggregates aggregates})
   (handlers aggregates))
 
-(defmethod ig/init-key ::broadcasters [_ {:keys [aggregates]}]
+(defmethod ig/init-key ::broadcasters
+  [_ {:keys [aggregates]}]
   {:broadcast-holdings-positions {:fn-start (get-in aggregates [:holding :queries :broadcast-holdings-positions])
                                   :fn-stop  holding-svc/stop-broadcast-holdings-positions}})
 
-(defmethod ig/init-key ::server [_ conf]
-  (server/start! conf))
+(defmethod ig/init-key ::server
+  [_ {:keys [aggregates] :as conf}]
+  (-> conf
+      (assoc :account-svc {:fn-get-account   (get-in aggregates [:account :queries :get1])
+                           :fn-save-account! (get-in aggregates [:account :commands :save!])})
+      server/start!))
 
 (defmethod ig/halt-key! ::server [_ _]
   (server/stop!))
@@ -164,12 +178,13 @@
   {::db              {:fn-authorize auth/authorize
                       :fn-get-ctx   common/get-context}
    ::account-svc     {:db (ig/ref ::db)}
-   ::aggregates      {:db          (ig/ref ::db)
-                      :account-svc (ig/ref ::account-svc)}
+   ::aggregates      {:db              (ig/ref ::db)
+                      #_#_:account-svc (ig/ref ::account-svc)}
    ::handlers        {:aggregates (ig/ref ::aggregates)}
    ::broadcasters    {:aggregates (ig/ref ::aggregates)}
    ::server          {:handlers     (ig/ref ::handlers)
-                      :account-svc  (ig/ref ::account-svc)
+                      #_#_:account-svc  (ig/ref ::account-svc)
+                      :aggregates   (ig/ref ::aggregates)
                       :port         5000
                       :broadcasters (ig/ref ::broadcasters)}
    ::instrumentation {:nss ['reason-alpha.data.model

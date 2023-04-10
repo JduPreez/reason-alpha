@@ -6,4 +6,3 @@
  [_]
  {:account-currency                 "9090909"
   :subscription-eod-historical-data "999"})
-

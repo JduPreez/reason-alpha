@@ -19,7 +19,7 @@ $(window).on("load", function(e) {
   
   // ______________ countUp
   $('.counter').countUp();
-})
+});
 
 
 // ______________ BACK TO TOP BUTTON
@@ -64,8 +64,9 @@ $(function(e) {
 
   /** Initialize popovers */
   $('[data-toggle="popover"]').popover({
-  html: true
+      html: false
   });
+
      /** Function for remove card */
   $('[data-toggle="card-remove"]').on('click', function(e) {
   let $card = $(this).closest(DIV_CARD);

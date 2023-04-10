@@ -12,7 +12,7 @@ body.dark-theme {
 }
 
 .dark-theme a:hover {
-    color: #a27cdf;
+    color: #a27cdf !important;
 }
 
 .dark-theme caption {
@@ -3431,13 +3431,13 @@ a.tag-addon:hover {
 
 /* Horizontal-menu */
 @media only screen and (max-width: 991px) {
-    .dark-theme .horizontalMenu>.horizontalMenu-list {
-        background: #2e3f68;
-    }
+    .dark-theme .horizontalMenu >.horizontalMenu-list {
+        background : #2e3f68 ;
+    }           
 
-    .dark-theme .horizontalMenu>.horizontalMenu-list>li>.horizontal-megamenu {
-        background: #243253;
-    }
+    .dark-theme .horizontalMenu >.horizontalMenu-list >li >.horizontal-megamenu {
+        background : #243253 ;
+    }           
 }
 
 /* left-menu */
