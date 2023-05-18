@@ -63,7 +63,11 @@
      {:commands {:save! (as-> db d
                           (partial account-repo/save! d)
                           (partial account-svc/save! fn-repo-get-acc-by-uid d))}
-      :queries  {:get1 fn-get-account}}
+      :queries  {:get1 (as-> db d
+                         (partial account-repo/get1 d)
+                         (partial account-svc/get1
+                                  common/get-context
+                                  d))}}
      :trade-pattern
      {:commands {:save!   (as-> db d
                             (partial trade-pattern-repo/save! d)

@@ -18,8 +18,8 @@
     (data.model/save! db acc {:role :system})))
 
 (defn get-by-user-id [db user-id]
-  (let [acc (-> (data.model/any
-                 db
+  (let [acc (-> db
+                (data.model/any
                  {:spec '{:find  [(pull e [*])]
                           :where [[e :account/user-id uid]]
                           :in    [uid]}
@@ -27,3 +27,12 @@
                   :role :system})
                 first)]
     acc))
+
+(defn get1 [db user-id]
+  (->>  {:spec '{:find  [(pull e [*])]
+                 :where [[e :account/user-id uid]]
+                 :in    [uid]}
+         :args [user-id]
+         :role :system}
+        (data.model/any db)
+        (mapping/command-ent->query-dto accounts/AccountDto)))

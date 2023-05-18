@@ -63,9 +63,9 @@ $(function(e) {
   $('[data-toggle="tooltip"]').tooltip();
 
   /** Initialize popovers */
-  $('[data-toggle="popover"]').popover({
-      html: false
-  });
+  //$('[data-toggle="popover"]').popover({
+  //    html: false
+  //});
 
      /** Function for remove card */
   $('[data-toggle="card-remove"]').on('click', function(e) {

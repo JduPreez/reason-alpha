@@ -18,6 +18,8 @@
 
 (def ^:const holdings [:data :holding])
 
+(def ^:const account-profile [:data :account-profile])
+
 (defn model [model-k]
   (conj models model-k))
 

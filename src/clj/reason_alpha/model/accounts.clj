@@ -28,12 +28,26 @@
    [:account/subscriptions {:optional true} Subscriptions]
    [:account/profile {:optional true} Profile]])
 
-(def AccountDto
+(def-model AccountDto
+  :model/account-dto
   [:map
-   [:account-id uuid?]
-   [:user-id string?]
-   [:user-name string?]
-   [:email string?]
-   [:first-name {:optional true} string?]
-   [:last-name {:optional true} string?]
-   [:image {:optional true} string?]])
+   [:account-id {:command-path [:account/id]} uuid?]
+   [:user-id {:command-path [:account/user-id]} string?]
+   [:user-name {:title        "User Name"
+                :command-path [:account/user-name]
+                :optional     true} string?]
+   [:email {:title        "E-mail"
+            :command-path [:account/profile :profile/email]} string?]
+   [:name {:title    "Name"
+           :optional true} string?]
+   [:account-currency {:title        "Main Currency"
+                       :ref          :account/currency
+                       :command-path [[:account/currency]
+                                      [:account/currency-name]]}
+    [:tuple keyword? string?]]
+   [:eod-historical-data-api-token
+    {:title        "EOD Historical Data Subscription"
+     :command-path [:account/subscriptions
+                    :subscription/eod-historical-data
+                    :api-token]}
+    string?]])

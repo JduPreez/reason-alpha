@@ -30,6 +30,7 @@
 
            (and (not cb-success?) on-failure)
            , (rf/dispatch (conj on-failure))))))
+    ;; else
     (@*chsk-send! event 60000)))
 
 (defn state-watcher [_key _atom _old-state new-state]

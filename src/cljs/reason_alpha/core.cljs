@@ -14,6 +14,7 @@
             [reason-alpha.events.positions]
             [reason-alpha.events.trade-patterns]
             [reason-alpha.subs]
+            [reason-alpha.subs.account-profile]
             [reason-alpha.subs.alerts]
             [reason-alpha.subs.financial-instruments]
             [reason-alpha.subs.holdings]

@@ -1,8 +1,10 @@
 (ns reason-alpha.subs.account-profile
-  (:require [re-frame.core :as rf]))
+  (:require [re-frame.core :as rf]
+            [reason-alpha.data :as data]))
 
 (rf/reg-sub
  :account-profile
- [_]
- {:account-currency                 "9090909"
-  :subscription-eod-historical-data "999"})
+ (fn [db _]
+   (->> data/account-profile
+        (get-in db)
+        first)))
