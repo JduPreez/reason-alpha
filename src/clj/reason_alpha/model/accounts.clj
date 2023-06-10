@@ -7,8 +7,9 @@
   [:map
    [:profile/id {:optional true} uuid?]
    [:profile/email string?]
-   [:profile/first-name {:optional true} string?]
-   [:profile/last-name {:optional true} string?]
+   [:profile/name {:optional true} string?]
+   #_[:profile/first-name {:optional true} string?]
+   #_[:profile/last-name {:optional true} string?]
    [:profile/image {:optional true} string?]])
 
 (def-model Subscriptions
@@ -38,8 +39,9 @@
                 :optional     true} string?]
    [:email {:title        "E-mail"
             :command-path [:account/profile :profile/email]} string?]
-   [:name {:title    "Name"
-           :optional true} string?]
+   [:name {:title        "Name"
+           :optional     true
+           :command-path [:account/profile :profile/name]} string?]
    [:account-currency {:title        "Main Currency"
                        :ref          :account/currency
                        :command-path [[:account/currency]

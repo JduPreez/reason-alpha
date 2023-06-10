@@ -1,6 +1,7 @@
 (ns reason-alpha.model.utils
   (:require [clojure.string :as str]
-            [malli.core :as m]))
+            [malli.core :as m]
+            [malli.util :as mu]))
 
 (defn creation-id-key-by-type [type]
   (-> type
@@ -61,17 +62,27 @@
     updated))
 
 (defn get-model-members-of [schema member-k]
-  (let [member        (->> schema
-                           rest
-                           (some #(when (= member-k (first %)) %)))
-        type-spec     (last member)
-        maybe-props   (second type-spec)
-        has-props?    (map? maybe-props)
-        child-members (if has-props?
-                        (nnext type-spec)
-                        (next type-spec))]
-    {:properties maybe-props
-     :members    child-members}))
+  (when schema
+    (let [members                 (m/entries schema)
+          {:keys [props
+                  member-schema]} (->> schema
+                                       m/children
+                                       (some
+                                        (fn [[mbr-k props sch]]
+                                          (when (= member-k mbr-k)
+                                            {:props         props
+                                             :member-schema sch}))))
+          props                   (-> member-schema m/properties (merge props))
+          child-members           (->> (m/children member-schema)
+                                       (mapv (fn [s]
+                                               (if (m/schema? s)
+                                                 (m/form s)
+                                                 s))))]
+      {:properties props
+       :schema     (if (m/schema? member-schema)
+                     (m/form member-schema)
+                     #_else member-schema)
+       :members    child-members})))
 
 (defn enum-titles [enum-schema]
   (when enum-schema

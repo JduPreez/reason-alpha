@@ -1,6 +1,5 @@
 (ns ra-datagrid.views.fields
   (:require [cljs-time.coerce :as coerce]
-            [cljs-time.format :as fmt]
             [cljs-uuid-utils.core :as uuid]
             [clojure.string :as str]
             [medley.core :as medley]
