@@ -105,89 +105,10 @@
 
 (def-model ExchangeRateDto
   :model/exchange-rate-dto
-  (let [#_#_rates-schema (->> Currency
-                              m/children
-                              (map (fn fx-rate-amount-schema [currency]
-                                     [currency {:optional true} number?]))
-                              (into [:map]))]
-    [:map
-     [:exchange-rate-creation-id uuid?]
-     [:exchange-rate-id {:optional true} uuid?]
-     [:base-currency Currency]
-     [:other-currency Currency]
-     [:rate number?]
-     [:date-time inst?]]))
-
-(comment
-  
-
-  (let [x {:USD "USD"
-           :EUR "EUR"
-           :JPY "JPY"
-           :GBP "GBP"
-           :AUD "AUD"
-           :CAD "CAD"
-           :CHF "CHF"
-           :CNY "CNY"
-           :HKD "HKD"
-           :NZD "NZD"
-           :SEK "SEK"
-           :KRW "KRW"
-           :SGD "SGD"
-           :NOK "NOK"
-           :MXN "MXN"
-           :INR "INR"
-           :RUB "RUB"
-           :ZAR "ZAR"
-           :TRY "TRY"
-           :BRL "BRL"
-           :TWD "TWD"
-           :DKK "DKK"
-           :PLN "PLN"
-           :THB "THB"
-           :IDR "IDR"
-           :HUF "HUF"
-           :CZK "CZK"
-           :ILS "ILS"
-           :CLP "CLP"
-           :PHP "PHP"
-           :AED "AED"
-           :COP "COP"
-           :SAR "SAR"
-           :MYR "MYR"
-           :RON "RON"}]
-    (into (sorted-map) x))
-
-  (letfn [(get-model-members-of [schema member-k]
-            (let [member        (->> schema
-                                     rest
-                                     (some #(when (= member-k (first %)) %)))
-                  type-spec     (last member)
-                  maybe-props   (second type-spec)
-                  has-props?    (map? maybe-props)
-                  child-members (if has-props?
-                                  (nnext type-spec)
-                                  (next type-spec))]
-              {:properties maybe-props
-               :members    child-members}))]
-    (get-model-members-of
-     Symbol
-     :symbol/provider)
-    #_(let [{{ptitles :enum/titles} :properties
-             providers              :members} (get-model-members-of
-                                               Symbol
-                                               :symbol/provider)
-            providers-schema                  (for [p    providers
-                                                    :let [t (get ptitles p)]]
-                                                [p {:title    t
-                                                    :optional true} keyword?])]
-      (into
-       [:map
-        [:instrument-name {:title    "Instrument"
-                           :optional true} string?]]
-       cat
-       [providers-schema
-        [[:instrument-type {:title    "Type"
-                            :optional true} keyword?]]])))
-
-  )
+  [:map
+   [:exchange-rate-creation-id uuid?]
+   [:exchange-rate-id {:optional true} uuid?]
+   [:base-currency Currency]
+   [:other-currency Currency]
+   [:rate number?]
+   [:date-time inst?]])

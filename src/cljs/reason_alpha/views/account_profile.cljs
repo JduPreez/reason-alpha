@@ -15,12 +15,13 @@
             (.popover #js {:html true})))
     :reagent-render
     , (fn []
-        (let [*acc-profile (rf/subscribe [:account-profile])
-              *schema      (rf/subscribe [:model/members-of :model/account-dto :account-currency])
-              *curs        (rf/subscribe [:financial-instrument/currencies])
-              curs         (->> @*curs
-                                seq
-                                (cons [:default "Select one"]))]
+        (let [*acc-profile  (rf/subscribe [:account-profile])
+              *acc-prof-sch (rf/subscribe [:model :model/account-dto])
+              *schema       (rf/subscribe [:model/members-of :model/account-dto :account-currency])
+              *curs         (rf/subscribe [:financial-instrument/currencies])
+              curs          (->> @*curs
+                                 seq
+                                 (cons [:default "Select one"]))]
           (cljs.pprint/pprint {:AP @*acc-profile})
           [:div.card
            [:div.card-status.bg-primary.br-tr-3.br-tl-3]
@@ -45,7 +46,12 @@
               [:div.col-md-6.col-lg-6
                [:div.form-group
                 [:label.form-label "Main Currency"]
-                [components/select-dropdown @*schema]
+                [components/select-dropdown
+                 :schema            @*acc-prof-sch
+                 :model-type        :model/account
+                 :member-nm         :account-currency
+                 :data-subscription [:financial-instrument/currencies]
+                 :enum-titles       "?????"]
                 #_[components/select-dropdown
                    :account-profile
                    :account-id

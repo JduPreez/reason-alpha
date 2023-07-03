@@ -6,6 +6,7 @@
             [re-com.dropdown :as dropdown]
             [re-frame.core :as rf]
             [reagent.core :as reagent]
+            [reason-alpha.model.utils :as mutils]
             [reason-alpha.utils :as utils]))
 
 (defn val->choice-id [ctype v]
@@ -36,26 +37,31 @@
                 cid)]
     [id label]))
 
-(def ref-suffix "ref")
-(def ref-suffix-list (str ref-suffix "-list"))
-
 (defn select-dropdown
-  ([schema]
-   (when schema
-     (cljs.pprint/pprint {:>>> schema})))
-  ([model-type idk *r {data-sub :data-subscription
-                       :as      field}]
-   (let [id            (idk @*r)
-         ;; *r                (rf/subscribe [:form/edited-record-by-pk form id])
-         *choices      (if data-sub
-                         (rf/subscribe data-sub)
-                         #_else (reagent/atom []))
-         ctype         (-> @*choices first :id choice-type)
-         *selected-val (reagent/atom (->> field
-                                          :name
-                                          (get @*r)
-                                          first
-                                          (val->choice-id ctype)))]
+  [& {:keys [schema model-type member-nm data-subscription
+             enum-titles]}]
+  (let [id-member (mutils/id-key model-type schema)
+        {:keys [properties
+                schema
+                members]
+         :as   x}  (mutils/model-member-schema-info schema member-nm)]
+    (cljs.pprint/pprint {:>>>X  x
+                         :>>>MK member-nm
+                         :>>>IM id-member
+                         :>>>S  schema}))
+  #_([model-type idk *r {data-sub :data-subscription
+                         :as      field}]
+     (let [id            (idk @*r)
+           ;; *r                (rf/subscribe [:form/edited-record-by-pk form id])
+           *choices      (if data-sub
+                           (rf/subscribe data-sub)
+                           #_else (reagent/atom []))
+           ctype         (-> @*choices first :id choice-type)
+           *selected-val (reagent/atom (->> field
+                                            :name
+                                            (get @*r)
+                                            first
+                                            (val->choice-id ctype)))]
      [:span @*selected-val]
      #_(fn [form model-type idk *r _]
          (let [choices (map (fn [{:keys [id] :as c}]

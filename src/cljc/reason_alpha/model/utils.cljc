@@ -3,24 +3,28 @@
             [malli.core :as m]
             [malli.util :as mu]))
 
-(defn creation-id-key-by-type [type]
+(defn creation-id-key-by-type
+  [type]
   (-> type
       name
       (str "-creation-id")
       keyword))
 
-(defn entity-ns [m]
+(defn entity-ns
+  [m]
   (-> (keys m)
       first
       namespace))
 
-(defn id-key-by-type [type]
+(defn id-key-by-type
+  [type]
   (-> type
       name
       (str "-id")
       keyword))
 
-(defn some-ns-key [key entities]
+(defn some-ns-key
+  [key entities]
   (let [key-nm (name key)]
     (->> entities
          first
@@ -28,7 +32,8 @@
          (some #(when (= key-nm (name %))
                   %)))))
 
-(defn- -id-key [model-type key-nm m]
+(defn- -id-key
+  [model-type key-nm m]
   (let [mtype-nm (name model-type)
         ent-id-k (keyword mtype-nm key-nm)
         dto-id-k (keyword (str mtype-nm "-" key-nm))]
@@ -36,13 +41,22 @@
       ent-id-k
       dto-id-k)))
 
-(defn creation-id-key [model-type m]
+(defn creation-id-key
+  [model-type m]
   (-id-key model-type "creation-id" m))
 
-(defn id-key [model-type m]
-  (-id-key model-type "id" m))
+(defn id-key
+  [model-type s]
+  (-id-key model-type "id" s))
 
-(defn merge-by-id [model-type maps1 maps2]
+(defn id-member?
+  [member-nm]
+  (-> member-nm
+      name
+      (str/ends-with? "-id")))
+
+(defn merge-by-id
+  [model-type maps1 maps2]
   (let [m         (first (or maps2 maps1))
         id-k      (id-key model-type m)
         crtn-id-k (creation-id-key model-type m)
@@ -61,30 +75,36 @@
                       (into maps2))]
     updated))
 
-(defn get-model-members-of [schema member-k]
-  (when schema
-    (let [members                 (m/entries schema)
-          {:keys [props
-                  member-schema]} (->> schema
-                                       m/children
-                                       (some
-                                        (fn [[mbr-k props sch]]
-                                          (when (= member-k mbr-k)
-                                            {:props         props
-                                             :member-schema sch}))))
-          props                   (-> member-schema m/properties (merge props))
-          child-members           (->> (m/children member-schema)
-                                       (mapv (fn [s]
-                                               (if (m/schema? s)
-                                                 (m/form s)
-                                                 s))))]
-      {:properties props
-       :schema     (if (m/schema? member-schema)
-                     (m/form member-schema)
-                     #_else member-schema)
-       :members    child-members})))
+(defn model-member-schema-info
+  ([schema member-nm]
+   (member-nm (model-member-schema-info schema)))
+  ([schema]
+   (when schema
+     (let [members        (m/entries schema)
+           member-sch-inf (->> schema
+                               m/children
+                               (map
+                                (fn [[mbr-nm props sch]]
+                                  (let [sch           (if (m/schema? sch)
+                                                        (m/form sch)
+                                                        #_else sch)
+                                        props         (-> sch m/properties
+                                                          (merge props))
+                                        child-members (->> sch
+                                                           m/children
+                                                           (mapv (fn [s]
+                                                                   (if (m/schema? s)
+                                                                     (m/form s)
+                                                                     s))))]
+                                    [mbr-nm {:properties props
+                                             :schema     sch
+                                             :type       (m/type sch)
+                                             :members    child-members}])))
+                               (into {}))]
+       member-sch-inf))))
 
-(defn enum-titles [enum-schema]
+(defn enum-titles
+  [enum-schema]
   (when enum-schema
     (-> enum-schema
         m/properties

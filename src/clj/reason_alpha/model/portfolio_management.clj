@@ -207,7 +207,7 @@
    [:holding/target-allocation {:optional true} float?]])
 
 (let [{{ptitles :enum/titles} :properties
-       providers              :members} (mutils/get-model-members-of
+       providers              :members} (mutils/model-member-schema-info
                                          fin-instruments/Symbol
                                          :symbol/provider)
       symbols-schema                    (for [p    providers

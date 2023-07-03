@@ -1,9 +1,12 @@
 (ns reason-alpha.views.datagrid
   (:require [clojure.string :as str]
+            [malli.core :as m]
             [medley.core :as medley]
             [ra-datagrid.views :as ra-datagrid]
             [re-frame.core :as rf]
-            [reagent.core :as r]))
+            [reagent.core :as r]
+            [reason-alpha.model.utils :as mutils]
+            [reason-alpha.views.utils :as vutils]))
 
 (def default-opts
   {;;:grid-id                    :my-grid
@@ -64,42 +67,44 @@
         [ra-datagrid/datagrid (merge default-opts opts) fields]]])))
 
 (defn model-member->field
-  [[member-nm & schema] & [{:keys [enum-titles] :as field-opts}]]
-  (let [ref-suffix             "ref"
-        ref-suffix-list        (str ref-suffix "-list")
-        id-member              (-> member-nm
+  [[member-nm {:keys [type properties schema] :as s}] &
+   [{:keys [enum-titles] :as field-opts}]]
+  (cljs.pprint/pprint {:***S s})
+  (let [#_#_ref-suffix         "ref"
+        #_#_ref-suffix-list    (str ref-suffix "-list")
+        #_#_id-member          (-> member-nm
                                    name
                                    (str/ends-with? "-id"))
+        id-member?             (mutils/id-member? member-nm)
         field-def              (cond-> field-opts
                                  (not (contains? field-opts :can-sort))
                                  , (assoc :can-sort true)
                                  :default
                                  , (dissoc field-opts :ref-suffix))
-        props-or-type          (first schema)
-        has-props?             (map? props-or-type)
+        #_#_props-or-type      (first schema)
+        #_#_has-props?         (map? props-or-type)
         {:keys [title ref
-                command-path]} props-or-type
+                command-path]} properties
         field-def              (merge field-def {:title title
                                                  :name  member-nm})
         ref-nm                 (when ref
                                  (name ref))
         ref-ns                 (when ref
                                  (namespace ref))
-        [type tuple-id-type]   (some #(when (not (map? %))
-                                        (if (sequential? %)
-                                          %
-                                          [%])) schema)
+        ;; TODO: Get tuple ID type from new schema format
+        tuple-id-type          (when (= type :tuple)
+                                 (second schema))
         data-subscr            (if ref-ns
-                                 (keyword ref-ns (str ref-nm "-" ref-suffix-list))
-                                 (keyword ref-nm ref-suffix-list))
+                                 (keyword ref-ns (str ref-nm "-" vutils/ref-suffix-list))
+                                 (keyword ref-nm vutils/ref-suffix-list))
         parent-subscr          (if ref-ns
-                                 (keyword ref-ns (str ref-nm "-" ref-suffix))
-                                 (keyword ref-nm ref-suffix))]
+                                 (keyword ref-ns (str ref-nm "-" vutils/ref-suffix))
+                                 (keyword ref-nm vutils/ref-suffix))]
     (cond
       ;; Id members are either the current entity's `:id` or `:creation-id` fields
       ;; or they should be 'foreign keys' with a `:ref` pointing to another entity
       ;; using an `<select>`
-      (and id-member
+      (and id-member?
            (not ref))
       , nil
 
@@ -110,7 +115,7 @@
       , (assoc field-def :type :no-edit)
 
       (and ref
-           (not id-member))
+           (not id-member?))
       , (merge
          (cond-> {:type              :select
                   :data-subscription [data-subscr]}
@@ -118,7 +123,7 @@
          field-def)
 
       (and ref
-           id-member)
+           id-member?)
       , (medley/deep-merge field-def
                            {:type              :indent-group
                             :data-subscription [data-subscr]
@@ -136,8 +141,9 @@
       :default
       , field-def)))
 
-(defn model->fields [[_ & members] & [{fields-opts :fields-opts}]]
-  (->> members
-       (mapv (fn [[membr-k & _ :as m]]
-               (model-member->field m (get fields-opts membr-k))))
+(defn model->fields [model-schema & [{fields-opts :fields-opts}]]
+  (->> model-schema
+       mutils/model-member-schema-info
+       (mapv (fn [[membr-nm :as sch-inf]]
+               (model-member->field sch-inf (get fields-opts membr-nm))))
        (remove nil?)))
