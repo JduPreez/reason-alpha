@@ -95,11 +95,16 @@
                                                            (mapv (fn [s]
                                                                    (if (m/schema? s)
                                                                      (m/form s)
-                                                                     s))))]
-                                    [mbr-nm {:properties props
-                                             :schema     sch
-                                             :type       (m/type sch)
-                                             :members    child-members}])))
+                                                                     s))))
+                                        t             (m/type sch)
+                                        [val-type _]  (when (and (= :tuple t)
+                                                                 (= 2 (count child-members)))
+                                                        child-members)]
+                                    [mbr-nm {:properties      props
+                                             :schema          sch
+                                             :type            t
+                                             :member-val-type val-type
+                                             :members         child-members}])))
                                (into {}))]
        member-sch-inf))))
 

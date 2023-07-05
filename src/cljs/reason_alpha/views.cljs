@@ -6,7 +6,7 @@
             [reason-alpha.views.main :as main]
             [reason-alpha.views.positions :as positions]
             [reason-alpha.views.trade-patterns :as trade-patterns]
-            [reason-alpha.views.account-profile :as acc-profile]
+            [reason-alpha.views.accounts :as accounts]
             [reitit.coercion.spec :as rss]
             [reitit.core :as r]
             [reitit.frontend :as rfe]
@@ -47,10 +47,10 @@
                 :model      :holding
                 :load-event [:holding/load]}]
    ["forms"
-    ["/account-profile" {:name       ::acc-profile/form-view
-                         :view       acc-profile/view
+    ["/account-profile" {:name       ::accounts/form-view
+                         :view       accounts/view
                          :model      :account
-                         :load-event [:account-profile/load]}]]])
+                         :load-event [:account/load]}]]])
 
 (defn on-navigate [new-match]
   (when new-match

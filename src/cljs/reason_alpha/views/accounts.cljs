@@ -1,8 +1,9 @@
-(ns reason-alpha.views.account-profile
+(ns reason-alpha.views.accounts
   (:require [re-frame.core :as rf]
             [reagent.core :as ra]
             [reagent.dom :as rd]
-            [reason-alpha.views.components :as components]))
+            [reason-alpha.views.components :as components]
+            [reagent.core :as reagent]))
 
 ;; https://stackoverflow.com/questions/27163184/how-to-attach-bootstrap-tooltip-to-clojurescript-reagent-component
 ;; https://ericnormand.me/guide/re-frame-lifecycle#component-did-mount
@@ -15,14 +16,17 @@
             (.popover #js {:html true})))
     :reagent-render
     , (fn []
-        (let [*acc-profile  (rf/subscribe [:account-profile])
-              *acc-prof-sch (rf/subscribe [:model :model/account-dto])
+        (let [*name         (rf/subscribe [:view-data ::account-edit :name])
+              *email        (rf/subscribe [:view-data ::account-edit :email])
+              *eod-token    (rf/subscribe [:view-data ::account-edit :eod-historical-data-api-token])
+              *acc-currency (rf/subscribe [:view-data ::account-edit :account-currency])
+              #_#_*account  (reagent/atom @*account-sub)
+              *acc-schema   (rf/subscribe [:model :model/account-dto])
               *schema       (rf/subscribe [:model/members-of :model/account-dto :account-currency])
-              *curs         (rf/subscribe [:financial-instrument/currencies])
-              curs          (->> @*curs
+              #_#_*curs     (rf/subscribe [:financial-instrument/currencies])
+              #_#_curs      (->> @*curs
                                  seq
                                  (cons [:default "Select one"]))]
-          (cljs.pprint/pprint {:AP @*acc-profile})
           [:div.card
            [:div.card-status.bg-primary.br-tr-3.br-tl-3]
            [:div.card-header
@@ -36,41 +40,35 @@
                 [:input.form-control {:type         "text"
                                       :disabled     true
                                       :defaultValue ""
-                                      :placeholder  (:name @*acc-profile)}]]
+                                      :placeholder  @*name}]]
                [:div.form-group
                 [:label.form-label "E-mail"]
                 [:input.form-control {:type         "text"
                                       :disabled     true
                                       :defaultValue ""
-                                      :placeholder  (:email @*acc-profile)}]]]
+                                      :placeholder  @*email}]]]
               [:div.col-md-6.col-lg-6
                [:div.form-group
                 [:label.form-label "Main Currency"]
                 [components/select-dropdown
-                 :schema            @*acc-prof-sch
-                 :model-type        :model/account
+                 *acc-currency
+                 :view              ::account-edit
+                 :schema            @*acc-schema
+                 :model-type        :account
                  :member-nm         :account-currency
                  :data-subscription [:financial-instrument/currencies]
-                 :enum-titles       "?????"]
-                #_[components/select-dropdown
-                   :account-profile
-                   :account-id
-                   *acc-profile
-                   {:name              :account-currency
-                    :data-subscription [:financial-instrument/currencies]}]
-                #_[:select.form-control.select2.custom-select.select2-hidden-accessible
-                   {:data-placeholder "Choose one"}
-                   (for[[_ ct] curs]
-                     ^{:key ct}
-                     [:option {:value ct} ct])]]
+                 :selected          :update-view-data]]
                [:div.form-group
                 [:label.form-label "EOD Historical Data Subscription"]
                 [:div.row.gutters-sm
                  [:div.col
-                  [:input.form-control {:type          "text"
-                                        :placeholder   "EOD Historical Data API Token"
-                                        :value         ""
-                                        #_#_:on-change #(swap! registration assoc :username (-> % .-target .-value))}]]
+                  [:input.form-control {:type        "text"
+                                        :placeholder "EOD Historical Data API Token"
+                                        :value       @*eod-token
+                                        :on-change   #(rf/dispatch [:update-view-data
+                                                                    ::account-edit
+                                                                    :eod-historical-data-api-token
+                                                                    (-> % .-target .-value)])}]]
                  [:span.col-auto.align-self-center
                   [:span.form-help.bg-primary.text-white
                    {:id                  "eod-token-help"

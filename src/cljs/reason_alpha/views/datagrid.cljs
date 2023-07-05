@@ -69,7 +69,6 @@
 (defn model-member->field
   [[member-nm {:keys [type properties schema] :as s}] &
    [{:keys [enum-titles] :as field-opts}]]
-  (cljs.pprint/pprint {:***S s})
   (let [#_#_ref-suffix         "ref"
         #_#_ref-suffix-list    (str ref-suffix "-list")
         #_#_id-member          (-> member-nm
@@ -87,19 +86,18 @@
                 command-path]} properties
         field-def              (merge field-def {:title title
                                                  :name  member-nm})
-        ref-nm                 (when ref
+        #_#_ref-nm             (when ref
                                  (name ref))
-        ref-ns                 (when ref
+        #_#_ref-ns             (when ref
                                  (namespace ref))
-        ;; TODO: Get tuple ID type from new schema format
         tuple-id-type          (when (= type :tuple)
                                  (second schema))
-        data-subscr            (if ref-ns
-                                 (keyword ref-ns (str ref-nm "-" vutils/ref-suffix-list))
-                                 (keyword ref-nm vutils/ref-suffix-list))
-        parent-subscr          (if ref-ns
-                                 (keyword ref-ns (str ref-nm "-" vutils/ref-suffix))
-                                 (keyword ref-nm vutils/ref-suffix))]
+        data-subscr            (vutils/ref->data-sub ref)        #_ (if ref-ns
+                                                                      (keyword ref-ns (str ref-nm "-" vutils/ref-suffix-list))
+                                                                      (keyword ref-nm vutils/ref-suffix-list))
+        parent-subscr          (vutils/ref->parent-data-sub ref) #_ (if ref-ns
+                                                                      (keyword ref-ns (str ref-nm "-" vutils/ref-suffix))
+                                                                      (keyword ref-nm vutils/ref-suffix))]
     (cond
       ;; Id members are either the current entity's `:id` or `:creation-id` fields
       ;; or they should be 'foreign keys' with a `:ref` pointing to another entity
@@ -118,7 +116,7 @@
            (not id-member?))
       , (merge
          (cond-> {:type              :select
-                  :data-subscription [data-subscr]}
+                  :data-subscription data-subscr}
            (= tuple-id-type keyword?) (assoc :enum-titles enum-titles))
          field-def)
 
@@ -126,7 +124,7 @@
            id-member?)
       , (medley/deep-merge field-def
                            {:type              :indent-group
-                            :data-subscription [data-subscr]
+                            :data-subscription data-subscr
                             :indent-group
                             {:parent-subscription parent-subscr}})
 

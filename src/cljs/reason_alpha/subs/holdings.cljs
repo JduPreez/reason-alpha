@@ -41,7 +41,6 @@
  (fn [{{:keys [enum/titles]} :properties
        mbrs                  :members
        :as                   _currencies} _]
-   (cljs.pprint/pprint {:holding/currency-ref-list _currencies})
    (for [m    mbrs
          :let [t (get titles m)]]
      {:id m :label t})))

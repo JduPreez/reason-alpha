@@ -18,7 +18,28 @@
 
 (def ^:const holdings [:data :holding])
 
-(def ^:const account-profile [:data :account-profile])
+(def ^:const accounts [:data :account])
+
+(defn- view-data
+  ([view field]
+   [:view-data view field])
+  ([view]
+   [:view-data view]))
+
+(defn update-view-data
+  [db view field value]
+  (assoc-in db (view-data view field) value))
+
+(defn get-view-data
+  ([db view field]
+   (get-in db (view-data view field)))
+  ([db view]
+   (get-in db (view-data view))))
+
+(defn init-view-data
+  [db view entity]
+  (let [current-ent (get-view-data db view)]
+    (assoc-in db (view-data view) (merge current-ent entity))))
 
 (defn model [model-k]
   (conj models model-k))
