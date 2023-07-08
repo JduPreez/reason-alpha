@@ -1,5 +1,7 @@
 (ns reason-alpha.services.account-service
-  (:require [medley.core :as medley]))
+  (:require [medley.core :as medley]
+            [reason-alpha.model.utils :as mutils]
+            [reason-alpha.utils :as utils]))
 
 (defn get-account [fn-get-ctx fn-repo-get-acc-by-uid]
   (let [{{:keys [account/user-id]} :user-account} (fn-get-ctx)]
@@ -15,10 +17,34 @@
        [:account.query/get1-result {:result acc
                                     :type   :success}]))))
 
-(defn save!
+(defn save-any!
   [fn-repo-get-acc-by-uid fn-repo-save! {:keys [account/user-id] :as acc}]
   (let [existing-acc (fn-repo-get-acc-by-uid user-id)
         updated-acc  (if existing-acc
-                       (medley/deep-merge existing-acc acc)
+                       (let [creation-id-k (mutils/creation-id-key :account acc)
+                             existing-acc  (->> (utils/new-uuid)
+                                                (get existing-acc creation-id-k)
+                                                (assoc existing-acc creation-id-k))]
+                         (medley/deep-merge existing-acc acc))
                        acc)]
+    (fn-repo-save! updated-acc)))
+
+(defn save!
+  [fn-get-acc fn-repo-save! {:keys [account/user-id] :as acc}]
+  ;; A user can only update their own profile and subscriptions
+  (let [a                           (select-keys
+                                     acc
+                                     [:accout/profile :account/subscriptions
+                                      :account/currency])
+        {existing-uid :account/user-id
+         :as          existing-acc} (fn-get-acc)
+        _                           (clojure.pprint/pprint {:*********-ACCOUNT-SAVE! {:A acc
+                                                                                      :E existing-acc}})
+        _                           (when (not= existing-uid user-id)
+                                      (throw (ex-info "Unexpected user"
+                                                      {:user-id      user-id
+                                                       :existing-uid existing-uid})))
+        updated-acc                 (if existing-acc
+                                      (medley/deep-merge existing-acc a)
+                                      a)]
     (fn-repo-save! updated-acc)))

@@ -60,6 +60,8 @@
    (data/save-remote! {:command :holding.command/save-holding!
                        :data    ent})))
 
+;; TODO: Shouldn't it check for `{:keys [holding-creation-id]}`??
+;; |> This also applies to `events.trade-patterns`
 (rf/reg-event-fx
  :holding/create
  (fn [{:keys [db]} [_ {:keys [creation-id] :as new-ent}]]

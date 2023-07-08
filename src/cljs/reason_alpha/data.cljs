@@ -1,6 +1,8 @@
 (ns reason-alpha.data
   (:require [reason-alpha.model.utils :as model.utils]
-            [reason-alpha.web.api-client :as api-client]))
+            [reason-alpha.web.api-client :as api-client]
+            [reason-alpha.model.utils :as mutils]
+            [reason-alpha.utils :as utils]))
 
 (def ^:const selected [:selected])
 
@@ -37,9 +39,21 @@
    (get-in db (view-data view))))
 
 (defn init-view-data
-  [db view entity]
-  (let [current-ent (get-view-data db view)]
-    (assoc-in db (view-data view) (merge current-ent entity))))
+  [db view model-type entity]
+  (let [e             (-> db
+                          (get-view-data view)
+                          (merge entity))
+        creation-id-k (mutils/creation-id-key-by-type model-type)
+        e             (->> (utils/new-uuid)
+                           (get e creation-id-k)
+                           (assoc e creation-id-k))]
+    (assoc-in db (view-data view) e)))
+
+(defn save-view-data
+  [db view save-event-fx]
+  (let [e (get-view-data db view)]
+    {:db       db
+     :dispatch [save-event-fx e]}))
 
 (defn model [model-k]
   (conj models model-k))

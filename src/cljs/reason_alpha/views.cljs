@@ -11,21 +11,12 @@
             [reitit.core :as r]
             [reitit.frontend :as rfe]
             [reitit.frontend.controllers :as rfc]
-            [reitit.frontend.easy :as rfeasy]
+            [reitit.frontend.easy :as rfe-easy]
             [schema.core :as s]))
 
 ;;; Routes ;;;
 
 (declare router)
-
-(defn href
-  "Return relative url for given route. Url can be used in HTML links."
-  ([k]
-   (href k nil nil))
-  ([k params]
-   (href k params nil))
-  ([k params query]
-   (rfeasy/href k params query)))
 
 (def routes
   ["/"
@@ -63,7 +54,17 @@
 
 (comment
   (r/match-by-path router "/forms/account-profile")
+  
+  (-> (r/match-by-name router ::accounts/form-view)
+      r/match->path)
   (r/routes router)
+
+  (let [url (-> js/window .-location js/URL.)]
+    (-> url .-hash .toString)
+    #_(-> url .-searchParams (.set "form" "account-profile"))
+    #_(-> url .toString))
+
+  (rfe-easy/href ::holdings/view nil {:form "account-profile"})
 
   (let [{{frm-name  :name
           frm-model :model} :data} nil]
@@ -73,7 +74,7 @@
 
 (defn init-routes! []
   (js/console.log "initializing routes")
-  (rfeasy/start!
+  (rfe-easy/start!
    router
    on-navigate
    {:use-fragment true}))

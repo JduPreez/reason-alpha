@@ -33,6 +33,8 @@
   :model/account-dto
   [:map
    [:account-id {:command-path [:account/id]} uuid?]
+   [:account-creation-id {:command-path [:account/creation-id]}
+    uuid?]
    [:user-id {:command-path [:account/user-id]} string?]
    [:user-name {:title        "User Name"
                 :command-path [:account/user-name]

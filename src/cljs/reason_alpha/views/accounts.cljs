@@ -16,17 +16,13 @@
             (.popover #js {:html true})))
     :reagent-render
     , (fn []
-        (let [*name         (rf/subscribe [:view-data ::account-edit :name])
-              *email        (rf/subscribe [:view-data ::account-edit :email])
-              *eod-token    (rf/subscribe [:view-data ::account-edit :eod-historical-data-api-token])
-              *acc-currency (rf/subscribe [:view-data ::account-edit :account-currency])
-              #_#_*account  (reagent/atom @*account-sub)
+        (let [*name         (rf/subscribe [:view.data ::account-edit :name])
+              *email        (rf/subscribe [:view.data ::account-edit :email])
+              *eod-token    (rf/subscribe [:view.data ::account-edit :eod-historical-data-api-token])
+              *acc-currency (rf/subscribe [:view.data ::account-edit :account-currency])
               *acc-schema   (rf/subscribe [:model :model/account-dto])
-              *schema       (rf/subscribe [:model/members-of :model/account-dto :account-currency])
-              #_#_*curs     (rf/subscribe [:financial-instrument/currencies])
-              #_#_curs      (->> @*curs
-                                 seq
-                                 (cons [:default "Select one"]))]
+              *schema       (rf/subscribe [:model/members-of :model/account-dto :account-currency])]
+          (cljs.pprint/pprint [:SELECTEDXXX @*acc-schema])
           [:div.card
            [:div.card-status.bg-primary.br-tr-3.br-tl-3]
            [:div.card-header
@@ -57,7 +53,7 @@
                  :model-type        :account
                  :member-nm         :account-currency
                  :data-subscription [:financial-instrument/currencies]
-                 :selected          :update-view-data]]
+                 :selected          :view.data/update]]
                [:div.form-group
                 [:label.form-label "EOD Historical Data Subscription"]
                 [:div.row.gutters-sm
@@ -65,7 +61,7 @@
                   [:input.form-control {:type        "text"
                                         :placeholder "EOD Historical Data API Token"
                                         :value       @*eod-token
-                                        :on-change   #(rf/dispatch [:update-view-data
+                                        :on-change   #(rf/dispatch [:view.data/update
                                                                     ::account-edit
                                                                     :eod-historical-data-api-token
                                                                     (-> % .-target .-value)])}]]
@@ -81,7 +77,14 @@
             [:div.card-footer.text-right
              [:div.d-flex
               [:a.btn.btn-link {:href     "#"
-                                :on-click #(do (.preventDefault %))}
+                                :on-click #(do
+                                             (rf/dispatch [:close-active-form])
+                                             (.preventDefault %))}
                "Cancel"]
-              [:button.btn.btn-primary.ml-auto {:type "submit"}
+              [:button.btn.btn-primary.ml-auto {:type     "button"
+                                                :on-click #(do
+                                                             (.preventDefault %)
+                                                             (rf/dispatch [:view.data/save
+                                                                           ::account-edit
+                                                                           :account/save]))}
                "Save"]]]]]))}))

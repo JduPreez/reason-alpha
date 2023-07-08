@@ -2,7 +2,6 @@
   (:require [day8.re-frame.tracing :refer-macros [fn-traced defn-traced]]
             [re-frame.core :as rf]
             [reason-alpha.data :as data]
-            [reason-alpha.data :as data]
             [reason-alpha.model.utils :as model.utils]
             [reason-alpha.utils :as utils]
             [reason-alpha.web.api-client :as api-client]
@@ -18,6 +17,17 @@
      {:current-route nil})))
 
 (rf/reg-event-fx
+ :close-active-form
+ (fn [{:keys [db]} [_]]
+   (let [{{:keys [name]} :sheet-view
+          :as            vm} (-> db
+                                 (get-in data/active-view-model)
+                                 (select-keys [:sheet-view]))
+         db                  (assoc-in db data/active-view-model vm)]
+     {:db       db
+      :dispatch [:push-state name]})))
+
+(rf/reg-event-fx
  :navigated
  (fn [{:keys [db]} [_ {{:keys [form]} :query-params
                        {:keys [name model
@@ -31,6 +41,7 @@
            frm-view       :view
            frm-load-event :load-event} :data} (when form
                                                 (r/match-by-path router (str "/forms/" form)))
+         ;; TODO: Check if new-match and old-match is the same, if so don't do anything???
          old-match                            (:current-route db)
          controllers                          (rfe-ctrls/apply-controllers (:controllers old-match)
                                                                            new-match)
@@ -64,6 +75,11 @@
  :push-state
  (fn [_ [_ & route]]
    {:push-state! route}))
+
+(rf/reg-event-fx
+ :push-state/form->active-view
+ (fn [{:keys [db]} [_ form]]
+   0))
 
 (defn entity-event-or-fx-key [db action]
   (let [{:keys [model]} (get-in db data/active-view-model)]
@@ -130,3 +146,19 @@
                                   [:datagrid/start-edit view creation-id %])
                                entities)]
      {:dispatch-n edit-evts})))
+
+(rf/reg-event-db
+ :view.data/update
+ (fn [db [_ view field value]]
+   (data/update-view-data db view field value)))
+
+(rf/reg-event-db
+ :view.data/init
+ (fn [db [_ view model-type entity]]
+   (cljs.pprint/pprint {:VIEW.DATA/INIT [view model-type entity]})
+   (data/init-view-data db view model-type entity)))
+
+(rf/reg-event-fx
+ :view.data/save
+ (fn [{:keys [db]} [_ view save-event-fx]]
+   (data/save-view-data db view save-event-fx)))

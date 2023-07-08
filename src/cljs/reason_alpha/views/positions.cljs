@@ -14,7 +14,6 @@
    :default-values    {}})
 
 (defn view [& x]
-  (cljs.pprint/pprint {::view x})
   (let [*schema    (rf/subscribe [:model :model/position-dto])
         *ls-titles (rf/subscribe [:position/long-short-titles])
         fields     (datagrid/model->fields

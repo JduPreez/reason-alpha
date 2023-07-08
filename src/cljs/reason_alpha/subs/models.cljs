@@ -12,7 +12,6 @@
  :model
  :<- [:model/list]
  (fn [models [_ model-k]]
-   (println [::model model-k])
    (get models model-k)))
 
 (rf/reg-sub

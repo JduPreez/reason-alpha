@@ -19,3 +19,8 @@
  :current-route
  (fn [db]
    (:current-route db)))
+
+(rf/reg-sub
+ :view.data
+ (fn [db [_ view field]]
+   (data/get-view-data db view field)))

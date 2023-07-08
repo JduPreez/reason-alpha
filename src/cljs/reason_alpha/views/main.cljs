@@ -16,7 +16,7 @@
       [:div.dropdown-menu ;;.dropdown-menu-right.dropdown-menu-arrow
        [:a.dropdown-item {:href     "#"
                           :on-click #(do (.preventDefault %)
-                                         (rf/dispatch [:account]))}
+                                         (rf/dispatch [:push-state :reason-alpha.views.holdings/view nil {:form "account-profile"}]))}
         [:i.dropdown-icon.mdi.mdi-account-outline] " Account Profile"]
        [:a.dropdown-item {:href "#"}
         [:i.dropdown-icon.mdi.mdi-settings] " Settings"]

@@ -29,35 +29,39 @@
     [id label]))
 
 (defn select-dropdown
-  [*ent & {:keys [schema model-type member-nm]}]
-  (let [{m-v-type :member-val-type} (mutils/model-member-schema-info schema member-nm)
-        *selected-val               (reagent/atom (->> member-nm
-                                                       (get @*ent)
-                                                       first
-                                                       (val->choice-id m-v-type)))]
-    (fn [*ent & {:keys [schema model-type member-nm selected view]}]
-      (let [id                          (->> schema
-                                             (mutils/id-key model-type)
-                                             (get @*ent))
+  [_ & {:keys [schema member-nm] :as x}]
+  (let [*choices (reagent/atom [])
+        *s-val   (reagent/atom nil)]
+    (fn [*selected-val & {:keys [schema model-type member-nm selected view]}]
+      (let [{mv-type :member-val-type}  (mutils/model-member-schema-info schema member-nm)
+            _                           (when (not= @*selected-val @*s-val)
+                                          (->> @*selected-val
+                                               first
+                                               (val->choice-id mv-type)
+                                               (reset! *s-val)))
             {{r :ref} :properties
-             m-v-type :member-val-type} (mutils/model-member-schema-info schema member-nm)
+             mv-type  :member-val-type} (mutils/model-member-schema-info schema member-nm)
             data-subscription           (vutils/ref->data-sub r)
-
-            *choices (if data-subscription
-                       (rf/subscribe data-subscription)
-                       (reagent/atom []))
-            choices  (map #(update % :id
-                                   (partial val->choice-id m-v-type))
-                          @*choices)]
+            choices                     (if (seq @*choices)
+                                          @*choices
+                                          (do
+                                            (->> (if data-subscription
+                                                   @(rf/subscribe data-subscription)
+                                                   #_else [])
+                                                 (map #(update % :id
+                                                               (partial val->choice-id
+                                                                        mv-type)))
+                                                 (reset! *choices))
+                                            @*choices))]
         [dropdown/single-dropdown
          :src         (re-com/at)
          :choices     choices
-         :model       *selected-val
+         :model       *s-val
          :width       "100%"
          :max-height  "200px"
          :class       "form-control"
          :style       {:padding "0"}
          :filter-box? true
-         :on-change   #(let [v (choice-id->val m-v-type choices %)]
-                         (reset! *selected-val %)
+         :on-change   #(let [v (choice-id->val mv-type @*choices %)]
+                         (reset! *s-val %)
                          (rf/dispatch [selected view member-nm v]))]))))

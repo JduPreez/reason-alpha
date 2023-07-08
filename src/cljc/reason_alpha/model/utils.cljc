@@ -46,8 +46,8 @@
   (-id-key model-type "creation-id" m))
 
 (defn id-key
-  [model-type s]
-  (-id-key model-type "id" s))
+  [model-type m]
+  (-id-key model-type "id" m))
 
 (defn id-member?
   [member-nm]

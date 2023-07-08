@@ -1,9 +1,11 @@
 (ns reason-alpha.events.accounts
   (:require [re-frame.core :as rf]
             [reason-alpha.data :as data]
+            [reason-alpha.model.mapping :as mapping]
+            [reason-alpha.model.utils :as mutils]
             [reason-alpha.utils :as utils]
-            [reason-alpha.web.api-client :as api-client]
-            [reason-alpha.views.accounts :as views.accounts]))
+            [reason-alpha.views.accounts :as views.accounts]
+            [reason-alpha.web.api-client :as api-client]))
 
 (rf/reg-event-fx
  :account/load
@@ -29,17 +31,26 @@
                                        :model-type :account
                                        :data       result})]
        {:db       db
-        :dispatch [:init-view-data
-                   ::views.accounts/account-edit acc]})
+        :dispatch [:view.data/init
+                   ::views.accounts/account-edit
+                   :account acc]})
      {:db db})))
 
-;; TODO: Move to generic ns
-(rf/reg-event-db
- :update-view-data
- (fn [db [_ view field value]]
-   (data/update-view-data db view field value)))
+(rf/reg-event-fx
+ :account/save
+ (fn [{:keys [db]} [evt acc]]
+   (let [qry-dto-model (get-in db (data/model :model/account-dto))
+         cmd-a         (mapping/query-dto->command-ent qry-dto-model acc)
+         db            (data/save-local! {:model-type :account
+                                          :data       acc
+                                          :db         db})]
+     {:db            db
+      :dispatch      [:close-active-form]
+      :account/save! cmd-a})))
 
-(rf/reg-event-db
- :init-view-data
- (fn [db [_ view entity]]
-   (data/init-view-data db view entity)))
+(rf/reg-fx
+ :account/save!
+ (fn [a]
+   (utils/log :account.command/save! a)
+   (data/save-remote! {:command :account.command/save!
+                       :data    a})))

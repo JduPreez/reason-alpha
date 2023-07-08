@@ -60,9 +60,12 @@
         fn-get-account         (partial account-svc/get-account
                                         common/get-context fn-repo-get-acc-by-uid)]
     {:account
-     {:commands {:save! (as-> db d
-                          (partial account-repo/save! d)
-                          (partial account-svc/save! fn-repo-get-acc-by-uid d))}
+     {:commands {:save-any! (as-> db d
+                              (partial account-repo/save! d)
+                              (partial account-svc/save-any! fn-repo-get-acc-by-uid d))
+                 :save!     (as-> db d
+                              (partial account-repo/save! d)
+                              (partial account-svc/save! fn-get-account d))}
       :queries  {:get1 (as-> db d
                          (partial account-repo/get1 d)
                          (partial account-svc/get1
@@ -163,7 +166,7 @@
   [_ {:keys [aggregates] :as conf}]
   (-> conf
       (assoc :account-svc {:fn-get-account   (get-in aggregates [:account :queries :get1])
-                           :fn-save-account! (get-in aggregates [:account :commands :save!])})
+                           :fn-save-account! (get-in aggregates [:account :commands :save-any!])})
       server/start!))
 
 (defmethod ig/halt-key! ::server [_ _]
@@ -182,12 +185,10 @@
   {::db              {:fn-authorize auth/authorize
                       :fn-get-ctx   common/get-context}
    ::account-svc     {:db (ig/ref ::db)}
-   ::aggregates      {:db              (ig/ref ::db)
-                      #_#_:account-svc (ig/ref ::account-svc)}
+   ::aggregates      {:db (ig/ref ::db)}
    ::handlers        {:aggregates (ig/ref ::aggregates)}
    ::broadcasters    {:aggregates (ig/ref ::aggregates)}
    ::server          {:handlers     (ig/ref ::handlers)
-                      #_#_:account-svc  (ig/ref ::account-svc)
                       :aggregates   (ig/ref ::aggregates)
                       :port         5000
                       :broadcasters (ig/ref ::broadcasters)}
