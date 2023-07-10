@@ -18,7 +18,7 @@
 (rf/reg-sub
  :current-route
  (fn [db]
-   (:current-route db)))
+   (get-in db data/current-route)))
 
 (rf/reg-sub
  :view.data

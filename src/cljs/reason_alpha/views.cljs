@@ -14,8 +14,6 @@
             [reitit.frontend.easy :as rfe-easy]
             [schema.core :as s]))
 
-;;; Routes ;;;
-
 (declare router)
 
 (def routes
@@ -82,9 +80,11 @@
 (defn router-component [{:keys [router]}]
   (let [{{sv :view} :sheet-view
          {fv :view} :form-view} @(rf/subscribe [:active-view-model])]
-    (cljs.pprint/pprint {::router-component fv})
     (when sv
-      [main/view :sheet-view sv :form-view fv])))
+      [main/view
+       :sheet-view sv
+       :form-view fv
+       :accounts-form-view ::accounts/form-view])))
 
 (defn init []
   (init-routes!)

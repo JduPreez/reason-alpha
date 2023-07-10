@@ -4,6 +4,8 @@
             [reason-alpha.model.utils :as mutils]
             [reason-alpha.utils :as utils]))
 
+(def ^:const router [:router])
+
 (def ^:const selected [:selected])
 
 (def ^:const active-view-model [:active-view-model])
@@ -21,6 +23,8 @@
 (def ^:const holdings [:data :holding])
 
 (def ^:const accounts [:data :account])
+
+(def ^:const current-route [:current-route])
 
 (defn- view-data
   ([view field]

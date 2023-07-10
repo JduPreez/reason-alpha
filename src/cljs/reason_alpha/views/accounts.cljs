@@ -22,7 +22,6 @@
               *acc-currency (rf/subscribe [:view.data ::account-edit :account-currency])
               *acc-schema   (rf/subscribe [:model :model/account-dto])
               *schema       (rf/subscribe [:model/members-of :model/account-dto :account-currency])]
-          (cljs.pprint/pprint [:SELECTEDXXX @*acc-schema])
           [:div.card
            [:div.card-status.bg-primary.br-tr-3.br-tl-3]
            [:div.card-header

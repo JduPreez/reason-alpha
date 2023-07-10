@@ -2,7 +2,8 @@
   (:require [re-frame.core :as rf]
             [reason-alpha.views.alerts :as alerts]))
 
-(defn view [& {:keys [sheet-view form-view]}]
+(defn view
+  [& {:keys [sheet-view form-view accounts-form-view]}]
   [:div.page-main
    [:div#headerMenuCollapse.ren-navbar>div.container
     [:ul.nav
@@ -13,10 +14,11 @@
        [:i.fas.fa-cog {:style {:height       "18px"
                                :margin-right "0"}}]
        [:span " "]]
-      [:div.dropdown-menu ;;.dropdown-menu-right.dropdown-menu-arrow
+      [:div.dropdown-menu
        [:a.dropdown-item {:href     "#"
                           :on-click #(do (.preventDefault %)
-                                         (rf/dispatch [:push-state :reason-alpha.views.holdings/view nil {:form "account-profile"}]))}
+                                         (when accounts-form-view
+                                           (rf/dispatch [:push-state/active-form accounts-form-view])))}
         [:i.dropdown-icon.mdi.mdi-account-outline] " Account Profile"]
        [:a.dropdown-item {:href "#"}
         [:i.dropdown-icon.mdi.mdi-settings] " Settings"]

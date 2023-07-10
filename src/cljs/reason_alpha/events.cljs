@@ -4,17 +4,29 @@
             [reason-alpha.data :as data]
             [reason-alpha.model.utils :as model.utils]
             [reason-alpha.utils :as utils]
+            ;; TODO: Maybe improve this? Not sure I like that the `events`
+            ;; ns references `views` directly ...
+            [reason-alpha.views :as views]
             [reason-alpha.web.api-client :as api-client]
             [reitit.core :as r]
             [reitit.frontend.controllers :as rfe-ctrls]
-            [reitit.frontend.easy :as rfe-easy]))
+            [reitit.frontend.easy :as rfe-easy]
+            [clojure.string :as str]))
+
+(rf/reg-event-fx
+ :initialize-db
+ (fn [{:keys [db]} _]
+   (if db
+     {:db       db
+      :dispatch [:init-router]}
+     {:db       {:current-route nil}
+      :dispatch [:init-router]})))
 
 (rf/reg-event-db
- :initialize-db
- (fn [db _]
-   (if db
-     db
-     {:current-route nil})))
+ :init-router
+ (fn [db [_]]
+   (cljs.pprint/pprint {:>>>INIT-ROUTER views/router})
+   (assoc-in db data/router views/router)))
 
 (rf/reg-event-fx
  :close-active-form
@@ -77,9 +89,15 @@
    {:push-state! route}))
 
 (rf/reg-event-fx
- :push-state/form->active-view
+ :push-state/active-form
  (fn [{:keys [db]} [_ form]]
-   0))
+   (let [{{r :name} :data} (get-in db data/current-route)
+         router            (get-in db data/router)
+         f                 (-> router
+                               (r/match-by-name form)
+                               r/match->path
+                               (str/replace #"/forms/" ""))]
+     {:dispatch [:push-state r nil {:form f}]})))
 
 (defn entity-event-or-fx-key [db action]
   (let [{:keys [model]} (get-in db data/active-view-model)]
