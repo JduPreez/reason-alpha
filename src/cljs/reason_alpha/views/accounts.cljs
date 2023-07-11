@@ -88,11 +88,4 @@
                                              (rf/dispatch [:close-active-form])
                                              (.preventDefault %))}
                "Cancel"]
-              [components/save-btn ::account-edit :account/save]
-              #_[:button.btn.btn-primary.ml-auto {:type     "button"
-                                                  :on-click #(do
-                                                               (.preventDefault %)
-                                                               (rf/dispatch [:view.data/save
-                                                                             ::account-edit
-                                                                             :account/save]))}
-                 "Save"]]]]]))}))
+              [components/save-btn ::account-edit :model/account-dto :account/save]]]]]))}))

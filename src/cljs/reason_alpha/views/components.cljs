@@ -81,7 +81,7 @@
   (let [*valid? (rf/subscribe [:view.data/valid? model-type view])]
     (fn [view _ save-event]
       [:button.btn.btn-primary.ml-auto {:type     "button"
-                                        :disabled (true? @*valid?)
+                                        :disabled (false? @*valid?)
                                         :on-click #(do
                                                      (.preventDefault %)
                                                      (rf/dispatch [:view.data/save
