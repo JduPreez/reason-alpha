@@ -3,10 +3,12 @@
             [clojure.set :as s]
             [clojure.zip :as z]
             [malli.core :as m]
+            [malli.util :as mu]
             [pact.core :refer [then error]]
             [reason-alpha.data-structures :as data-structs]
             [reason-alpha.model.accounts :as accounts]
             [reason-alpha.model.core :as model :refer [def-model]]
+            [reason-alpha.model.fin-instruments :as fin-instruments]
             [taoensso.timbre :as timbre :refer (warnf errorf debug)]))
 
 (def ^:dynamic *context* {})
@@ -21,7 +23,8 @@
    [:type [:enum :error :success :warn :info :failed-validation]]
    [:title {:optional true} string?]
    [:error {:optional true} any?]
-   [:description {:optional true} string?]
+   [:description {:optional true}
+    [:or string? [:sequential string?]]]
    [:nr-items {:optional true} int?]])
 
 (def-model getContext
@@ -30,7 +33,11 @@
        [:map
         [:send-message :any]
         [:*connected-users :any]
-        [:user-account accounts/Account]]])
+        [:user-account (mu/union
+                        accounts/Account
+                        [:map
+                         [:account/currency {:optional true}
+                          fin-instruments/Currency]])]]])
 
 (m/=> get-context getContext)
 

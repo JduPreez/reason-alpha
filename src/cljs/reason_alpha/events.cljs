@@ -25,7 +25,6 @@
 (rf/reg-event-db
  :init-router
  (fn [db [_]]
-   (cljs.pprint/pprint {:>>>INIT-ROUTER views/router})
    (assoc-in db data/router views/router)))
 
 (rf/reg-event-fx
@@ -173,7 +172,6 @@
 (rf/reg-event-db
  :view.data/init
  (fn [db [_ view model-type entity]]
-   (cljs.pprint/pprint {:VIEW.DATA/INIT [view model-type entity]})
    (data/init-view-data db view model-type entity)))
 
 (rf/reg-event-fx

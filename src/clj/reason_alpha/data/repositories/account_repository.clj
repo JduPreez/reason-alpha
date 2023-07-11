@@ -12,6 +12,7 @@
             accounts/Account])
 
 (defn save! [db account]
+  (clojure.pprint/pprint {::$$$-SA account})
   (let [acc (if (contains? account :account/creation-id)
               account
               (assoc account :account/creation-id (utils/new-uuid)))]

@@ -3,13 +3,15 @@
             [buddy.sign.jwt :as jwt]
             [clojure.data.codec.base64 :as b64]
             [clojure.java.io :as io]
+            [clojure.set :as set]
             [clojure.string :as str]
             [malli.core :as m]
+            [malli.util :as mu]
             [outpace.config :refer [defconfig]]
             [reason-alpha.model.accounts :as accounts]
             [reason-alpha.model.common :as common]
-            [reason-alpha.model.utils :as mutils]
-            [clojure.set :as set]))
+            [reason-alpha.model.fin-instruments :as fin-instruments]
+            [reason-alpha.model.utils :as mutils]))
 
 (defconfig tenant-id)
 
@@ -34,7 +36,11 @@
 
 (m/=> account
       [:=> [:cat :any]
-       accounts/Account])
+       (mu/union
+        accounts/Account
+        [:map
+         [:account/currency {:optional true}
+          fin-instruments/Currency]])])
 
 ;; TODO: This must be cached
 (defn account [request]

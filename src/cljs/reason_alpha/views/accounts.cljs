@@ -16,10 +16,14 @@
             (.popover #js {:html true})))
     :reagent-render
     , (fn []
-        (let [*name         (rf/subscribe [:view.data ::account-edit :name])
-              *email        (rf/subscribe [:view.data ::account-edit :email])
-              *eod-token    (rf/subscribe [:view.data ::account-edit :eod-historical-data-api-token])
-              *acc-currency (rf/subscribe [:view.data ::account-edit :account-currency])
+        (let [*name         (rf/subscribe [:view.data/with-validation
+                                           :model/account-dto ::account-edit :name])
+              *email        (rf/subscribe [:view.data/with-validation
+                                           :model/account-dto ::account-edit :email])
+              *eod-token    (rf/subscribe [:view.data/with-validation
+                                           :model/account-dto ::account-edit :eod-historical-data-api-token])
+              *acc-currency (rf/subscribe [:view.data/with-validation
+                                           :model/account-dto ::account-edit :account-currency])
               *acc-schema   (rf/subscribe [:model :model/account-dto])
               *schema       (rf/subscribe [:model/members-of :model/account-dto :account-currency])]
           [:div.card
@@ -35,13 +39,13 @@
                 [:input.form-control {:type         "text"
                                       :disabled     true
                                       :defaultValue ""
-                                      :placeholder  @*name}]]
+                                      :placeholder  (:result @*name)}]]
                [:div.form-group
                 [:label.form-label "E-mail"]
                 [:input.form-control {:type         "text"
                                       :disabled     true
                                       :defaultValue ""
-                                      :placeholder  @*email}]]]
+                                      :placeholder  (:result @*email)}]]]
               [:div.col-md-6.col-lg-6
                [:div.form-group
                 [:label.form-label "Main Currency"]
@@ -52,18 +56,22 @@
                  :model-type        :account
                  :member-nm         :account-currency
                  :data-subscription [:financial-instrument/currencies]
-                 :selected          :view.data/update]]
+                 :selected          :view.data/update]
+                (components/invalid-feedback *acc-currency)]
                [:div.form-group
                 [:label.form-label "EOD Historical Data Subscription"]
                 [:div.row.gutters-sm
                  [:div.col
                   [:input.form-control {:type        "text"
                                         :placeholder "EOD Historical Data API Token"
-                                        :value       @*eod-token
+                                        :value       (:result @*eod-token)
+                                        :class       (when (= :failed-validation (:type @*eod-token))
+                                                       "is-invalid")
                                         :on-change   #(rf/dispatch [:view.data/update
                                                                     ::account-edit
                                                                     :eod-historical-data-api-token
-                                                                    (-> % .-target .-value)])}]]
+                                                                    (-> % .-target .-value)])}]
+                  (components/invalid-feedback *eod-token)]
                  [:span.col-auto.align-self-center
                   [:span.form-help.bg-primary.text-white
                    {:id                  "eod-token-help"
@@ -80,10 +88,11 @@
                                              (rf/dispatch [:close-active-form])
                                              (.preventDefault %))}
                "Cancel"]
-              [:button.btn.btn-primary.ml-auto {:type     "button"
-                                                :on-click #(do
-                                                             (.preventDefault %)
-                                                             (rf/dispatch [:view.data/save
-                                                                           ::account-edit
-                                                                           :account/save]))}
-               "Save"]]]]]))}))
+              [components/save-btn ::account-edit :account/save]
+              #_[:button.btn.btn-primary.ml-auto {:type     "button"
+                                                  :on-click #(do
+                                                               (.preventDefault %)
+                                                               (rf/dispatch [:view.data/save
+                                                                             ::account-edit
+                                                                             :account/save]))}
+                 "Save"]]]]]))}))

@@ -1675,6 +1675,9 @@ select.form-control-lg:not([size]):not([multiple]), .input-group-lg>select.form-
 	font-size: 87.5%;
 	color: #f5365c;
 }
+.invalid-feedback span {
+	margin-right: 0.25rem;	
+}
 .invalid-tooltip {
 	position: absolute;
 	top: 100%;

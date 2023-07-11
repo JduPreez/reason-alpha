@@ -26,7 +26,11 @@
                                                 (get existing-acc creation-id-k)
                                                 (assoc existing-acc creation-id-k))]
                          (medley/deep-merge existing-acc acc))
-                       acc)]
+                       acc)
+        updated-acc  (if-let [c (:account/currency updated-acc)]
+                       updated-acc
+                       (assoc updated-acc :account/currency :USD))]
+    (clojure.pprint/pprint {::***SAVE-ANY! updated-acc})
     (fn-repo-save! updated-acc)))
 
 (defn save!
@@ -38,8 +42,6 @@
                                       :account/currency])
         {existing-uid :account/user-id
          :as          existing-acc} (fn-get-acc)
-        _                           (clojure.pprint/pprint {:*********-ACCOUNT-SAVE! {:A acc
-                                                                                      :E existing-acc}})
         _                           (when (not= existing-uid user-id)
                                       (throw (ex-info "Unexpected user"
                                                       {:user-id      user-id

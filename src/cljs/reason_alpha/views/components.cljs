@@ -36,6 +36,7 @@
       (let [{mv-type :member-val-type}  (mutils/model-member-schema-info schema member-nm)
             _                           (when (not= @*selected-val @*s-val)
                                           (->> @*selected-val
+                                               :result
                                                first
                                                (val->choice-id mv-type)
                                                (reset! *s-val)))
@@ -59,9 +60,31 @@
          :model       *s-val
          :width       "100%"
          :max-height  "200px"
-         :class       "form-control"
+         :class       (cond-> "form-control"
+                        (= :failed-validation (:type @*selected-val))
+                        , (str " is-invalid"))
          :style       {:padding "0"}
          :filter-box? true
          :on-change   #(let [v (choice-id->val mv-type @*choices %)]
                          (reset! *s-val %)
                          (rf/dispatch [selected view member-nm v]))]))))
+
+(defn invalid-feedback
+  [*val]
+  [:div.invalid-feedback
+   [:<>
+    (for [d (:description @*val)]
+      [:span d])]])
+
+(defn save-btn
+  [view model-type _]
+  (let [*valid? (rf/subscribe [:view.data/valid? model-type view])]
+    (fn [view _ save-event]
+      [:button.btn.btn-primary.ml-auto {:type     "button"
+                                        :disabled (true? @*valid?)
+                                        :on-click #(do
+                                                     (.preventDefault %)
+                                                     (rf/dispatch [:view.data/save
+                                                                   view
+                                                                   save-event]))}
+       "Save"])))
