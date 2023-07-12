@@ -74,17 +74,18 @@
   [:div.invalid-feedback
    [:<>
     (for [d (:description @*val)]
+      ^{:key (js/encodeURI "invalid-feedback-component" d)}
       [:span d])]])
 
 (defn save-btn
   [view model-type _]
   (let [*valid? (rf/subscribe [:view.data/valid? model-type view])]
-    (fn [view _ save-event]
+    (fn [view _ save-dispatch]
       [:button.btn.btn-primary.ml-auto {:type     "button"
                                         :disabled (false? @*valid?)
                                         :on-click #(do
                                                      (.preventDefault %)
                                                      (rf/dispatch [:view.data/save
                                                                    view
-                                                                   save-event]))}
+                                                                   save-dispatch]))}
        "Save"])))

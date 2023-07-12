@@ -48,4 +48,4 @@
     (rf/subscribe [:view.data view])])
  (fn [[schema view-data] [_ _ _]]
    (when (and schema view-data)
-     (validation/validate schema view-data))))
+     (validation/valid? schema view-data))))

@@ -154,12 +154,13 @@
     number?]
    [:stop-loss {:title    "Stop Loss"
                 :optional true}
-    float?]
+    number?]
    ;; Stop Loss Main Currency
    [:stop-loss-percent {:optional true
                         :title    "Stop Loss % of Allocation"
                         :compute  {:function "TPERCENT(stop-loss/(quantity * open-price))"
-                                   :use      [:stop-loss :quantity :open-price]}} float?]
+                                   :use      [:stop-loss :quantity :open-price]}}
+    string?]
    ;; 1st Deviation
    ;; 1st Deviation Amount Open
    ;; 1st Deviation Amount Close

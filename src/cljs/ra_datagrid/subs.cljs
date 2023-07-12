@@ -262,6 +262,21 @@
    (get-in db [:datagrid/data id :edit-rows pk])))
 
 (rf/reg-sub
+ :datagrid/edited-record-by-pk-with-validation
+ (fn [[_ id pk]]
+   (cljs.pprint/pprint {:>>>-1-ID id
+                        :>>>-1-PK pk})
+   [(rf/subscribe [:datagrid/edited-record-by-pk id pk])
+    (rf/subscribe [:datagrid/options id])])
+ (fn [[r {:keys [validator]}] [_ _ _]]
+   (let [vres (when validator
+                (validator r))]
+     (cljs.pprint/pprint {:>>>-2-R  r
+                          :>>>-2-VR vres})
+     (cond-> {:result r}
+       vres (assoc :validation vres)))))
+
+(rf/reg-sub
  :datagrid/selected-record-pks-internal
  (fn [db [_ id]]
    (get-in db [:datagrid/data id :selected-records])))

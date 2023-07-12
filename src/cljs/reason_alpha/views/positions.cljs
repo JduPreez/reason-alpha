@@ -2,16 +2,18 @@
   (:require [re-frame.core :as rf]
             [reason-alpha.views.datagrid :as datagrid]
             [reason-alpha.views.holdings :as views.holdings]
-            [reason-alpha.views.trade-patterns :as views.trade-patterns]))
+            [reason-alpha.views.trade-patterns :as views.trade-patterns]
+            [reason-alpha.model.validation :as validation]))
 
-(def options
+(defn options
+  [schema]
   {:grid-id           ::view
    :title             "Positions"
    :data-subscription [:position/list]
    :id-field          :position-creation-id
    :create-dispatch   [:position/create]
    :update-dispatch   [:position/update]
-   :default-values    {}})
+   :validator         (partial validation/validate schema)})
 
 (defn view [& x]
   (let [*schema    (rf/subscribe [:model :model/position-dto])
@@ -33,5 +35,4 @@
                       :holding-position-id
                       {:indent-group {:group-path        [:position-id]
                                       :display-name-path [:holding 1]}}}})]
-
-    [datagrid/view fields options]))
+    [datagrid/view fields (options @*schema)]))

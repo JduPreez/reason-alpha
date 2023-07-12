@@ -86,7 +86,8 @@
    (s/optional-key :update-dispatch)             s/Any
    (s/optional-key :delete-dispatch)             s/Any
    (s/optional-key :additional-css-class-names)  s/Str ; additional css-class-names to be applied to the <table> tag.
-   (s/optional-key :group-by)                    s/Any})
+   (s/optional-key :group-by)                    s/Any
+   (s/optional-key :validator)                   s/Any})
 
 (def GridField
   "A schema for grid field configuration"
@@ -97,7 +98,6 @@
    ;;the first validator to fail will return
    (s/optional-key :on-click)                     s/Any
    (s/optional-key :footer-cell)                  s/Any
-   (s/optional-key :validators)                   s/Any
    (s/optional-key :align)                        s/Any
    (s/optional-key :custom-element-renderer)      s/Any
    (s/optional-key :custom-element-edit-renderer) s/Any

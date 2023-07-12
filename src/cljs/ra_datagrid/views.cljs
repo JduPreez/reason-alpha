@@ -247,30 +247,43 @@
          (when-not (:hide-heading @options)
            [:tr
             (if (:can-create @options)
-              (concat cells [ ^{:key "cmds"}
-                             [:th.commands
-                              [create-button id]]])
+              (concat [ ^{:key "cmds"}
+                       [:th.commands
+                        [create-button id]]] cells)
               cells)])]))))
 
 (defmulti edit-cell
   (fn [_ {t :type} _]
     (or t :string)))
 
+(defn invalid-feedback
+  [feedback]
+  [:div.invalid-tooltip
+   [:<>
+    (for [f feedback]
+      ^{:key (js/encodeURI "edit-cell-validation" f)}
+      [:span f])]])
+
 (defmethod edit-cell :number
-  [id field pk]
-  (let [r (rf/subscribe [:datagrid/edited-record-by-pk id pk])]
-    (fn [id field pk]
-      (let [v (get @r (:name field))]
+  [grid-id field pk]
+  (let [*r (rf/subscribe [:datagrid/edited-record-by-pk-with-validation grid-id pk])]
+    (fn [grid-id field pk]
+      (let [field-nm   (:name field)
+            validation (-> @*r :validation (get field-nm))
+            v          (-> @*r :result (get field-nm))]
         [:td {:key       (:name field)
               :className "editing"}
-         [:div.fg-line
+         [:div
           [:input.form-control {:type      "number"
                                 :value     v
-                                :on-change #(rf/dispatch [:datagrid/update-edited-record id pk
+                                :class     (when (seq validation)
+                                             "is-invalid")
+                                :on-change #(rf/dispatch [:datagrid/update-edited-record grid-id pk
                                                           (:name field) (-> %
                                                                             .-target
                                                                             .-value
-                                                                            cljs.reader/read-string)])}]]]))))
+                                                                            cljs.reader/read-string)])}]
+          (invalid-feedback validation)]]))))
 
 (defmethod edit-cell :custom
   [id field pk]
@@ -304,7 +317,7 @@
     (fn [id field pk]
       (let [v (get @r (:name field))]
         [:td {:key       (:name field)
-              :className "editing"}
+              :className "editing data-cell"}
          (if (:formatter field)
            ((:formatter field) v @r)
            v)]))))
@@ -321,7 +334,7 @@
     (fn [id field pk]
       (let [v (get @r (:name field))]
         [:td {:key       (:name field)
-              :className "editing"}
+              :className "editing data-cell"}
          [:div.fg-line
           [:input.form-control {:type      "text"
                                 :value     v
@@ -351,7 +364,7 @@
                                         (concat [^{:key "checkbox__"}
                                                  [edit-cell id {:name (str "checkbox-" id)
                                                                 :type :empty-edit}]]))]
-        [:tr.editing {:key pk} (concat cells [save-button])]))))
+        [:tr.editing {:key pk} (concat [save-button] cells)]))))
 
 
 (defmulti table-cell
@@ -383,7 +396,7 @@
             formatted-value (or
                              (get record fmt-fieldname)
                              (get record fieldname))
-            align           (if (nil? (:align field)) :text-left (:align field))
+            align           (if (nil? (:align field)) "text-left" (:align field))
             formatted-value (if is-clickable?
                               [:a.table-link {:on-click
                                               (fn [e]
@@ -395,7 +408,7 @@
                               formatted-value)]
 
         [:td (cond-> {:key       fieldname
-                      :className align}
+                      :className (str align " data-cell")}
                indent? (assoc :style {:padding-left "30px"}))
          formatted-value]))))
 
@@ -484,7 +497,7 @@
                     (concat [^{:key "checkbox__"}
                              [cell-select-checkbox id record]]))]
         [:tr atts
-         (cond-> cells
+         (cond->> cells
            (or (:can-update @options) (:can-edit @options) (:can-delete @options))
            (concat [^{:key "commands"}
                     [command-td id @options record]]))]))))

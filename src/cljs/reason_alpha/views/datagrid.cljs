@@ -62,42 +62,26 @@
          opts     (or options @*options)]
       [:div.card
        [history-list grid-id title]
-       [:div.card-body {:style {:padding-top    0
-                                :padding-bottom 0}}
+       [:div.card-body.card-body-datagrid 
         [ra-datagrid/datagrid (merge default-opts opts) fields]]])))
 
 (defn model-member->field
   [[member-nm {:keys [type properties schema] :as s}] &
    [{:keys [enum-titles] :as field-opts}]]
-  (let [#_#_ref-suffix         "ref"
-        #_#_ref-suffix-list    (str ref-suffix "-list")
-        #_#_id-member          (-> member-nm
-                                   name
-                                   (str/ends-with? "-id"))
-        id-member?             (mutils/id-member? member-nm)
+  (let [id-member?             (mutils/id-member? member-nm)
         field-def              (cond-> field-opts
                                  (not (contains? field-opts :can-sort))
                                  , (assoc :can-sort true)
                                  :default
                                  , (dissoc field-opts :ref-suffix))
-        #_#_props-or-type      (first schema)
-        #_#_has-props?         (map? props-or-type)
         {:keys [title ref
                 command-path]} properties
         field-def              (merge field-def {:title title
                                                  :name  member-nm})
-        #_#_ref-nm             (when ref
-                                 (name ref))
-        #_#_ref-ns             (when ref
-                                 (namespace ref))
         tuple-id-type          (when (= type :tuple)
                                  (second schema))
-        data-subscr            (vutils/ref->data-sub ref)        #_ (if ref-ns
-                                                                      (keyword ref-ns (str ref-nm "-" vutils/ref-suffix-list))
-                                                                      (keyword ref-nm vutils/ref-suffix-list))
-        parent-subscr          (vutils/ref->parent-data-sub ref) #_ (if ref-ns
-                                                                      (keyword ref-ns (str ref-nm "-" vutils/ref-suffix))
-                                                                      (keyword ref-nm vutils/ref-suffix))]
+        data-subscr            (vutils/ref->data-sub ref)
+        parent-subscr          (vutils/ref->parent-data-sub ref)]
     (cond
       ;; Id members are either the current entity's `:id` or `:creation-id` fields
       ;; or they should be 'foreign keys' with a `:ref` pointing to another entity
