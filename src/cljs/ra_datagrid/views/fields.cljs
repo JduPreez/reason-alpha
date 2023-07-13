@@ -65,7 +65,7 @@
                                         :result
                                         (get (:name field))
                                         first
-                                        (val->choice-id ctype)))]
+                                        (as-> v (val->choice-id ctype v))))]
     (fn [grid-id field pk]
       (let [validation (-> @*r :validation (get (:name field)))
             ctype      (-> @*choices first :id choice-type)
@@ -74,9 +74,8 @@
                                c :id
                                #(val->choice-id ctype %)))
                             @*choices)]
-        (cljs.pprint/pprint {:>>>-EDIT-CELL-SELECT validation})
         [:td {:key       (:name field)
-              :className "editing"}
+              :className "editing data-cell"}
          [dropdown/single-dropdown
           :src         (re-com/at)
           :choices     choices

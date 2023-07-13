@@ -48,6 +48,7 @@
                            @(rf/subscribe [:datagrid/history grid-id]))
                       [])]
       [:div.card-header.bg-gradient-indigo.br-tr-3.br-tl-3
+       {:style {:padding "0.5rem 0.5rem"}}
        [:div.btn-list
         (for [hgrid-id history]
           (if (= hgrid-id grid-id)

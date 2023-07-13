@@ -24,8 +24,7 @@
                                            :model/account-dto ::account-edit :eod-historical-data-api-token])
               *acc-currency (rf/subscribe [:view.data/with-validation
                                            :model/account-dto ::account-edit :account-currency])
-              *acc-schema   (rf/subscribe [:model :model/account-dto])
-              *schema       (rf/subscribe [:model/members-of :model/account-dto :account-currency])]
+              *acc-schema   (rf/subscribe [:model :model/account-dto])]
           [:div.card
            [:div.card-status.bg-primary.br-tr-3.br-tl-3]
            [:div.card-header

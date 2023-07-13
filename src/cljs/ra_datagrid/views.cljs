@@ -67,20 +67,23 @@
      [:i.fas.fa-plus-square]]))
 
 (defn save-cell-button
-  [id pk]
-  [:td.commands {:key "SAVECELLBUTTON" :className "save"}
-   [:button.btn.btn-icon.btn-primary.btn-success
-    {:on-click #(rf/dispatch [:datagrid/save-edited-record id pk])}
-    [:i.fe.fe-check]]])
+  [grid-id pk]
+  (fn [grid-id pk]
+    (let [*valid? (rf/subscribe [:datagrid/edited-record-valid? grid-id pk])]
+      [:td.commands {:key       "SAVECELLBUTTON"
+                     :className "save"}
+       [:button.btn.btn-icon.btn-primary.btn-success
+        {:on-click #(rf/dispatch [:datagrid/save-edited-record grid-id pk])
+         :disabled (false? @*valid?)}
+        [:i.fe.fe-check-square]]])))
 
 (defn delete-cell-button
   [id record]
-  (let []
-    (fn [id record]
-      [:span {:key "DELETE" :className "delete"}
-       [:button.btn.btn-xs.btn-danger.waves-effect.waves-circle.waves-float
-        {:on-click #(rf/dispatch [:datagrid/delete-record-maybe id record])}
-        [:i.zmdi.zmdi-close]]])))
+  (fn [id record]
+    [:span {:key "DELETE" :className "delete"}
+     [:button.btn.btn-xs.btn-danger.waves-effect.waves-circle.waves-float
+      {:on-click #(rf/dispatch [:datagrid/delete-record-maybe id record])}
+      [:i.zmdi.zmdi-close]]]))
 
 (defn reorder-cell-button-up
   [callback]
@@ -272,7 +275,7 @@
             validation (-> @*r :validation (get field-nm))
             v          (-> @*r :result (get field-nm))]
         [:td {:key       (:name field)
-              :className "editing"}
+              :className "editing data-cell"}
          [:div
           [:input.form-control {:type      "number"
                                 :value     v
@@ -291,7 +294,7 @@
     (fn [id field pk]
       (let [v (get @r (:name field))]
         [:td {:key (:name field)
-              :className "editing"}
+              :className "editing data-cell"}
          ((:custom-element-edit-renderer field) field @r
           #(rf/dispatch [:datagrid/update-edited-record id pk (:name field) %]) v)]))))
 
@@ -307,9 +310,9 @@
            [:select.form-control
             {:value     (if v "true" "false")
              :on-change #(rf/dispatch [:datagrid/update-edited-record id pk
-                                      (:name field) (= "true" (.-target.value ^js %))])}
-            [:option {:value "true"}  "ja"]
-            [:option {:value "false"} "nee"]]]]]))))
+                                       (:name field) (= "true" (.-target.value ^js %))])}
+            [:option {:value "true"}  "Yes"]
+            [:option {:value "false"} "No"]]]]]))))
 
 (defmethod edit-cell :no-edit
   [id field pk]
@@ -350,19 +353,19 @@
 
 (defn edit-row
   "shows a row with inline editing elements"
-  [id pk]
-  (let [options (rf/subscribe [:datagrid/options id])
-        fields  (rf/subscribe [:datagrid/fields id])]
-    (fn [id pk]
+  [grid-id pk]
+  (let [options (rf/subscribe [:datagrid/options grid-id])
+        fields  (rf/subscribe [:datagrid/fields grid-id])]
+    (fn [grid-id pk]
       (let [{:keys [checkbox-select]} @options
-            save-button               ^{:key (or pk -1)} [save-cell-button id pk]
+            save-button               ^{:key (or pk -1)} [save-cell-button grid-id pk]
             cells                     (cond->> (doall
                                                 (map (fn [f]
                                                        ^{:key (:name f)}
-                                                       [edit-cell id f pk]) @fields))
+                                                       [edit-cell grid-id f pk]) @fields))
                                         checkbox-select
                                         (concat [^{:key "checkbox__"}
-                                                 [edit-cell id {:name (str "checkbox-" id)
+                                                 [edit-cell grid-id {:name (str "checkbox-" grid-id)
                                                                 :type :empty-edit}]]))]
         [:tr.editing {:key pk} (concat [save-button] cells)]))))
 

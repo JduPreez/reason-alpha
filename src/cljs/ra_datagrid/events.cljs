@@ -172,8 +172,6 @@
  (fn [db [_ id]]
    (update-in db [:datagrid/data  id :expanded?] not)))
 
-
-
 (rf/reg-event-fx
  :datagrid/start-edit
  (fn [{db :db} [_ id pk record]]
@@ -182,7 +180,6 @@
       {:db (assoc-in db [:datagrid/data id :edit-rows pk] record)}
       (when start-edit-dispatch
         {:dispatch (conj start-edit-dispatch record)})))))
-
 
 (rf/reg-event-fx
  :datagrid/reorder
@@ -241,3 +238,13 @@
      (cond->
          {:db (assoc-in db [:datagrid/data id :header-filter-values k] v)}
        extra-dispatch (assoc :dispatch extra-dispatch)))))
+
+(rf/reg-event-db
+ :datagrid/cancel-editing
+ (fn [db [_]]
+   (->> db
+        :datagrid/data
+        (map (fn [[gid d]]
+               [gid (dissoc d :edit-rows :creating?)]))
+        (into {})
+        (assoc db :datagrid/data))))

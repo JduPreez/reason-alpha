@@ -139,7 +139,8 @@
 
 (rf/reg-event-fx
  :cancel
- action-event)
+ (fn [{:keys [db]} _]
+   {:dispatch [:datagrid/cancel-editing]}))
 
 (rf/reg-event-fx
  :create

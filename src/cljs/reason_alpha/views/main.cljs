@@ -50,9 +50,11 @@
       [:a.nav-link {:href     "#"
                     :on-click #(do (.preventDefault %)
                                    (rf/dispatch [:delete!]))}
-       [:i.fas.fa-minus-square] [:span "DELETE"]]]
+       [:i.fe.fe-trash-2] [:span "DELETE"]]]
      [:li.nav-item
-      [:a.nav-link {:href "#"}
+      [:a.nav-link {:href     "#"
+                    :on-click #(do (.preventDefault %)
+                                   (rf/dispatch [:cancel]))}
        [:i.fas.fa-undo-alt] [:span "CANCEL"]]]]]
    [:div.container.full-height>div.hor-content.full-height
     [alerts/view]

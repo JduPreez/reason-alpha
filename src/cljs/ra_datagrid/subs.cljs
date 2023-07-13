@@ -248,10 +248,10 @@
 
 (rf/reg-sub
  :datagrid/editing-record?
- (fn [[_ id _] _]
-   [(rf/subscribe [:datagrid/options id])
-    (rf/subscribe [:datagrid/edit-rows id])])
- (fn [[options edit-rows] [_ id record]]
+ (fn [[_ grid-id _] _]
+   [(rf/subscribe [:datagrid/options grid-id])
+    (rf/subscribe [:datagrid/edit-rows grid-id])])
+ (fn [[options edit-rows] [_ grid-id record]]
    (let [pk     (:id-field options)
          rec-id (get record pk)]
      (get edit-rows rec-id))))
@@ -263,18 +263,22 @@
 
 (rf/reg-sub
  :datagrid/edited-record-by-pk-with-validation
- (fn [[_ id pk]]
-   (cljs.pprint/pprint {:>>>-1-ID id
-                        :>>>-1-PK pk})
-   [(rf/subscribe [:datagrid/edited-record-by-pk id pk])
-    (rf/subscribe [:datagrid/options id])])
+ (fn [[_ grid-id pk]]
+   [(rf/subscribe [:datagrid/edited-record-by-pk grid-id pk])
+    (rf/subscribe [:datagrid/options grid-id])])
  (fn [[r {:keys [validator]}] [_ _ _]]
    (let [vres (when validator
                 (validator r))]
-     (cljs.pprint/pprint {:>>>-2-R  r
-                          :>>>-2-VR vres})
      (cond-> {:result r}
        vres (assoc :validation vres)))))
+
+
+(rf/reg-sub
+ :datagrid/edited-record-valid?
+ (fn [[_ grid-id pk]]
+   (rf/subscribe [:datagrid/edited-record-by-pk-with-validation grid-id pk]))
+ (fn [{v :validation} [_ _ _]]
+   (empty? v)))
 
 (rf/reg-sub
  :datagrid/selected-record-pks-internal
