@@ -2744,6 +2744,7 @@ input[type="submit"].btn-block, input[type="reset"].btn-block, input[type="butto
 }
 .table-sm th.check, .table-sm td.check {
 	padding-left: 0.25rem;
+	width: 18px;
 }
 .table-bordered, .text-wrap table {
 	border: 1px solid rgba(250, 250, 250, 0.05);
@@ -2759,6 +2760,9 @@ input[type="submit"].btn-block, input[type="reset"].btn-block, input[type="butto
 }
 .table-striped tbody tr:nth-of-type(odd) {
 	background-color: rgba(0, 0, 0, 0.02);
+}
+.table-striped tbody tr:first-child td {
+	padding-top: 0.5rem;
 }
 .table-hover tbody tr:hover {
 	background-color: rgba(70, 127, 207, 0.06);
@@ -20516,5 +20520,5 @@ svg {
 
 .commands {
 	text-align : right;
-
+	width: 40px;
 }

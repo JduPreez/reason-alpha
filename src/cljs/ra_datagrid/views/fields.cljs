@@ -6,8 +6,8 @@
             [ra-datagrid.config :as conf]
             [ra-datagrid.subs :as subs :refer [default-formatter]]
             [ra-datagrid.views :as views :refer [edit-cell table-cell]]
+            [ra-datagrid.views.components.datepicker :as datepicker]
             [re-com.core :as re-com]
-            [re-com.datepicker :as datepicker]
             [re-com.dropdown :as dropdown]
             [re-frame.core :as rf]
             [reagent.core :as reagent]
@@ -46,14 +46,15 @@
     (str v)))
 
 (defn choice-id->val [ctype choices cid]
-  (let [label (some (fn [{:keys [id label]}]
-                      (when (= id cid) label)) choices)
-        id    (case ctype
-                :keyword (keyword cid)
-                :uuid    (medley/uuid cid)
-                :bool    (utils/str->bool cid)
-                cid)]
-    [id label]))
+  (when cid
+    (let [label (some (fn [{:keys [id label]}]
+                        (when (= id cid) label)) choices)
+          id    (case ctype
+                  :keyword (keyword cid)
+                  :uuid    (medley/uuid cid)
+                  :bool    (utils/str->bool cid)
+                  cid)]
+      [id label])))
 
 (defmethod edit-cell :select
   [grid-id field pk]
@@ -67,13 +68,19 @@
                                         first
                                         (as-> v (val->choice-id ctype v))))]
     (fn [grid-id field pk]
-      (let [validation (-> @*r :validation (get (:name field)))
-            ctype      (-> @*choices first :id choice-type)
-            choices    (map (fn [{:keys [grid-id] :as c}]
-                              (update
-                               c :id
-                               #(val->choice-id ctype %)))
-                            @*choices)]
+      (let [{field-nm :name
+             opt?     :optional?} field
+            validation            (-> @*r :validation (get field-nm))
+            ctype                 (-> @*choices first :id choice-type)
+            choices               (map (fn [{:keys [grid-id] :as c}]
+                                         (update
+                                          c :id
+                                          #(val->choice-id ctype %)))
+                                       @*choices)
+            choices               (if opt?
+                                    (cons {:id nil, :label [:div {:style {:margin-top    "1rem"
+                                                                          :margin-bottom "1rem"}}]} choices)
+                                    #_else choices)]
         [:td {:key       (:name field)
               :className "editing data-cell"}
          [dropdown/single-dropdown
@@ -99,28 +106,32 @@
 ;; -----
 
 (defmethod edit-cell :date
-  [id field pk]
-  (let [*r             (rf/subscribe [:datagrid/edited-record-by-pk id pk])
-        dte            (->> field :name (get @*r))
+  [grid-id field pk]
+  (let [;;*r             (rf/subscribe [:datagrid/edited-record-by-pk grid-id pk])
+        *r             (rf/subscribe [:datagrid/edited-record-by-pk-with-validation grid-id pk])
+        dte            (->> @*r :result (:name field) (get @*r))
         *selected-date (reagent/atom
                         (when dte
                           (coerce/to-date-time dte)))]
-    (fn [id field pk]
-      [:td {:key       (:name field)
-            :className "editing"}
-       [datepicker/datepicker-dropdown
-        :src           (re-com/at)
-        :model         *selected-date
-        :show-today?   true
-        :show-weeks?   false
-        :start-of-week 0
-        :placeholder   "Select a date"
-        :format        conf/date-format
-        :width         "227px"
-        :on-change     #(do
-                          (reset! *selected-date %)
-                          (rf/dispatch [:datagrid/update-edited-record id pk
-                                        (:name field) (coerce/to-date %)]))]])))
+    (fn [grid-id field pk]
+      (let [validation (-> @*r :validation (get (:name field)))]
+        [:td {:key       (:name field)
+              :className "editing data-cell"}
+         [datepicker/datepicker-dropdown
+          :src           (re-com/at)
+          :model         *selected-date
+          :show-today?   true
+          :show-weeks?   false
+          :start-of-week 0
+          :placeholder   "Select a date"
+          :format        conf/date-format
+          :width         "227px"
+          :invalid-feedback validation ;;(when (seq validation) "is-invalid")
+          :parts {:wrapper {:class "form-control is-invalid"}}
+          :on-change     #(do
+                            (reset! *selected-date %)
+                            (rf/dispatch [:datagrid/update-edited-record grid-id pk
+                                          (:name field) (coerce/to-date %)]))]]))))
 ;; Date)
 ;; -----
 

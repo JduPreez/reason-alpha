@@ -93,9 +93,7 @@
   "A schema for grid field configuration"
   {:name                                          s/Keyword
    :title                                         s/Any
-   ;;list of validators, a validator should return [true nil] if valid
-   ;;and [false "some error msg] if invalid
-   ;;the first validator to fail will return
+   (s/optional-key :optional?)                    s/Any
    (s/optional-key :on-click)                     s/Any
    (s/optional-key :footer-cell)                  s/Any
    (s/optional-key :align)                        s/Any

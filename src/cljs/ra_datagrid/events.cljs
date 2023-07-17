@@ -1,5 +1,6 @@
 (ns ra-datagrid.events
-  (:require [re-frame.core :as rf]
+  (:require [medley.core :refer [dissoc-in]]
+            [re-frame.core :as rf]
             [reagent.core :as r]))
 
 (defn get-next-sort-direction
@@ -114,17 +115,24 @@
 
 (rf/reg-event-db
  :datagrid/create-new-record
- (fn [db [_ id]]
-   (let [defaults (get-in db [:datagrid/data  id :options :default-values])]
+ (fn [db [_ grid-id]]
+   (let [defaults (->> [:datagrid/data grid-id :options :default-values]
+                       (get-in db)
+                       (map (fn [[k v]]
+                              [k (if (fn? v)
+                                   (v) #_else v)]))
+                       (into {}))]
      (-> db
          ;;put it under 'nil' key in edit-rows
-         (assoc-in [:datagrid/data  id :edit-rows nil] (or defaults {}))
-         (assoc-in [:datagrid/data  id :creating?] true)))))
+         (assoc-in [:datagrid/data  grid-id :edit-rows nil] (or defaults {}))
+         (assoc-in [:datagrid/data  grid-id :creating?] true)))))
 
 (rf/reg-event-db
  :datagrid/update-edited-record
  (fn [db [_ id pk k v]]
-   (assoc-in db [:datagrid/data id :edit-rows pk k] v)))
+   (if (not (nil? v))
+     (assoc-in db [:datagrid/data id :edit-rows pk k] v)
+     (dissoc-in db [:datagrid/data id :edit-rows pk k]))))
 
 ;;rec-with-only-grid-fields (if is-update?
  ;;                           (assoc (remove-keys-not-in-gridfields @edit-record fields)

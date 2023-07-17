@@ -68,8 +68,8 @@
 
 (defn save-cell-button
   [grid-id pk]
-  (fn [grid-id pk]
-    (let [*valid? (rf/subscribe [:datagrid/edited-record-valid? grid-id pk])]
+  (let [*valid? (rf/subscribe [:datagrid/edited-record-valid? grid-id pk])]
+    (fn [grid-id pk]
       [:td.commands {:key       "SAVECELLBUTTON"
                      :className "save"}
        [:button.btn.btn-icon.btn-primary.btn-success

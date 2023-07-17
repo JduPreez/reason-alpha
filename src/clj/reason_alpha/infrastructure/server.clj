@@ -158,7 +158,6 @@
         account (-> ring-req
                     auth/account
                     (assoc :account/id uid))]
-    (clojure.pprint/pprint {::>>> account})
     ;;future
     (if fun
       (binding [common/*context* {:*connected-users connected-uids

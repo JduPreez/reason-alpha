@@ -1,9 +1,10 @@
 (ns reason-alpha.views.positions
   (:require [re-frame.core :as rf]
+            [reason-alpha.model.validation :as validation]
+            [reason-alpha.utils :as utils]
             [reason-alpha.views.datagrid :as datagrid]
             [reason-alpha.views.holdings :as views.holdings]
-            [reason-alpha.views.trade-patterns :as views.trade-patterns]
-            [reason-alpha.model.validation :as validation]))
+            [reason-alpha.views.trade-patterns :as views.trade-patterns]))
 
 (defn options
   [schema]
@@ -13,7 +14,8 @@
    :id-field          :position-creation-id
    :create-dispatch   [:position/create]
    :update-dispatch   [:position/update]
-   :validator         (partial validation/validate schema)})
+   :validator         (partial validation/validate schema)
+   :default-values    {:position-creation-id (constantly (utils/new-uuid))}})
 
 (defn view [& x]
   (let [*schema    (rf/subscribe [:model :model/position-dto])

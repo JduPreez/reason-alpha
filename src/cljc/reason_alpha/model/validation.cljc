@@ -8,7 +8,6 @@
 
 (defn validate
   ([schema data]
-   (cljs.pprint/pprint {:>>>-VALIDATE {:S schema, :D data}})
    (->> data
         (m/explain schema)
         me/humanize
