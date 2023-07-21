@@ -67,11 +67,10 @@
         [ra-datagrid/datagrid (merge default-opts opts) fields]]])))
 
 (defn model-member->field
-  [[member-nm {:keys                         [type schema]
+  [[member-nm {:keys                         [type schema order]
                {o? :optional :as properties} :properties
                :as                           s}] &
    [{:keys [enum-titles] :as field-opts}]]
-  (cljs.pprint/pprint {:>>>S schema, :>>>FO field-opts, :>>>P properties})
   (let [id-member?             (mutils/id-member? member-nm)
         field-def              (cond-> field-opts
                                  (not (contains? field-opts :can-sort))
@@ -132,6 +131,7 @@
 (defn model->fields [model-schema & [{fields-opts :fields-opts}]]
   (->> model-schema
        mutils/model-member-schema-info
+       (sort-by (fn [[k {:keys [order]}]] order))
        (mapv (fn [[membr-nm :as sch-inf]]
                (model-member->field sch-inf (get fields-opts membr-nm))))
        (remove nil?)))

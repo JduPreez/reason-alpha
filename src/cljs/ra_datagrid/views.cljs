@@ -2,6 +2,7 @@
   (:require [cljs-time.coerce :as coerce]
             [cljs-time.format :as fmt]
             [cljs.pprint :as pprint]
+            [pogonos.core :as pg]
             [ra-datagrid.events]
             [ra-datagrid.schema :as ds]
             [ra-datagrid.subs]
@@ -9,7 +10,8 @@
             [re-frame.core :as rf]
             [reagent.core :as r]
             [schema.core :as s
-             :include-macros true]))
+             :include-macros true]
+            [clojure.string :as str]))
 
 (defn clean-formatted-keys
   [r]
@@ -135,25 +137,36 @@
          :type        :number}]])))
 
 (defn table-header-cell
-  [id {:keys [title align width can-sort hide-header-filter] :as field}]
+  [grid-id {:keys [title align width can-sort hide-header-filter] :as field}]
   (let [align   (if-not align :text-left align)
         atts    (cond-> {:className align
                          :key (name (:name field))}
                   width
                   (assoc :style {:width width}))
-        sorting (rf/subscribe [:datagrid/sorting id])
-        options (rf/subscribe [:datagrid/options id])]
-    (fn [id {:keys [title align width can-sort menu edit]
-             :as   field}]
-      (let [sort-by-key      (:key @sorting)
+        sorting (rf/subscribe [:datagrid/sorting grid-id])
+        options (rf/subscribe [:datagrid/options grid-id])
+        ctx     (when-let [ctx-sub (:context-subscription @options)]
+                  @(rf/subscribe ctx-sub))]
+    (cljs.pprint/pprint {:>>>-1-TABLE-HEADER-CELL {:OPTS @options
+                                                   :CTX  ctx}})
+    (fn [grid-id {:keys [title align width can-sort menu edit]
+                  :as   field}]
+      (let [_                (cljs.pprint/pprint {:>>>-2-TABLE-HEADER-CELL {:OPTS @options
+                                                                            :CTX  ctx}})
+            sort-by-key      (:key @sorting)
             sort-direction   (:direction @sorting)
             can-sort-global? (:can-sort @options)
-            header-filters?  (:header-filters @options)]
+            header-filters?  (:header-filters @options)
+            title            (if (and (not-empty ctx)
+                                      (str/includes? title "{{"))
+                               (pg/render-string title ctx)
+                               #_else title)]
         [:th atts
          [:div.btn-toolbar {:role "toolbar"}
           [:div.btn-group.mr-2 {:role "group"}
-           [:a.btn.btn-link {:type  "button"
-                             :style {:padding-left 0}} title]
+           [:a.btn.btn-link {:type                    "button"
+                             :style                   {:padding-left 0}
+                             :dangerouslySetInnerHTML {:__html title}}]
            (when (and can-sort-global?
                       (not= false can-sort))
              [:a.btn.btn-link {:type "button"} [:i.fas.fa-arrows-alt-v]])
@@ -176,7 +189,7 @@
 
             [:span.text.m-r-5
              {:style    {:cursor :pointer}
-              :on-click #(rf/dispatch [:datagrid/sort-field id (:name field)])}
+              :on-click #(rf/dispatch [:datagrid/sort-field grid-id (:name field)])}
              title]
             (cond
               (and
@@ -209,7 +222,7 @@
          (when (and header-filters?
                     (or (nil? hide-header-filter)
                         (not hide-header-filter)))
-           [table-header-filter id field])
+           [table-header-filter grid-id field])
 
          (when (and header-filters? hide-header-filter)
            [:div.m-b-10 {:style {:height "35px"}} " "])]))))
@@ -228,22 +241,22 @@
         [:i.input-helper]]])))
 
 (defn table-header
-  [id data-sub]
-  (let [fields           (rf/subscribe [:datagrid/fields id])
-        sorting          (rf/subscribe [:datagrid/sorting id])
-        options          (rf/subscribe [:datagrid/options id])
-        selected-records (rf/subscribe [:datagrid/selected-record-pks id data-sub])]
-    (fn [id data-sub]
+  [grid-id data-sub]
+  (let [fields           (rf/subscribe [:datagrid/fields grid-id])
+        sorting          (rf/subscribe [:datagrid/sorting grid-id])
+        options          (rf/subscribe [:datagrid/options grid-id])
+        selected-records (rf/subscribe [:datagrid/selected-record-pks grid-id data-sub])]
+    (fn [grid-id data-sub]
       (let [cells (map (fn [f]
                          ^{:key (:name f)}
-                         [table-header-cell id f]) @fields)
+                         [table-header-cell grid-id f]) @fields)
             cells
             (cond->> cells
               (:checkbox-select @options)
               (concat [^{:key "check"}
                        [:th.check
                         {:key "check"}
-                        [mass-select id data-sub]]]))]
+                        [mass-select grid-id data-sub]]]))]
         [:thead  {:key "head"}
          (when (:extra-header-row @options)
            (:extra-header-row @options))
@@ -252,7 +265,7 @@
             (if (:can-create @options)
               (concat [ ^{:key "cmds"}
                        [:th.commands
-                        [create-button id]]] cells)
+                        [create-button grid-id]]] cells)
               cells)])]))))
 
 (defmulti edit-cell
@@ -573,7 +586,6 @@
   "Creates a datagrid"
   [options :- ds/GridConfiguration
    fields  :- [ds/GridField]]
-  (cljs.pprint/pprint ::datagrid)
   (let [id              (:grid-id options)
         data-sub        (:data-subscription options)
         loading-sub     (:loading-subscription options)

@@ -3,6 +3,7 @@
             [reason-alpha.data.model :as data.model]
             [reason-alpha.model.accounts :as accounts]
             [reason-alpha.model.mapping :as mapping]
+            [reason-alpha.model.utils :as mutils]
             [reason-alpha.utils :as utils]))
 
 (m/=> save! [:=>
@@ -12,7 +13,6 @@
             accounts/Account])
 
 (defn save! [db account]
-  (clojure.pprint/pprint {::$$$-SA account})
   (let [acc (if (contains? account :account/creation-id)
               account
               (assoc account :account/creation-id (utils/new-uuid)))]

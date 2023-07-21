@@ -5,7 +5,6 @@
             [reason-alpha.data.model :as data.model :refer [DataBase]]
             [reason-alpha.data.repositories.account-repository :as account-repo]
             [reason-alpha.data.repositories.holding-repository :as holding-repo]
-            ;;[reason-alpha.data.repositories.position-repository :as position-repo]
             [reason-alpha.data.repositories.trade-pattern-repository :as trade-pattern-repo]
             [reason-alpha.data.xtdb :as xtdb]
             [reason-alpha.infrastructure.auth :as auth]

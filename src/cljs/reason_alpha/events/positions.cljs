@@ -14,8 +14,9 @@
    {:position/get-holdings-positions nil
     :holding/get-holdings            nil
     :trade-pattern.query/getn        nil
-    :dispatch                        [:model.query/getn
-                                      [:model/position :model/position-dto]]}))
+    :dispatch-n                      [[:account/load]
+                                      [:model.query/getn
+                                       [:model/position :model/position-dto]]]}))
 
 (rf/reg-fx
  :position/get-holdings-positions

@@ -47,6 +47,7 @@
                  [org.clojure/tools.logging "1.1.0"]
                  [org.clojure/tools.reader "1.3.6"]
                  [org.slf4j/slf4j-log4j12 "1.7.29"]
+                 [pogonos "0.2.1"]
                  [prone "2019-07-08"]
                  [prismatic/schema "1.1.6"]
                  [re-frame "1.2.0"]

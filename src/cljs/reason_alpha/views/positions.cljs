@@ -8,14 +8,15 @@
 
 (defn options
   [schema]
-  {:grid-id           ::view
-   :title             "Positions"
-   :data-subscription [:position/list]
-   :id-field          :position-creation-id
-   :create-dispatch   [:position/create]
-   :update-dispatch   [:position/update]
-   :validator         (partial validation/validate schema)
-   :default-values    {:position-creation-id (constantly (utils/new-uuid))}})
+  {:grid-id              ::view
+   :title                "Positions"
+   :data-subscription    [:position/list]
+   :id-field             :position-creation-id
+   :create-dispatch      [:position/create]
+   :update-dispatch      [:position/update]
+   :validator            (partial validation/validate schema)
+   :default-values       {:position-creation-id (constantly (utils/new-uuid))}
+   :context-subscription [:account]})
 
 (defn view [& x]
   (let [*schema    (rf/subscribe [:model :model/position-dto])

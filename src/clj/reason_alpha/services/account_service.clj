@@ -30,7 +30,6 @@
         updated-acc  (if-let [c (:account/currency updated-acc)]
                        updated-acc
                        (assoc updated-acc :account/currency :USD))]
-    (clojure.pprint/pprint {::***SAVE-ANY! updated-acc})
     (fn-repo-save! updated-acc)))
 
 (defn save!

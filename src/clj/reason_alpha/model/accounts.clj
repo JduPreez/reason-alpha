@@ -1,6 +1,7 @@
 (ns reason-alpha.model.accounts
   (:require [reason-alpha.model.core :as model :refer [def-model]]
-            [reason-alpha.model.fin-instruments :as fin-instruments]))
+            [reason-alpha.model.fin-instruments :as fin-instruments]
+            [reason-alpha.model.utils :as mutils]))
 
 (def-model Profile
   :model/profile

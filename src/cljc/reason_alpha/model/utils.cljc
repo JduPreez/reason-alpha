@@ -83,8 +83,8 @@
      (let [members        (m/entries schema)
            member-sch-inf (->> schema
                                m/children
-                               (map
-                                (fn [[mbr-nm props sch]]
+                               (map-indexed
+                                (fn [idx [mbr-nm props sch]]
                                   (let [sch           (if (m/schema? sch)
                                                         (m/form sch)
                                                         #_else sch)
@@ -100,7 +100,8 @@
                                         [val-type _]  (when (and (= :tuple t)
                                                                  (= 2 (count child-members)))
                                                         child-members)]
-                                    [mbr-nm {:properties      props
+                                    [mbr-nm {:order           idx
+                                             :properties      props
                                              :schema          sch
                                              :type            t
                                              :member-val-type val-type

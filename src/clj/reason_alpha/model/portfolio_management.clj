@@ -123,7 +123,12 @@
                  :compute  {:function "quantity * open-price"
                             :use      [:quantity :open-price]}}
     number?]
-   ;; Open Total Main Currency
+   ;; `:title` supports Mustache templating and inner HTML too: "Open Total`<br>`({{account-currency-nm}})"
+   [:open-total-acc-currency {:title    "Open Total ({{account-currency-nm}})"
+                              :optional true
+                              :compute  {:function "quantity * open-price"
+                                         :use      [:quantity :open-price]}}
+    number?]
    [:close-price {:title        "Close"
                   :optional     true
                   :command-path [:position/close
