@@ -10,7 +10,7 @@
             [reason-alpha.infrastructure.auth :as auth]
             [reason-alpha.infrastructure.server :as server]
             [reason-alpha.integration.fake-eod-api-client :as eod]
-            [reason-alpha.model.accounts :as accounts]
+            [reason-alpha.integration.marketstack-api-client :as marketstack]
             [reason-alpha.model.common :as common]
             [reason-alpha.services.account-service :as account-svc]
             [reason-alpha.services.common :as svc.common]

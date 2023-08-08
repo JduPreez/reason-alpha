@@ -42,7 +42,8 @@
             :description (str "Error occurred quoting live stock prices: " status " " status-text)
             :type        :error}))
 
-(defn- quote-live-prices* [api-token' ticker-promises]
+(defn- quote-live-prices*
+  [api-token' ticker-promises]
   (for [[tkrs *res] ticker-promises
         :let        [idx-hid-tkrs   (->> tkrs
                                          (map (fn [[hid t]][t hid]))

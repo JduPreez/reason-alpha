@@ -138,18 +138,18 @@
 
 (defn- assoc-close-prices-fn [fn-repo-get-acc-by-uid fn-quote-live-prices & [{:keys [batch-size]}]]
   (fn [account-id positions]
-    (let [api-token         (-> account-id
+    (let [access-key        (-> account-id
                                 fn-repo-get-acc-by-uid
                                 :account/subscriptions
-                                :subscription/eod-historical-data
-                                :api-token)
+                                :subscription/marketstack
+                                :access-key)
           tickers           (->> positions
                                  (map (fn [{:keys [holding-id eod-historical-data]}]
                                         (when (and holding-id eod-historical-data)
                                           [holding-id eod-historical-data])))
                                  (remove nil?)
                                  distinct)
-          prices            (fn-quote-live-prices api-token tickers {:batch-size batch-size})
+          prices            (fn-quote-live-prices access-key tickers {:batch-size batch-size})
           pos-with-close-pr (->> prices
                                  (pmap #(deref %))
                                  (mapcat identity)

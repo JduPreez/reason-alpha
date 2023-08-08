@@ -79,6 +79,27 @@
                e)))))))
 
 #?(:clj
+   (defn ttl-cache
+     [& {ttl :ttl, :or {ttl 3600000}}]
+     (atom (cache/ttl-cache-factory {} :ttl ttl))))
+
+#?(:clj
+   (defn get-cache-item
+     [*cache k]
+     ;; Use `:cache.item/nil` to enable caching `nil` values
+     (let [i (cache/lookup @*cache k ::nil-cache-item)]
+       (if (= ::nil-cache-item i)
+         ::nil-cache-item
+         (do
+           (swap! *cache cache/hit k)
+           i)))))
+
+#?(:clj
+   (defn set-cache-item
+     [*cache k v]
+     (swap! *cache cache/miss k v)))
+
+#?(:clj
    (defn list-resource-files [dir file-type]
      (let [xtnsn (str "." file-type)]
        (-> dir
