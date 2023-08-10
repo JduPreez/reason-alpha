@@ -15,33 +15,56 @@
 
 (def *cache (utils/ttl-cache))
 
+;; Only used for testing
+(defconfig dev-access-key)
+
 (defn cache-key
   [symbol]
   (str (tick/today) "-" symbol))
 
-(defn handler [result-out-chnl _ {:keys [data] :as r}]
-  (clojure.pprint/pprint r)
-  (go-loop [d data]
-    (when-let [{:keys [symbol]
-                :as   share-price} (peek d)]
-      (do
-        (>! result-out-chnl share-price)
-        (utils/set-cache-item *cache (cache-key symbol) share-price)
-        (recur (pop d))))))
+(defn- build-idx-symbol->s-inf
+  [symbols]
+  (->> symbols
+       (map (fn [{:keys [symbol] :as s}]
+              [symbol s]))
+       (into {})))
+
+(defn handler [result-out-chnl symbols {:keys [data] :as r}]
+  (let [idx-symbol->s-inf (build-idx-symbol->s-inf symbols)]
+    (go-loop [d data]
+      (when-let [{:keys [symbol open close high low date volume]} (peek d)]
+        (let [p     {:price-id                (utils/new-uuid)
+                     :price-creation-id       (utils/new-uuid)
+                     :symbol-ticker           symbol
+                     :symbol-provider         :marketstack
+                     #_#_:holding-id          (get idx-hid-tkrs code)
+                     :price-time              date
+                     :price-open              open
+                     :price-close             close
+                     :price-high              high
+                     :price-low               low
+                     #_#_price-previous-close previousClose
+                     :price-volume            volume
+                     #_#_:price-change        change}
+              s-inf (get idx-symbol->s-inf symbol)
+              p     (merge s-inf p)]
+          (>! result-out-chnl p)
+          (utils/set-cache-item *cache (cache-key symbol) p)
+          (recur (pop d)))))))
 
 (defn err-handler [result-out-chnl symbols {:keys [status status-text] :as r}]
-  (clojure.pprint/pprint {:error (str "something bad happened: " status " " status-text)})
-  (go-loop [syms symbols]
-    (when-let [s (peek symbols)]
-      (do
-        (>! result-out-chnl {:symbol s
-                             :error  r})
-        (recur (pop syms))))))
+  (let [idx-symbol->s-inf (build-idx-symbol->s-inf symbols)]
+    (go-loop [syms symbols]
+      (when-let [s (peek symbols)]
+        (do
+          (>! result-out-chnl (merge (get idx-symbol->s-inf s)
+                                     {:error r}))
+          (recur (pop syms)))))))
 
 (defn- request-eod-share-prices
   [access-key result-out-chnl symbols]
     (go
-      (let [s       (str/join "," symbols)
+      (let [s       (->> symbols (map :symbol) (str/join ","))
             request {:params          {:access_key access-key
                                        :symbols    s}
                      :format          :json
@@ -54,10 +77,10 @@
 
 (defn- quote-cached-eod-share-prices
   [symbols result-out-chnl]
-  (filterv (fn [s]
+  (filterv (fn [{s :symbol :as s-info}]
              (let [share-price (utils/get-cache-item *cache (cache-key s))]
                (if (= ::utils/nil-cache-item share-price)
-                s
+                s-info
                 (let [_ (>!! result-out-chnl share-price)]))))
           symbols))
 
@@ -78,8 +101,9 @@
 
 (comment
   (let [result-chnl (quote-eod-share-prices
-                     access-key
-                     ["AAPL" "INTC"])]
+                     dev-access-key
+                     [{:symbol "AAPL"}
+                      {:symbol "INTC"}])]
     (println (<!! result-chnl))
     (println (<!! result-chnl)))
 

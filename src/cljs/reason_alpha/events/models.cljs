@@ -28,7 +28,8 @@
  (fn [{:keys [db]} [_ model-ks]]
    (let [models   (get-in db data/models {})
          model-ks (remove #(contains? models %) model-ks)]
-     {:model.query/getn-fx model-ks})))
+     (when (seq model-ks)
+       {:model.query/getn-fx model-ks}))))
 
 (comment
 

@@ -181,13 +181,13 @@
                           :ref          :position/holding-position
                           :command-path [:position/holding-position-id]}
     uuid?]
-   [:eod-historical-data {:optional     true
-                          :fn-value     {:arg :symbol/provider
-                                         :fun '(fn [{p :symbol/provider
-                                                     v :symbol/ticker}]
-                                                 (when (= p :eod-historical-data)
-                                                   {:value v}))}
-                          :command-path [:holding/symbols 0 :symbol/ticker]}
+   [:marketstack {:optional     true
+                  :fn-value     {:arg :symbol/provider
+                                 :fun '(fn [{p :symbol/provider
+                                             v :symbol/ticker}]
+                                         (when (= p :marketstack)
+                                           {:value v}))}
+                  :command-path [:holding/symbols 0 :symbol/ticker]}
     string?]
    [:holding-id {:optional     true
                  :command-path [:position/holding-id]}

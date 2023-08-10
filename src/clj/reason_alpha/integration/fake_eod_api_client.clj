@@ -22,7 +22,7 @@
                         {:price-id             (utils/new-uuid)
                          :price-creation-id    (utils/new-uuid)
                          :symbol-ticker        t
-                         :symbol-provider      :eod-historical-data
+                         :symbol-provider      :marketstack
                          :holding-id           hid
                          :price-time           (tick/now)
                          :price-open           (utils/round (rand 100))

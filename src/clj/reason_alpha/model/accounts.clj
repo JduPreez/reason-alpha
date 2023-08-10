@@ -16,9 +16,9 @@
 (def-model Subscriptions
   :model/subscriptions
   [:map
-   [:subscription/eod-historical-data {:optional true}
+   [:subscription/marketstack {:optional true}
     [:map
-     [:api-token string?]]]])
+     [:access-key string?]]]])
 
 (def-model Account
   :model/account
@@ -50,9 +50,9 @@
                        :command-path [[:account/currency]
                                       [:account/currency-name]]}
     [:tuple keyword? string?]]
-   [:eod-historical-data-api-token
-    {:title        "EOD Historical Data Subscription"
+   [:marketstack-access-key
+    {:title        "Marketstack Subscription"
      :command-path [:account/subscriptions
-                    :subscription/eod-historical-data
-                    :api-token]}
+                    :subscription/marketstack
+                    :access-key]}
     string?]])

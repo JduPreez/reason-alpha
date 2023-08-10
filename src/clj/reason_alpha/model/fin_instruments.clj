@@ -8,10 +8,10 @@
    [:symbol/ticker {:min 1} string?]
    [:symbol/holding-id {:optional true} uuid?]
    [:symbol/provider
-    [:enum {:enum/titles {:eod-historical-data "EOD Historical Data"
-                          :saxo-dma            "Saxo/DMA"
-                          :easy-equities       "Easy Equities"}}
-                         :eod-historical-data :saxo-dma :easy-equities]]])
+    [:enum {:enum/titles {:marketstack   "Marketstack"
+                          :saxo-dma      "Saxo/DMA"
+                          :easy-equities "Easy Equities"}}
+                         :marketstack :saxo-dma :easy-equities]]])
 
 (def-model Price
   :model/price

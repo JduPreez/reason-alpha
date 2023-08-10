@@ -9,7 +9,7 @@
             [reason-alpha.data.xtdb :as xtdb]
             [reason-alpha.infrastructure.auth :as auth]
             [reason-alpha.infrastructure.server :as server]
-            [reason-alpha.integration.fake-eod-api-client :as eod]
+            ;;[reason-alpha.integration.fake-eod-api-client :as eod]
             [reason-alpha.integration.marketstack-api-client :as marketstack]
             [reason-alpha.model.common :as common]
             [reason-alpha.services.account-service :as account-svc]
@@ -44,7 +44,7 @@
 
 (defmethod ig/init-key ::account-svc [_ {:keys [db]}]
   (let [fn-repo-save!      #(account-repo/save! db %)
-        fn-repo-get-by-uid #(account-repo/get-by-user-id db %)]
+        fn-repo-get-by-uid #(account-repo/get-by-id db :user-id %)]
     {:fn-get-account   #(account-svc/get-account common/get-context
                                                  fn-repo-get-by-uid)
      :fn-save-account! #(account-svc/save! fn-repo-get-by-uid
@@ -53,9 +53,9 @@
 (defmethod ig/halt-key! ::db [_ db]
   (data.model/disconnect db))
 
-(defmethod ig/init-key ::aggregates [_ {db   :db
-                                        #_#_ {:keys [fn-get-account]} :account-svc}]
-  (let [fn-repo-get-acc-by-uid #(account-repo/get-by-user-id db %)
+(defmethod ig/init-key ::aggregates [_ {db :db}]
+  (let [fn-repo-get-acc-by-uid (partial account-repo/get-by-id db :user-id)
+        fn-repo-get-acc-by-aid (partial account-repo/get-by-id db :account-id)
         fn-get-account         (partial account-svc/get-account
                                         common/get-context fn-repo-get-acc-by-uid)]
     {:account
@@ -119,33 +119,32 @@
                                         :model-type         :position
                                         :fn-get-ctx         common/get-context
                                         :response-msg-event :holding.command/delete-positions!-result}))}
-      :queries  {:get-holdings           (as-> db d
-                                           (partial holding-repo/get-holdings d)
-                                           (partial holding-svc/get-holdings d
-                                                    fn-get-account
-                                                    common/get-context))
-                 :get-holding            (as-> db d
-                                           (partial holding-repo/get-holding d)
-                                           (partial holding-svc/get-holding d
-                                                    common/get-context))
-                 :get-holdings-positions (as-> db d
-                                           (partial holding-repo/get-holdings-positions d)
-                                           (partial holding-svc/get-holdings-positions d
-                                                    #(account-repo/get-by-user-id db %)
-                                                    eod/quote-live-prices
-                                                    true
-                                                    {:fn-get-ctx common/get-context}))
-                 :get-holding-positions  (holding-svc/get-holding-positions-fn
-                                          #(holding-repo/get-holding-positions db %)
-                                          #(account-repo/get-by-user-id db %)
-                                          eod/quote-live-prices
-                                          common/get-context)
-
+      :queries  {:get-holdings                 (as-> db d
+                                                 (partial holding-repo/get-holdings d)
+                                                 (partial holding-svc/get-holdings d
+                                                          fn-get-account
+                                                          common/get-context))
+                 :get-holding                  (as-> db d
+                                                 (partial holding-repo/get-holding d)
+                                                 (partial holding-svc/get-holding d
+                                                          common/get-context))
+                 :get-holdings-positions       (as-> db d
+                                                 (partial holding-repo/get-holdings-positions d)
+                                                 (partial holding-svc/get-holdings-positions d
+                                                          fn-repo-get-acc-by-aid
+                                                          marketstack/quote-eod-share-prices
+                                                          true
+                                                          {:fn-get-ctx common/get-context}))
+                 :get-holding-positions        (holding-svc/get-holding-positions-fn
+                                                #(holding-repo/get-holding-positions db %)
+                                                fn-repo-get-acc-by-aid
+                                                marketstack/quote-eod-share-prices
+                                                common/get-context)
                  :broadcast-holdings-positions (as-> db d
                                                  (partial holding-repo/get-holdings-positions d)
                                                  (partial holding-svc/get-holdings-positions d
-                                                          #(account-repo/get-by-user-id db %)
-                                                          eod/quote-live-prices
+                                                          fn-repo-get-acc-by-aid
+                                                          marketstack/quote-eod-share-prices
                                                           false)
                                                  (partial holding-svc/broadcast-holdings-positions d))}}
      :model
@@ -172,10 +171,10 @@
   (server/stop!))
 
 (defmethod ig/init-key ::instrumentation [_ {:keys [nss]}]
-  (doall
+  #_(doall
    (for [n nss]
      (malli.instr/collect! {:ns (the-ns n)})))
-  (malli.instr/instrument!))
+  #_(malli.instr/instrument!))
 
 (defmethod ig/halt-key! ::instrumentation [_ _]
   (malli.instr/unstrument!))
@@ -191,7 +190,7 @@
                       :aggregates   (ig/ref ::aggregates)
                       :port         5000
                       :broadcasters (ig/ref ::broadcasters)}
-   ::instrumentation {:nss ['reason-alpha.data.model
+   ::instrumentation {:nss [] #_['reason-alpha.data.model
                             'reason-alpha.data.repositories.account-repository
                             'reason-alpha.data.repositories.holding-repository
                             'reason-alpha.data.repositories.trade-pattern-repository

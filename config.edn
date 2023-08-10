@@ -1,7 +1,8 @@
-{reason-alpha.data.xtdb/db-name                                "dev"
- reason-alpha.data.xtdb/data-dir                               "data"
- reason-alpha.infrastructure.auth/tenant-id                    #config/env "AUTH_TENANT_ID"
- reason-alpha.infrastructure.server/allowed-origins            "http://localhost:8700"
- reason-alpha.integration.eod-api-client/live-stock-prices-api "https://eodhistoricaldata.com/api/real-time/%s"
- reason-alpha.services.holding-service/price-quote-interval    1
- reason-alpha.integration.eod-api-client/api-token             #config/env "EOD_API_TOKEN"}
+{reason-alpha.data.xtdb/db-name                                 "dev"
+ reason-alpha.data.xtdb/data-dir                                "data"
+ reason-alpha.infrastructure.auth/tenant-id                     #config/env "AUTH_TENANT_ID"
+ reason-alpha.infrastructure.server/allowed-origins             "http://localhost:8700"
+ reason-alpha.integration.eod-api-client/live-stock-prices-api  "https://eodhistoricaldata.com/api/real-time/%s"
+ reason-alpha.services.holding-service/price-quote-interval     1
+ reason-alpha.integration.eod-api-client/api-token              #config/env "EOD_API_TOKEN"
+ reason-alpha.integration.marketstack-api-client/dev-access-key #config/env "DEV_MARKETSTACK_ACCESS_KEY"}

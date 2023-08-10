@@ -18,13 +18,16 @@
               (assoc account :account/creation-id (utils/new-uuid)))]
     (data.model/save! db acc {:role :system})))
 
-(defn get-by-user-id [db user-id]
-  (let [acc (-> db
+(defn get-by-id [db & {:keys [user-id account-id]}]
+  (let [k   (if user-id
+              :account/user-id
+              #_else :account/id)
+        acc (-> db
                 (data.model/any
-                 {:spec '{:find  [(pull e [*])]
-                          :where [[e :account/user-id uid]]
-                          :in    [uid]}
-                  :args [user-id]
+                 {:spec `{:find  [(~'pull ~'e ~'[*])]
+                          :where [[~'e ~k ~'id]]
+                          :in    [~'id]}
+                  :args [(or user-id account-id)]
                   :role :system})
                 first)]
     acc))

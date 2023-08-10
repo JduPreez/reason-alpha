@@ -16,15 +16,15 @@
             (.popover #js {:html true})))
     :reagent-render
     , (fn []
-        (let [*name         (rf/subscribe [:view.data/with-validation
-                                           :model/account-dto ::account-edit :name])
-              *email        (rf/subscribe [:view.data/with-validation
-                                           :model/account-dto ::account-edit :email])
-              *eod-token    (rf/subscribe [:view.data/with-validation
-                                           :model/account-dto ::account-edit :eod-historical-data-api-token])
-              *acc-currency (rf/subscribe [:view.data/with-validation
-                                           :model/account-dto ::account-edit :account-currency])
-              *acc-schema   (rf/subscribe [:model :model/account-dto])]
+        (let [*name              (rf/subscribe [:view.data/with-validation
+                                                :model/account-dto ::account-edit :name])
+              *email             (rf/subscribe [:view.data/with-validation
+                                                :model/account-dto ::account-edit :email])
+              *marketstack-acc-k (rf/subscribe [:view.data/with-validation
+                                                :model/account-dto ::account-edit :marketstack-access-key])
+              *acc-currency      (rf/subscribe [:view.data/with-validation
+                                                :model/account-dto ::account-edit :account-currency])
+              *acc-schema        (rf/subscribe [:model :model/account-dto])]
           [:div.card
            [:div.card-status.bg-primary.br-tr-3.br-tl-3]
            [:div.card-header
@@ -58,19 +58,19 @@
                  :selected          :view.data/update]
                 (components/invalid-feedback *acc-currency)]
                [:div.form-group
-                [:label.form-label "EOD Historical Data Subscription"]
+                [:label.form-label "Marketstack Subscription"]
                 [:div.row.gutters-sm
                  [:div.col
                   [:input.form-control {:type        "text"
-                                        :placeholder "EOD Historical Data API Token"
-                                        :value       (:result @*eod-token)
-                                        :class       (when (= :failed-validation (:type @*eod-token))
+                                        :placeholder "Marketstack Access Key"
+                                        :value       (:result @*marketstack-acc-k)
+                                        :class       (when (= :failed-validation (:type @*marketstack-acc-k))
                                                        "is-invalid")
                                         :on-change   #(rf/dispatch [:view.data/update
                                                                     ::account-edit
-                                                                    :eod-historical-data-api-token
+                                                                    :marketstack-access-key
                                                                     (-> % .-target .-value)])}]
-                  (components/invalid-feedback *eod-token)]
+                  (components/invalid-feedback *marketstack-acc-k)]
                  [:span.col-auto.align-self-center
                   [:span.form-help.bg-primary.text-white
                    {:id                  "eod-token-help"
