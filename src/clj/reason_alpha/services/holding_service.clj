@@ -67,7 +67,6 @@
 (defn get-holdings [fn-repo-get-positions fn-get-account fn-get-ctx]
   (let [{acc-id :account/id
          :as x}   (fn-get-account)
-        _                      (println {::>>>-GH x})
         {:keys [send-message]} (fn-get-ctx)
         holdings               (fn-repo-get-positions
                                 {:account-id acc-id})]
@@ -109,9 +108,6 @@
 (defn- assoc-close-prices-fn
   [fn-repo-get-acc-by-uid fn-quote-live-prices & [{:keys [batch-size]}]]
   (fn assoc-close-prices [account-id positions]
-    (println {:>>>-ACP positions
-              :>>>-AID account-id
-              :>>>-ACC (fn-repo-get-acc-by-uid account-id)})
     (if-let [access-key (-> account-id
                             fn-repo-get-acc-by-uid
                             :account/subscriptions
@@ -124,18 +120,14 @@
                                              :holding-id holding-id})))
                                    (remove nil?)
                                    distinct)
-            #_#__             (println {:>>>-AK access-key
-                                        :>>>-S  symbols})
             result-out-chnl   (fn-quote-live-prices access-key symbols :batch-size batch-size)
             idx-hid->quote    (->> symbols
                                    (map (fn [_]
                                           (let [{hid :holding-id
                                                  err :error
                                                  :as r} (<!! result-out-chnl)]
-                                            (clojure.pprint/pprint {:>>>-R r})
                                             [hid r])))
                                    (into {}))
-            #_#__             (println {:>>>-IH->Q idx-hid->quote})
             pos-with-close-pr (->> positions
                                    (mapv (fn [{:keys [holding-id status] :as p}]
                                            (let [{price :price-close
@@ -155,21 +147,8 @@
                                                , (assoc p :close-price price)
 
                                                :else
-                                               , p)))))
-            #_                (->> prices
-                                   (pmap #(deref %))
-                                   (mapcat identity)
-                                   (mapcat (fn [{price-hid :holding-id
-                                                 price     :price-close}]
-                                             (->> positions
-                                                  (filter (fn [{:keys [holding-id]}]
-                                                            (= holding-id price-hid)))
-                                                  (mapv (fn [{:keys [status] :as p}]
-                                                          (if (#{:open} status)
-                                                            (assoc p :close-price price)
-                                                            p)))))))]
-        positions
-        #_pos-with-close-pr)
+                                               , p)))))]
+        pos-with-close-pr)
       #_else
       positions)))
 
@@ -214,8 +193,6 @@
                                                (or holding-position-id
                                                    position-id))))]
 
-    (clojure.pprint/pprint {:>>>-GP gpositions})
-
     (when broadcast? (swap! *broadcast-holdings-positions conj acc-id))
 
     (doseq [[_gpos-id posns] gpositions]
@@ -224,7 +201,6 @@
           (let [result (->> posns
                             (fn-assoc-close-prices acc-id)
                             aggregate-holding-positions)]
-            (clojure.pprint/pprint {:>>>-HPS result})
             (send-msg
              [:holding.query/get-holdings-positions-result result]))
           (catch Exception e

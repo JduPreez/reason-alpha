@@ -145,7 +145,7 @@
    ;; Profit/Loss %
    ;; Profit/Loss Long
    ;; Profit/Loss Long Main Currency
-   ;; PRofit/Loss Long %
+   ;; Profit/Loss Long %
    ;; Target Price
    ;; Target Profit
    ;; Target Profit Main Currency
