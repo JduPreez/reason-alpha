@@ -2,6 +2,7 @@
   (:require [cljs-time.coerce :as coerce]
             [cljs-time.format :as fmt]
             [cljs.pprint :as pprint]
+            [clojure.string :as str]
             [pogonos.core :as pg]
             [ra-datagrid.events]
             [ra-datagrid.schema :as ds]
@@ -10,8 +11,7 @@
             [re-frame.core :as rf]
             [reagent.core :as r]
             [schema.core :as s
-             :include-macros true]
-            [clojure.string :as str]))
+             :include-macros true]))
 
 (defn clean-formatted-keys
   [r]
@@ -147,13 +147,9 @@
         options (rf/subscribe [:datagrid/options grid-id])
         ctx     (when-let [ctx-sub (:context-subscription @options)]
                   @(rf/subscribe ctx-sub))]
-    (cljs.pprint/pprint {:>>>-1-TABLE-HEADER-CELL {:OPTS @options
-                                                   :CTX  ctx}})
     (fn [grid-id {:keys [title align width can-sort menu edit]
                   :as   field}]
-      (let [_                (cljs.pprint/pprint {:>>>-2-TABLE-HEADER-CELL {:OPTS @options
-                                                                            :CTX  ctx}})
-            sort-by-key      (:key @sorting)
+      (let [sort-by-key      (:key @sorting)
             sort-direction   (:direction @sorting)
             can-sort-global? (:can-sort @options)
             header-filters?  (:header-filters @options)

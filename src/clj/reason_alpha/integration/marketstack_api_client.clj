@@ -1,7 +1,7 @@
 (ns reason-alpha.integration.marketstack-api-client
   (:require [ajax.core :as ajax :refer [GET]]
             [clojure.core.async
-             :as async
+             :as as
              :refer [>! <! >!! <!! go chan buffer close!
                      alts! go-loop]]
             [clojure.string :as str]
@@ -29,7 +29,8 @@
               [symbol s]))
        (into {})))
 
-(defn handler [result-out-chnl symbols {:keys [data] :as r}]
+(defn handler
+  [result-out-chnl symbols {:keys [data] :as r}]
   (let [idx-symbol->s-inf (build-idx-symbol->s-inf symbols)]
     (go-loop [d data]
       (when-let [{:keys [symbol open close high low date volume]} (peek d)]
@@ -52,13 +53,14 @@
           (utils/set-cache-item *cache (cache-key symbol) p)
           (recur (pop d)))))))
 
-(defn err-handler [result-out-chnl symbols {:keys [status status-text] :as r}]
+(defn err-handler
+  [result-out-chnl symbols {:keys [status status-text] :as r}]
   (let [idx-symbol->s-inf (build-idx-symbol->s-inf symbols)]
     (go-loop [syms symbols]
       (when-let [s (peek symbols)]
         (do
-          (>! result-out-chnl (merge (get idx-symbol->s-inf s)
-                                     {:error r}))
+          (>! result-out-chnl (assoc (get idx-symbol->s-inf s)
+                                     :error r))
           (recur (pop syms)))))))
 
 (defn- request-eod-share-prices
@@ -81,7 +83,7 @@
              (let [share-price (utils/get-cache-item *cache (cache-key s))]
                (if (= ::utils/nil-cache-item share-price)
                 s-info
-                (let [_ (>!! result-out-chnl share-price)]))))
+                #_else (let [_ (>!! result-out-chnl share-price)]))))
           symbols))
 
 (defn quote-eod-share-prices
@@ -97,7 +99,7 @@
         (go
           (doseq [b batches]
             (request-eod-share-prices access-key result-out-chnl b)))))
-    (async/take buffer-size result-out-chnl)))
+    (as/take buffer-size result-out-chnl)))
 
 (comment
   (let [result-chnl (quote-eod-share-prices

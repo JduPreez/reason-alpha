@@ -55,12 +55,10 @@
 
 (defmulti get-holdings-positions
   (fn [_ args]
-    (clojure.pprint/pprint {::get-holdings-positions args})
     (->> args keys sort vec)))
 
 (defmethod get-holdings-positions :default
   [db {:keys [account-id role] :as x}]
-  (clojure.pprint/pprint {::get-holdings-positions-default x})
   (->> {:spec '{:find  [(pull pos [*])
                         (pull hold [*])
                         (pull tpattern [*])]

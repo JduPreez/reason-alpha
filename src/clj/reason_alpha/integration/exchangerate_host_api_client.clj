@@ -1,6 +1,7 @@
 (ns reason-alpha.integration.exchangerate-host-api-client
   (:require [ajax.core :as ajax :refer [GET]]
             [clojure.core [memoize :as memo]]
+            [clojure.core.async :as as]
             [clojure.instant :as instant]
             [clojure.string :as str]
             [malli.core :as m]
@@ -9,7 +10,11 @@
             [tick.core :as tick])
   (:import [java.util Date]))
 
-(def latest-uri "https://api.exchangerate.host/latest")
+(def ^:const base-uri "https://api.exchangerate.host/")
+
+(def latest-uri (str base-uri "latest"))
+
+(def convert-uri (str base-uri "convert"))
 
 (defn- latest-success
   [*result {:keys [base date rates] :as response}]
@@ -58,6 +63,7 @@
 (def latest-by-base-currency-cached (memo/ttl latest-by-base-currency
                                               :ttl/threshold 3600000))
 
+;; TODO: Rewrite to use channels
 (defn latest
   [base-currency other-currency]
   (let [*result (promise)]
@@ -69,9 +75,76 @@
           (deliver *result r))))
     *result))
 
+(def *cache (utils/ttl-cache))
 
+(defn- cache-key
+  [{:keys [from to date]}]
+  (str (str date ) "-" from "-" to))
+
+(defn- convert-success
+  [result-out-chnl conversion {:keys [result]}]
+  (let [c (assoc conversion :fx-rate result)]
+    (as/>!! result-out-chnl c)
+    (utils/set-cache-item *cache (cache-key c) c)))
+
+(defn- convert-error
+  [result-out-chnl conversion {:keys [status status-text] :as r}]
+  (as/>!! result-out-chnl (assoc conversion :error r)))
+
+(defn- request-convert
+  [result-out-chnl {:keys [from to] :as conversion}]
+  (as/go
+    (let [f   (if (keyword? from) (name from) from)
+          t   (if (keyword? to) (name to) to)
+          req {:params {:from            f
+                        :to              t
+                        :format          :json
+                        :response-format :json
+                        :handler         (partial convert-success
+                                                  result-out-chnl conversion)
+                        :error-handler   (partial convert-error
+                                                  result-out-chnl conversion)
+                        :keywords?       true}}]
+      @(GET (str base-uri convert-uri)
+            req))))
+
+(defn- convert-cached
+  [result-out-chnl currency-conversions]
+  (filterv (fn [{:keys [from to] :as convr}]
+             (let [c (utils/get-cache-item *cache (cache-key convr))]
+               (if (= ::utils/nil-cache-item c)
+                 convr
+                 #_else (let [_ (as/>!! result-out-chnl c)]))))
+           currency-conversions))
+
+(defn convert
+  [currency-conversions]
+  (let [buffer-size     (count currency-conversions)
+        result-out-chnl (as/chan buffer-size)
+        convrs          (->> currency-conversions
+                             (map (fn [{:keys [date] :as c}]
+                                    (if date
+                                      c
+                                      (assoc c :date (tick/now)))))
+                             (convert-cached result-out-chnl))]
+    (as/go
+      (doseq [c convrs]
+        (request-convert result-out-chnl c)))
+    (as/take buffer-size result-out-chnl)))
 
 (comment
+  ([from-currency to-currency date]
+   (let [dte-str (-> date
+                     (tick/in "UTC")
+                     tick/date
+                     str)]))
+
+
+  (-> (tick/now)
+      (tick/in "UTC")
+      (tick/date))
+
+
   @(latest :USD :ZAR)
 
   @(latest :USD :SGD)

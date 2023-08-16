@@ -1,5 +1,7 @@
 (ns reason-alpha.views.datagrid
   (:require [clojure.string :as str]
+            [goog.string :as gstr]
+            [goog.string.format]
             [malli.core :as m]
             [medley.core :as medley]
             [ra-datagrid.views :as ra-datagrid]
@@ -72,11 +74,16 @@
                :as                           s}] &
    [{:keys [enum-titles] :as field-opts}]]
   (let [id-member?             (mutils/id-member? member-nm)
+        is-number?             (or (= type (-> #'number? meta :name))
+                                   (= type (-> #'float? meta :name)))
         field-def              (cond-> field-opts
                                  (not (contains? field-opts :can-sort))
                                  , (assoc :can-sort true)
                                  o?
                                  , (assoc :optional? o?)
+                                 is-number?
+                                 , (assoc :formatter
+                                          #(gstr/format "%.2f" %))
                                  :default
                                  , (dissoc field-opts :ref-suffix))
         {:keys [title ref
@@ -117,8 +124,8 @@
                             :indent-group
                             {:parent-subscription parent-subscr}})
 
-      (or (= type (-> #'number? meta :name))
-          (= type (-> #'float? meta :name)))
+      is-number? #_ (or (= type (-> #'number? meta :name))
+                        (= type (-> #'float? meta :name)))
       , (merge field-def {:type :number})
 
       (= type (-> #'inst? meta :name))

@@ -30,7 +30,6 @@
             :as db} (data/save-local! {:db         db
                                        :model-type :account
                                        :data       result})]
-       (cljs.pprint/pprint {:>>>-SAVED-ACCOUNT!!! acc})
        {:db       db
         :dispatch [:view.data/init
                    ::views.accounts/account-edit

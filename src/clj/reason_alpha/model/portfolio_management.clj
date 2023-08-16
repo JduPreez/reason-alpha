@@ -100,12 +100,15 @@
               :command-path [[:position/holding-id]
                              [:holding/instrument-name]]}
     [:tuple uuid? string?]]
+   [:holding-currency
+    {:ref          :holding
+     :command-path [:holding/currency]}
+    fin-instruments/Currency]
    [:long-short {:title        "Long/Short (Hedge)"
                  :ref          :position/long-short
                  :command-path [[:position/long-short]
                                 [:position/long-short-name]]}
     [:tuple keyword? string?]]
-   ;; Currency (should be obtained from the share)
    [:open-time {:title        "Open Date"
                 :command-path [:position/open
                                :trade-transaction/date]}
@@ -122,6 +125,8 @@
                  :optional true
                  :compute  {:function "quantity * open-price"
                             :use      [:quantity :open-price]}}
+    number?]
+   [:fx-rate
     number?]
    ;; `:title` supports Mustache templating and inner HTML too: "Open Total`<br>`({{account-currency-nm}})"
    [:open-total-acc-currency {:title    "Open Total ({{account-currency-nm}})"

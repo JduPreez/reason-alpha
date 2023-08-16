@@ -4,11 +4,11 @@
             [reason-alpha.services.holding-service :as sut]))
 
 (deftest test-assoc-close-prices-fn
-  (let [fun               (#'sut/assoc-close-prices-fn (fn [aid]
-                                                         {:account/subscriptions
-                                                          {:subscription/eod-historical-data
-                                                           {:api-token "djhjdhd"}}})
-                                                       eod/quote-live-prices)
+  (let [fun               (#'sut/assoc-market-data-fn (fn [aid]
+                                                        {:account/subscriptions
+                                                         {:subscription/eod-historical-data
+                                                          {:api-token "djhjdhd"}}})
+                                                      eod/quote-live-prices)
         p                 [{:holding
                             [#uuid "018004b9-3a7f-df48-4c96-c63d6aea78b5"
                              "Sony"],

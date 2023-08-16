@@ -133,8 +133,14 @@
            .floatValue))))
 
 #?(:cljs
-   (defn maybe-parse-number [nr]
+   (defn maybe-parse-number
+     [nr]
      (cond
        (re-find #"^-?\d+\.\d+$" nr) (js/parseFloat nr)
        (re-find #"^-?\d+$" nr)      (js/parseInt nr)
        :else                        nr)))
+
+(defn do!
+  [f & args]
+  (apply f args)
+  nil)

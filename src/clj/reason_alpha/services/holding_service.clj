@@ -2,16 +2,17 @@
   (:require [clojure.core.async :as async  :refer (<! <!! go-loop close!)]
             [malli.core :as m]
             [outpace.config :refer [defconfig]]
-            [reason-alpha.integration.eod-api-client :as eod-api-client]
-            [reason-alpha.model.core :as model]
+            [reason-alpha.integration.marketstack-api-client :as marketstack]
+            [reason-alpha.integration.exchangerate-host-api-client :as exchangerate]
             [reason-alpha.model.accounts :as accounts]
             [reason-alpha.model.common :as common]
+            [reason-alpha.model.core :as model]
             [reason-alpha.model.fin-instruments :as fin-instruments]
             [reason-alpha.model.portfolio-management :as portfolio-management]
             [reason-alpha.utils :as utils]
             [taoensso.timbre :as timbre :refer (errorf)]
             [traversy.lens :as lens]
-            [reason-alpha.integration.fake-eod-api-client :as eod]))
+            [clojure.core.async :as as]))
 
 (m/=> save-holding! [:=>
                      [:cat
@@ -105,9 +106,84 @@
                          :always             (common/compute {:computations comps}))]
     pos-with-comps))
 
-(defn- assoc-close-prices-fn
-  [fn-repo-get-acc-by-uid fn-quote-live-prices & [{:keys [batch-size]}]]
-  (fn assoc-close-prices [account-id positions]
+(defn- get-close-prices<
+  [positions & {:keys [account batch-size]}]
+  (when-let [access-key (-> account
+                            :account/subscriptions
+                            :subscription/marketstack
+                            :access-key)]
+    (let [result-out-chnl (as/chan)]
+      (as/go
+        (let [symbols           (->> positions
+                                     (map (fn [{:keys [holding-id marketstack]}]
+                                            (when (and holding-id marketstack)
+                                              {:symbol     marketstack
+                                               :holding-id holding-id})))
+                                     (remove nil?)
+                                     distinct)
+              quote-result-chnl (marketstack/quote-eod-share-prices
+                                 access-key symbols :batch-size batch-size)
+              idx-hid->quote    (->> symbols
+                                     (map (fn [_]
+                                            (let [{hid :holding-id
+                                                   err :error
+                                                   :as r} (as/<! quote-result-chnl)]
+                                              [hid r])))
+                                     (into {}))
+              pos-with-close-pr (->> positions
+                                     (mapv (fn [{:keys [holding-id status] :as p}]
+                                             (let [{price :price-close
+                                                    s     :symbol
+                                                    err   :error} (get idx-hid->quote
+                                                                       holding-id)]
+                                               (cond
+                                                 err
+                                                 , (do
+                                                     (errorf (str "Error occurred getting the share "
+                                                                  "price of '%s' (holding-id %s)")
+                                                             holding-id
+                                                             (pr-str err))
+                                                     p)
+
+                                                 (#{:open} status)
+                                                 , (assoc p :close-price price)
+
+                                                 :else
+                                                 , p)))))]
+          pos-with-close-pr))
+      (as/take 1 result-out-chnl))))
+
+(defn- get-fx-rates<
+  [positions & {{acc-currency :account/currency} :account}]
+  (when-let [currency-conversions (and acc-currency
+                                       (->> positions
+                                            (map (fn [{:keys [holding-currency]}]
+                                                   {:from holding-currency
+                                                    :to   acc-currency}))
+                                            distinct
+                                            seq))]
+    (let [result-out-chnl (as/chan)]
+          (as/go
+            (let [fxrate-result-chnl         (exchangerate/convert currency-conversions)
+                  idx-currency-pair->fx-rate (->> currency-conversions
+                                                  (map (fn [_]
+                                                         (let [{:keys [fx-rate]
+                                                                :as   c} (as/<! fxrate-result-chnl)]
+                                                           [(dissoc c :fx-rate) fx-rate])))
+                                                  (into {}))
+                  pos-with-fx-rate           (->> positions
+                                                  (map (fn [{:keys [holding-currency]
+                                                             :as   p}]
+                                                         (let [k   {:from holding-currency
+                                                                    :to   acc-currency}
+                                                               fxr (get idx-currency-pair->fx-rate k)]
+                                                           (assoc p :fx-rate fxr)))))]
+              (as/>! result-out-chnl pos-with-fx-rate)))
+          (as/take 1 result-out-chnl))))
+
+(defn- assoc-market-data-fn
+  [fn-repo-get-acc-by-uid fn-quote-eod-share-prices & {:keys [batch-size]}]
+  (fn assoc-market-data [account-id positions]
     (if-let [access-key (-> account-id
                             fn-repo-get-acc-by-uid
                             :account/subscriptions
@@ -120,7 +196,7 @@
                                              :holding-id holding-id})))
                                    (remove nil?)
                                    distinct)
-            result-out-chnl   (fn-quote-live-prices access-key symbols :batch-size batch-size)
+            result-out-chnl   (fn-quote-eod-share-prices access-key symbols :batch-size batch-size)
             idx-hid->quote    (->> symbols
                                    (map (fn [_]
                                           (let [{hid :holding-id
@@ -154,8 +230,8 @@
 
 (defn get-holding-positions-fn
   [fn-repo-get-holding-positions fn-repo-get-acc-by-uid fn-quote-live-prices fn-get-ctx]
-  (let [fn-assoc-close-prices (assoc-close-prices-fn fn-repo-get-acc-by-uid
-                                                     fn-quote-live-prices)]
+  (let [fn-assoc-close-prices (assoc-market-data-fn fn-repo-get-acc-by-uid
+                                                    fn-quote-live-prices)]
     (fn [{:keys [position/id position/holding-position-id]}]
       (let [pos-id                               (or holding-position-id id)
             {send-message         :send-message
@@ -182,8 +258,8 @@
                                        (get-in ctx [:user-account :account/id])))
         send-msg              (or send-msg
                                   #(send-message acc-id %))
-        fn-assoc-close-prices (assoc-close-prices-fn fn-repo-get-acc-by-uid
-                                                     fn-quote-live-prices)
+        fn-assoc-close-prices (assoc-market-data-fn fn-repo-get-acc-by-uid
+                                                    fn-quote-live-prices)
         gpositions            (->> {:account-id acc-id
                                     :role       (if account-id
                                                   :system

@@ -88,6 +88,11 @@
    :PLN :THB :IDR :HUF :CZK :ILS :CLP :PHP :AED :COP :SAR
    :MYR :RON])
 
+(def-model CurrencyPair
+  :model/currency-pair
+  [:tuple
+   Currency Currency])
+
 (def-model ExchangeRate
   :model/exchange-rate
   [:map

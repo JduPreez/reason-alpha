@@ -44,8 +44,9 @@
 
 ;; TODO: This must be cached
 (defn account [request]
-  (let [{:keys [user-token] :as tokens}              (tokens request)
-        {:keys [userUuid email username name image]} (token-data user-token)]
+  (let [{:keys [user-token] :as tokens} (tokens request)
+        {:keys [userUuid email username name image]
+         :as   acc}                     (token-data user-token)]
     {:account/user-id   userUuid
      :account/user-name username
      :account/profile   {:profile/email email
