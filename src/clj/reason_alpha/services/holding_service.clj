@@ -131,25 +131,22 @@
                                               [hid r])))
                                      (into {}))
               pos-with-close-pr (->> positions
-                                     (mapv (fn [{:keys [holding-id status] :as p}]
-                                             (let [{price :price-close
-                                                    s     :symbol
-                                                    err   :error} (get idx-hid->quote
-                                                                       holding-id)]
-                                               (cond
-                                                 err
-                                                 , (do
-                                                     (errorf (str "Error occurred getting the share "
-                                                                  "price of '%s' (holding-id %s)")
-                                                             holding-id
-                                                             (pr-str err))
-                                                     p)
+                                     (map (fn [{:keys [holding-id status position-id] :as p}]
+                                            (let [{price :price-close
+                                                   s     :symbol
+                                                   err   :error} (get idx-hid->quote
+                                                                      holding-id)]
+                                              (cond
+                                                err
+                                                , (utils/do!
+                                                   (errorf (str "Error occurred getting the share "
+                                                                "price of '%s' (holding-id %s)")
+                                                           holding-id
+                                                           (pr-str err)))
 
-                                                 (#{:open} status)
-                                                 , (assoc p :close-price price)
-
-                                                 :else
-                                                 , p)))))]
+                                                (#{:open} status)
+                                                , [position-id {:close-price price}]))))
+                                     (into {}))]
           pos-with-close-pr))
       (as/take 1 result-out-chnl))))
 
@@ -172,17 +169,41 @@
                                                            [(dissoc c :fx-rate) fx-rate])))
                                                   (into {}))
                   pos-with-fx-rate           (->> positions
-                                                  (map (fn [{:keys [holding-currency]
+                                                  (map (fn [{:keys [holding-currency position-id]
                                                              :as   p}]
                                                          (let [k   {:from holding-currency
                                                                     :to   acc-currency}
                                                                fxr (get idx-currency-pair->fx-rate k)]
-                                                           (assoc p :fx-rate fxr)))))]
+                                                           (when fxr
+                                                             [position-id {:fx-rate fxr}]))))
+                                                  (into {}))]
               (as/>! result-out-chnl pos-with-fx-rate)))
           (as/take 1 result-out-chnl))))
 
+;; TODO: This can be made completely generic, by allowing the primary key,
+;;       in this case `:position-id` to be specified.
 (defn- assoc-market-data-fn
-  [fn-repo-get-acc-by-uid fn-quote-eod-share-prices & {:keys [batch-size]}]
+  [fn-repo-get-acc-by-uid fns-market-data & {:keys [batch-size]}]
+  (fn assoc-market-data [account-id positions]
+    (if-let [acc (fn-repo-get-acc-by-uid account-id)]
+      (loop [result-chnls (pmap #(% positions
+                                    :batch-size batch-size
+                                    :account acc) fns-market-data)
+             ps           positions]
+        (if-let  [[pid->market-data c] (and (seq result-chnls)
+                                            (as/alts!! result-chnls))]
+          (let [ps (map (fn [{:keys [position-id] :as p}]
+                          (if-let [p-md (get pid->market-data position-id)]
+                            (merge p p-md)
+                            p))
+                        ps)]
+            (recur (remove #(= c %) result-chnls) ps))
+          ps))
+      positions)))
+
+
+#_(defn- assoc-market-data-fn
+  [fn-repo-get-acc-by-uid fn-quote-eod-sharem-prices & {:keys [batch-size]}]
   (fn assoc-market-data [account-id positions]
     (if-let [access-key (-> account-id
                             fn-repo-get-acc-by-uid
@@ -229,9 +250,9 @@
       positions)))
 
 (defn get-holding-positions-fn
-  [fn-repo-get-holding-positions fn-repo-get-acc-by-uid fn-quote-live-prices fn-get-ctx]
+  [fn-repo-get-holding-positions fn-repo-get-acc-by-uid fns-market-data fn-get-ctx]
   (let [fn-assoc-close-prices (assoc-market-data-fn fn-repo-get-acc-by-uid
-                                                    fn-quote-live-prices)]
+                                                    fns-market-data)]
     (fn [{:keys [position/id position/holding-position-id]}]
       (let [pos-id                               (or holding-position-id id)
             {send-message         :send-message
@@ -248,7 +269,7 @@
 (defconfig price-quote-interval)
 
 (defn get-holdings-positions
-  [fn-repo-get-holdings-positions fn-repo-get-acc-by-uid fn-quote-live-prices
+  [fn-repo-get-holdings-positions fn-repo-get-acc-by-uid fns-market-data
    broadcast? {:keys [fn-get-ctx account-id send-message]}]
   (let [{send-msg :send-message
          :as      ctx}        (when fn-get-ctx
@@ -259,7 +280,7 @@
         send-msg              (or send-msg
                                   #(send-message acc-id %))
         fn-assoc-close-prices (assoc-market-data-fn fn-repo-get-acc-by-uid
-                                                    fn-quote-live-prices)
+                                                    fns-market-data)
         gpositions            (->> {:account-id acc-id
                                     :role       (if account-id
                                                   :system
