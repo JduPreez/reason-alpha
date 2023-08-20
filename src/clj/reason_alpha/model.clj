@@ -9,8 +9,6 @@
             [reason-alpha.data.xtdb :as xtdb]
             [reason-alpha.infrastructure.auth :as auth]
             [reason-alpha.infrastructure.server :as server]
-            ;;[reason-alpha.integration.fake-eod-api-client :as eod]
-            [reason-alpha.integration.marketstack-api-client :as marketstack]
             [reason-alpha.model.common :as common]
             [reason-alpha.services.account-service :as account-svc]
             [reason-alpha.services.common :as svc.common]
@@ -132,19 +130,22 @@
                                                  (partial holding-repo/get-holdings-positions d)
                                                  (partial holding-svc/get-holdings-positions d
                                                           fn-repo-get-acc-by-aid
-                                                          marketstack/quote-eod-share-prices
+                                                          [holding-svc/get-close-prices<
+                                                           holding-svc/get-fx-rates<]
                                                           true
                                                           {:fn-get-ctx common/get-context}))
                  :get-holding-positions        (holding-svc/get-holding-positions-fn
                                                 #(holding-repo/get-holding-positions db %)
                                                 fn-repo-get-acc-by-aid
-                                                marketstack/quote-eod-share-prices
+                                                [holding-svc/get-close-prices<
+                                                 holding-svc/get-fx-rates<]
                                                 common/get-context)
                  :broadcast-holdings-positions (as-> db d
                                                  (partial holding-repo/get-holdings-positions d)
                                                  (partial holding-svc/get-holdings-positions d
                                                           fn-repo-get-acc-by-aid
-                                                          marketstack/quote-eod-share-prices
+                                                          [holding-svc/get-close-prices<
+                                                           holding-svc/get-fx-rates<]
                                                           false)
                                                  (partial holding-svc/broadcast-holdings-positions d))}}
      :model

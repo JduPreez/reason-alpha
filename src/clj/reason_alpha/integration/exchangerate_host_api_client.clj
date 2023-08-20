@@ -84,11 +84,13 @@
 (defn- convert-success
   [result-out-chnl conversion {:keys [result]}]
   (let [c (assoc conversion :fx-rate result)]
+    (clojure.pprint/pprint {:>>>CONVERT-SUCCESS c})
     (as/>!! result-out-chnl c)
     (utils/set-cache-item *cache (cache-key c) c)))
 
 (defn- convert-error
   [result-out-chnl conversion {:keys [status status-text] :as r}]
+  (clojure.pprint/pprint {:>>>CONVERT-ERR r})
   (as/>!! result-out-chnl (assoc conversion :error r)))
 
 (defn- request-convert
