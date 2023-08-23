@@ -146,13 +146,14 @@
                            #(reduce (fn [d comp-k]
                                       (let [{comp-str :function
                                              use'     :use
-                                             :as      x} (computations comp-k)
-                                            fn-comp      (compile-str comp-str)
-                                            any-nils?    (->> use'
-                                                              (map (fn [u] (get d u)))
-                                                              (not-every? some?))
-                                            comp-v       (when-not any-nils?
-                                                           (fn-comp d))]
+                                             req      :require} (computations comp-k)
+                                            fn-comp             (compile-str comp-str)
+                                            any-nils?           (->> req
+                                                                     (concat use')
+                                                                     (map (fn [u] (get d u)))
+                                                                     (not-every? some?))
+                                            comp-v              (when-not any-nils?
+                                                                  (fn-comp d))]
                                         (assoc d comp-k comp-v)))
                                     %
                                     comp-order)))]

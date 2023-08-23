@@ -272,7 +272,6 @@
      (cond-> {:result r}
        vres (assoc :validation vres)))))
 
-
 (rf/reg-sub
  :datagrid/edited-record-valid?
  (fn [[_ grid-id pk]]

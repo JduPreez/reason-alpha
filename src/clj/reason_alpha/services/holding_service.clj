@@ -11,7 +11,8 @@
             [reason-alpha.model.portfolio-management :as portfolio-management]
             [reason-alpha.utils :as utils]
             [taoensso.timbre :as timbre :refer (errorf)]
-            [traversy.lens :as lens]))
+            [traversy.lens :as lens]
+            [tick.core :as tick]))
 
 (m/=> save-holding! [:=>
                      [:cat
@@ -137,7 +138,7 @@
                                                                       holding-id)]
                                               (cond
                                                 err
-                                                , (utils/do!
+                                                , (utils/ignore
                                                    (errorf (str "Error occurred getting the share "
                                                                 "price of '%s' (holding-id %s)")
                                                            holding-id
@@ -153,30 +154,46 @@
   [positions & {{acc-currency :account/currency} :account}]
   (when-let [currency-conversions (and acc-currency
                                        (->> positions
-                                            (map (fn [{:keys [holding-currency]}]
-                                                   {:from holding-currency
-                                                    :to   acc-currency}))
+                                            (mapcat (fn [{:keys [holding-currency open-time close-time]}]
+                                                      [{:from holding-currency
+                                                        :to   acc-currency
+                                                        :date close-time}
+                                                       {:from holding-currency
+                                                        :to   acc-currency
+                                                        :date open-time}]))
                                             distinct
                                             seq))]
     (let [result-out-chnl (as/chan)]
           (as/go
             (let [fxrate-result-chnl         (exchangerate/convert currency-conversions)
                   idx-currency-pair->fx-rate (->> currency-conversions
-                                                  (mapv (fn [_]
-                                                          (let [{:keys [fx-rate]
-                                                                 :as   c} (as/<!! fxrate-result-chnl)]
-                                                            [(dissoc c :fx-rate) fx-rate])))
+                                                  (map
+                                                   (fn [_]
+                                                     (let [{:keys [fx-rate]
+                                                            :as   c} (as/<!! fxrate-result-chnl)]
+                                                       [(dissoc c :fx-rate) fx-rate])))
                                                   (into {}))
-                  pos-with-fx-rate           (->> positions
-                                                  (map (fn [{:keys [holding-currency position-id]
-                                                             :as   p}]
-                                                         (let [k   {:from holding-currency
-                                                                    :to   acc-currency}
-                                                               fxr (get idx-currency-pair->fx-rate k)]
-                                                           (when fxr
-                                                             [position-id {:fx-rate fxr}]))))
+                  pos-with-fx-rates          (->> positions
+                                                  (map
+                                                   (fn [{:keys [holding-currency position-id
+                                                                open-time close-time]
+                                                         :as   p}]
+                                                     (let [open-dte  (tick/date (or open-time (tick/now)))
+                                                           close-dte (tick/date (or close-time (tick/now)))
+                                                           open-k    {:from holding-currency
+                                                                      :to   acc-currency
+                                                                      :date open-dte}
+                                                           close-k   {:from holding-currency
+                                                                      :to   acc-currency
+                                                                      :date close-dte}
+                                                           open-fxr  (get idx-currency-pair->fx-rate open-k)
+                                                           close-fxr (get idx-currency-pair->fx-rate close-k)
+                                                           fxrs      (cond-> {}
+                                                                       open-fxr  (assoc :open-fx-rate open-fxr)
+                                                                       close-fxr (assoc :close-fx-rate close-fxr))]
+                                                       [position-id fxrs])))
                                                   (into {}))]
-              (as/>! result-out-chnl pos-with-fx-rate)))
+              (as/>! result-out-chnl pos-with-fx-rates)))
           (as/take 1 result-out-chnl))))
 
 ;; TODO: This can be made completely generic, by allowing the primary key,
@@ -191,8 +208,7 @@
              ps           positions]
         (if-let  [[pid->market-data c] (and (seq result-chnls)
                                             (as/alts!! result-chnls))]
-          (let [_  (clojure.pprint/pprint {:>>>PID->MD pid->market-data})
-                ps (map (fn [{:keys [position-id] :as p}]
+          (let [ps (map (fn [{:keys [position-id] :as p}]
                           (if-let [p-md (get pid->market-data position-id)]
                             (merge p p-md)
                             p))

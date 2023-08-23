@@ -97,6 +97,9 @@
                                                                      (m/form s)
                                                                      s))))
                                         t             (m/type sch)
+                                        t             (if (= :maybe t)
+                                                        (peek child-members)
+                                                        t)
                                         [val-type _]  (when (and (= :tuple t)
                                                                  (= 2 (count child-members)))
                                                         child-members)]

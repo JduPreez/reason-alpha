@@ -83,7 +83,8 @@
                                  , (assoc :optional? o?)
                                  is-number?
                                  , (assoc :formatter
-                                          #(gstr/format "%.2f" %))
+                                          #(when %
+                                             (gstr/format "%.2f" %)))
                                  :default
                                  , (dissoc field-opts :ref-suffix))
         {:keys [title ref
@@ -124,8 +125,7 @@
                             :indent-group
                             {:parent-subscription parent-subscr}})
 
-      is-number? #_ (or (= type (-> #'number? meta :name))
-                        (= type (-> #'float? meta :name)))
+      is-number?
       , (merge field-def {:type :number})
 
       (= type (-> #'inst? meta :name))

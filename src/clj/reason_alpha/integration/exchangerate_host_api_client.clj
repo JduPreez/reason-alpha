@@ -79,36 +79,34 @@
 
 (defn- cache-key
   [{:keys [from to date]}]
-  (str (str date ) "-" from "-" to))
+  (str date "-" from "-" to))
 
 (defn- convert-success
   [result-out-chnl conversion {:keys [result]}]
   (let [c (assoc conversion :fx-rate result)]
-    (clojure.pprint/pprint {:>>>CONVERT-SUCCESS c})
     (as/>!! result-out-chnl c)
     (utils/set-cache-item *cache (cache-key c) c)))
 
 (defn- convert-error
-  [result-out-chnl conversion {:keys [status status-text] :as r}]
-  (clojure.pprint/pprint {:>>>CONVERT-ERR r})
+  [result-out-chnl conversion r]
   (as/>!! result-out-chnl (assoc conversion :error r)))
 
 (defn- request-convert
-  [result-out-chnl {:keys [from to] :as conversion}]
+  [result-out-chnl {:keys [date from to] :as conversion}]
   (as/go
     (let [f   (if (keyword? from) (name from) from)
           t   (if (keyword? to) (name to) to)
-          req {:params {:from            f
-                        :to              t
-                        :format          :json
-                        :response-format :json
-                        :handler         (partial convert-success
-                                                  result-out-chnl conversion)
-                        :error-handler   (partial convert-error
-                                                  result-out-chnl conversion)
-                        :keywords?       true}}]
-      @(GET (str base-uri convert-uri)
-            req))))
+          req {:params          {:from f
+                                 :to   t
+                                 :date (str date)}
+               :format          :json
+               :response-format :json
+               :handler         (partial convert-success
+                                         result-out-chnl conversion)
+               :error-handler   (partial convert-error
+                                         result-out-chnl conversion)
+               :keywords?       true}]
+      @(GET convert-uri req))))
 
 (defn- convert-cached
   [result-out-chnl currency-conversions]
@@ -116,7 +114,8 @@
              (let [c (utils/get-cache-item *cache (cache-key convr))]
                (if (= ::utils/nil-cache-item c)
                  convr
-                 #_else (let [_ (as/>!! result-out-chnl c)]))))
+                 #_else (utils/ignore
+                         (as/>!! result-out-chnl c)))))
            currency-conversions))
 
 (defn convert
@@ -125,9 +124,12 @@
         result-out-chnl (as/chan buffer-size)
         convrs          (->> currency-conversions
                              (map (fn [{:keys [date] :as c}]
-                                    (if date
-                                      c
-                                      (assoc c :date (tick/now)))))
+                                    (->> (tick/inst)
+                                         (or date)
+                                         tick/date
+                                         #_(tick/at "00:00")
+                                         #_tick/inst
+                                         (assoc c :date))))
                              (convert-cached result-out-chnl))]
     (as/go
       (doseq [c convrs]
@@ -135,22 +137,20 @@
     (as/take buffer-size result-out-chnl)))
 
 (comment
-  ([from-currency to-currency date]
-   (let [dte-str (-> date
-                     (tick/in "UTC")
-                     tick/date
-                     str)]))
+  (let [c (convert [{:from :USD :to :ZAR}
+                    {:from :EUR :to :ZAR}
+                    {:from :GEL :to :ZAR}])]
+    (println (as/<!! c))
+    (println (as/<!! c))
+    (println (as/<!! c)))
 
 
   (-> (tick/now)
-      (tick/in "UTC")
-      (tick/date))
+      ;;(tick/in "UTC")
+      (tick/date)
+      #_(tick/at "00:00")
+      #_(tick/inst))
 
 
-  @(latest :USD :ZAR)
-
-  @(latest :USD :SGD)
-
-  @(latest :EUR :ZAR)
 
   )

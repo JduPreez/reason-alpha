@@ -74,6 +74,7 @@
     [:enum {:enum/titles {:long  "Long"
                           :short "Short (Hedge)"}} :long :short]]
    [:position/stop {:optional true} number?]
+   [:position/target-price {:optional true} number?]
    [:position/holding-position-id {:optional true} uuid?]])
 
 (comment
@@ -102,6 +103,7 @@
     [:tuple uuid? string?]]
    [:holding-currency
     {:ref          :holding
+     :optional     true
      :command-path [:holding/currency]}
     fin-instruments/Currency]
    [:long-short {:title        "Long/Short (Hedge)"
@@ -126,13 +128,14 @@
                  :compute  {:function "quantity * open-price"
                             :use      [:quantity :open-price]}}
     number?]
-   [:fx-rate
-    number?]
+   [:open-fx-rate {:optional true} number?]
+   [:close-fx-rate {:optional true} number?]
    ;; `:title` supports Mustache templating and inner HTML too: "Open Total`<br>`({{account-currency-nm}})"
    [:open-total-acc-currency {:title    "Open Total ({{account-currency-nm}})"
                               :optional true
-                              :compute  {:function "quantity * open-price"
-                                         :use      [:quantity :open-price]}}
+                              :compute  {:function "open-total * open-fx-rate"
+                                         :use      [:open-fx-rate]
+                                         :require  [:open-total]}}
     number?]
    [:close-price {:title        "Close"
                   :optional     true
@@ -146,35 +149,68 @@
                                     :use      [:quantity :close-price]
                                     :require  [:open-total]}}
     number?]
-   ;; Profit/Loss Amount Main Currency
-   ;; Profit/Loss %
+   [:profit-loss-amount-acc-currency {:title    "Profit/Loss ({{account-currency-nm}})"
+                                      :optional true
+                                      :compute  {:function "profit-loss-amount * close-fx-rate"
+                                                 :use      [:close-fx-rate]
+                                                 :require  [:profit-loss-amount]}}
+    number?]
+   [:profit-loss-percent {:title    "Profit/Loss %"
+                          :optional true
+                          :compute  {:function "PERCENT(profit-loss-amount / open-total)"
+                                     :require  [:open-total :profit-loss-amount]}}
+    number?]
    ;; Profit/Loss Long
    ;; Profit/Loss Long Main Currency
    ;; Profit/Loss Long %
-   ;; Target Price
-   ;; Target Profit
-   ;; Target Profit Main Currency
-   ;; Target Profit %
+   [:target-price {:title        "Target Price"
+                   :optional     true
+                   :command-path [:position/target-price]}
+    number?]
+   [:target-profit {:title    "Target Profit"
+                    :optional true
+                    :compute  {:function "(target-price * quantity) - open-total"
+                               :use      [:target-price :quantity]
+                               :require  [:open-total]}}
+    [:maybe number?]]
+   [:target-profit-acc-currency {:title    "Target Profit ({{account-currency-nm}})"
+                                 :optional true
+                                 :compute  {:function "target-profit * close-fx-rate"
+                                            :use      [:close-fx-rate]
+                                            :require  [:target-profit]}}
+    [:maybe number?]]
+   [:target-profit-percent {:title    "Target Profit %"
+                            :optional true
+                            :compute  {:function "TPERCENT(target-profit / open-total)"
+                                       :require  [:target-profit :open-total]}}
+    [:maybe string?]]
    [:status {:optional     true
              :command-path [:position/status]}
     keyword?]
-   [:stop {:optional     true
-           :title        "Stop"
+   [:stop {:title        "Stop"
+           :optional     true
            :command-path [:position/stop]}
-    number?]
+    [:maybe number?]]
    [:stop-loss {:title    "Stop Loss"
-                :optional true}
-    number?]
-   ;; Stop Loss Main Currency
+                :optional true
+                :compute  {:function "(stop * quantity) - open-total"
+                           :use      [:stop :quantity]
+                           :require  [:open-total]}}
+    [:maybe number?]]
+   [:stop-loss-acc-currency {:title    "Stop Loss ({{account-currency-nm}})"
+                             :optional true
+                             :compute  {:function "stop-loss * close-fx-rate"
+                                        :use      [:close-fx-rate]
+                                        :require  [:stop-loss]}}
+    [:maybe number?]]
    [:stop-loss-percent {:optional true
                         :title    "Stop Loss % of Allocation"
                         :compute  {:function "TPERCENT(stop-loss/(quantity * open-price))"
                                    :use      [:stop-loss :quantity :open-price]}}
-    string?]
+    [:maybe string?]]
    ;; 1st Deviation
    ;; 1st Deviation Amount Open
    ;; 1st Deviation Amount Close
-   ;; Exchange Rate Main Currency
    [:trade-pattern {:title        "Trade Pattern"
                     :optional     true
                     :ref          :trade-pattern

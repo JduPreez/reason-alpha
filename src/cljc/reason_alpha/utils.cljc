@@ -140,7 +140,6 @@
        (re-find #"^-?\d+$" nr)      (js/parseInt nr)
        :else                        nr)))
 
-(defn do!
-  [f & args]
-  (apply f args)
+(defn ignore
+  [r]
   nil)
