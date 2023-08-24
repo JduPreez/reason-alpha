@@ -77,7 +77,9 @@
                                               (not= close-price cur-close-pr))
                                        :closed
                                        :open)
-         pos                         (assoc pos :status status)
+         pos                         (-> pos
+                                         (assoc :status status)
+                                         (dissoc :holding-id))
          query-dto-model             (get-in db (data/model :model/position-dto))
          cmd-pos                     (mapping/query-dto->command-ent query-dto-model pos)
          db                          (data/save-local! {:model-type :position

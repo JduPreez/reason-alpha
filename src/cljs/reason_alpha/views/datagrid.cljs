@@ -8,7 +8,11 @@
             [re-frame.core :as rf]
             [reagent.core :as r]
             [reason-alpha.model.utils :as mutils]
-            [reason-alpha.views.utils :as vutils]))
+            [reason-alpha.views.utils :as vutils]
+            [tick.core :as tick]
+            [tick.locale-en-us]))
+
+(def date-formatter (tick/formatter "yyyy-MM-dd"))
 
 (def default-opts
   {;;:grid-id                    :my-grid

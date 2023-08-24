@@ -111,7 +111,7 @@
                  :command-path [[:position/long-short]
                                 [:position/long-short-name]]}
     [:tuple keyword? string?]]
-   [:open-time {:title        "Open Date"
+   [:open-date {:title        "Open Date"
                 :command-path [:position/open
                                :trade-transaction/date]}
     inst?]
@@ -142,7 +142,11 @@
                   :command-path [:position/close
                                  :trade-transaction/price]}
     number?]
-   ;; Close date
+   [:close-date {:title        "Close Date"
+                 :optional     true
+                 :command-path [:position/close
+                                :trade-transaction/date]}
+    [:maybe inst?]]
    [:profit-loss-amount {:title    "Profit/Loss"
                          :optional true
                          :compute  {:function "(quantity * close-price) - open-total"
@@ -157,9 +161,9 @@
     number?]
    [:profit-loss-percent {:title    "Profit/Loss %"
                           :optional true
-                          :compute  {:function "PERCENT(profit-loss-amount / open-total)"
+                          :compute  {:function "TPERCENT(profit-loss-amount / open-total)"
                                      :require  [:open-total :profit-loss-amount]}}
-    number?]
+    [:maybe string?]]
    ;; Profit/Loss Long
    ;; Profit/Loss Long Main Currency
    ;; Profit/Loss Long %

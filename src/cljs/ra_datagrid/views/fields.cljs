@@ -1,5 +1,6 @@
 (ns ra-datagrid.views.fields
   (:require [cljs-time.coerce :as coerce]
+            [cljs-time.format :as fmt]
             [cljs-uuid-utils.core :as uuid]
             [clojure.string :as str]
             [medley.core :as medley]
@@ -77,6 +78,7 @@
                                           c :id
                                           #(val->choice-id ctype %)))
                                        @*choices)
+            disabled?             (empty? choices)
             choices               (if opt?
                                     (cons {:id nil, :label [:div {:style {:margin-top    "1rem"
                                                                           :margin-bottom "1rem"}}]} choices)
@@ -86,6 +88,7 @@
          [dropdown/single-dropdown
           :src         (re-com/at)
           :choices     choices
+          :disabled?   disabled?
           :model       *selected-val
           :width       "100%"
           :max-height  "200px"
@@ -143,25 +146,27 @@
   (let [*options (rf/subscribe [:datagrid/options id])]
     (fn [id field record indent?]
       (let [{:keys [parent-subscription
-                    display-name-path]} (:indent-group field)
-            is-clickable?               (not (nil? (:on-click field)))
-            formatter                   (:formatter field)
-            fieldname                   (:name field)
-            parent-id                   (get record fieldname)
-            parent                      @(rf/subscribe [parent-subscription parent-id])
-            formatted-value             (get-in parent display-name-path)
-            align                       (if (nil? (:align field)) :text-left (:align field))]
+                    display-name]
+             :as   x}       (:indent-group field)
+            is-clickable?   (not (nil? (:on-click field)))
+            formatter       (:formatter field)
+            fieldname       (:name field)
+            parent-id       (get record fieldname)
+            parent          @(rf/subscribe [parent-subscription parent-id])
+            formatted-value (when display-name
+                              (display-name parent))
+            align           (if (nil? (:align field)) :text-left (:align field))]
         [:td (cond-> {:key       fieldname
                       :className align}
                indent? (assoc :style {:padding-left "30px"}))
          formatted-value]))))
 
 (defmethod edit-cell :indent-group
-  [grid-id {member-key                  :name
-            data-subscr                 :data-subscription
+  [grid-id {member-key             :name
+            data-subscr            :data-subscription
             {:keys [group-path
-                    display-name-path]} :indent-group
-            :as                         _field} pk]
+                    display-name]} :indent-group
+            :as                    _field} pk]
   (let [*r (rf/subscribe [:datagrid/edited-record-by-pk-with-validation grid-id pk])]
     (fn [grid-id field pk]
       (let [validation       (-> @*r :validation (get (:name field)))
@@ -178,10 +183,14 @@
                                                          (and id
                                                               (= (get r member-key) id)))
                                                        records))))
-                                  (sort-by (fn [r] (get-in r display-name-path))))]
+                                  (sort-by display-name))]
+        (cljs.pprint/pprint {:>>>-EP eligible-parents})
         [:td {:key       member-key
               :className "editing"}
          [:select.form-control {:value     (or parent-id "")
+                                :style     {:display (if (seq eligible-parents)
+                                                       "block"
+                                                       "none")}
                                 :on-change #(let [v (as-> % v
                                                       (.-target v)
                                                       (.-value v)
@@ -196,7 +205,8 @@
           [:option {:value ""} ""]
           (for [ep   eligible-parents
                 :let [ep-id   (get-in ep group-path)
-                      ep-name (get-in ep display-name-path)]]
+                      ep-name (when display-name
+                                (display-name ep))]]
             ^{:key (str member-key "-option-" id "-" ep-id)}
             [:option {:value ep-id} ep-name])]
          (views/invalid-feedback validation)]))))

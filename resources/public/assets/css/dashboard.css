@@ -1489,7 +1489,10 @@ pre code {
 select.form-control:not([size]):not([multiple]) {
 	height: 2.6rem;
 }
-
+select.form-control {
+	padding-left: 0.4rem;
+	width: fit-content;
+}
 select.form-control:focus::-ms-value {
 	color: #495057;
 	background-color: #fff;
@@ -1652,7 +1655,7 @@ select.form-control-lg:not([size]):not([multiple]), .input-group-lg>select.form-
 }
 .was-validated .custom-control-input:valid:checked~.custom-control-label::before, .custom-control-input.is-valid:checked~.custom-control-label::before {
 	background-color: #78ed00;
-}
+}option
 .was-validated .custom-control-input:valid:focus~.custom-control-label::before, .custom-control-input.is-valid:focus~.custom-control-label::before {
 	box-shadow: 0 0 0 1px #f5f7fb, 0 0 0 2px rgba(94, 186, 0, 0.25);
 }

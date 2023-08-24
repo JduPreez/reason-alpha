@@ -4,7 +4,8 @@
             [reason-alpha.utils :as utils]
             [reason-alpha.views.datagrid :as datagrid]
             [reason-alpha.views.holdings :as views.holdings]
-            [reason-alpha.views.trade-patterns :as views.trade-patterns]))
+            [reason-alpha.views.trade-patterns :as views.trade-patterns]
+            [tick.core :as tick]))
 
 (defn options
   [schema]
@@ -36,6 +37,15 @@
                       {:enum-titles @*ls-titles}
 
                       :holding-position-id
-                      {:indent-group {:group-path        [:position-id]
-                                      :display-name-path [:holding 1]}}}})]
+                      {:indent-group {:group-path   [:position-id]
+                                      ;; holding -> then 2nd child of tuple, which is the
+                                      ;; holding name
+                                      :display-name (fn hoilding-pos-display-nm
+                                                      [{:keys [open-date holding]}]
+                                                      (when (and open-date holding)
+                                                        (let [[_ h]    holding
+                                                              open-dte (->> open-date
+                                                                            tick/date
+                                                                            (tick/format datagrid/date-formatter))]
+                                                          (str h " (" open-dte ")"))))}}}})]
     [datagrid/view fields (options @*schema)]))
