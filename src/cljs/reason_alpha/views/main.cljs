@@ -42,6 +42,9 @@
       [:a.nav-link {:href "#"}
        [:i.fas.fa-file-import] [:span "IMPORT"]]]
      [:li.nav-item
+      [:a.nav-link {:href "#"}
+       [:i.fas.fa-archive] [:span "SAVE"]]]
+     [:li.nav-item
       [:a.nav-link {:href     "#"
                     :on-click #(do (.preventDefault %)
                                    (rf/dispatch [:add]))}

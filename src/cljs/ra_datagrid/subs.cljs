@@ -8,12 +8,9 @@
 (defn sensible-sort
   [k r]
   (let [v (get r k)]
-    (cond
-      (nil? v)    v
-      (number? v) v
-      (string? v) (clojure.string/lower-case v)
-      :else       (str v))))
-
+    (if (string? v)
+      (clojure.string/lower-case v)
+      #_else (str v))))
 
 (defn sort-records
   "Assumes a `:<k>-formatted` key exists in each record for k"
@@ -25,7 +22,7 @@
           fmt-key (keyword (str (name k) "-formatted"))
           field   (first (filter #(= (:name %) k) fields))
           sort-fn (if (:sort-value-fn field)
-                    #((:sort-value-fn field) (or (str (get % k)) (str (get % fmt-key))) %)
+                    #((:sort-value-fn field) (or (get % k) (get % fmt-key)) %)
                     (partial sensible-sort fmt-key))
           do-sort #(->> %
                         (sort-by sort-fn)

@@ -109,10 +109,9 @@
 ;; -----
 
 (defmethod edit-cell :date
-  [grid-id field pk]
-  (let [;;*r             (rf/subscribe [:datagrid/edited-record-by-pk grid-id pk])
-        *r             (rf/subscribe [:datagrid/edited-record-by-pk-with-validation grid-id pk])
-        dte            (->> @*r :result (:name field) (get @*r))
+  [grid-id {:keys [name] :as field} pk]
+  (let [*r             (rf/subscribe [:datagrid/edited-record-by-pk-with-validation grid-id pk])
+        dte            (-> @*r :result name)
         *selected-date (reagent/atom
                         (when dte
                           (coerce/to-date-time dte)))]
@@ -184,7 +183,6 @@
                                                               (= (get r member-key) id)))
                                                        records))))
                                   (sort-by display-name))]
-        (cljs.pprint/pprint {:>>>-EP eligible-parents})
         [:td {:key       member-key
               :className "editing"}
          [:select.form-control {:value     (or parent-id "")
