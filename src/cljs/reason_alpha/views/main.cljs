@@ -35,10 +35,11 @@
      [:li.nav-item
       [:a.nav-link {:href "#"}
        [:i.fas.fa-chart-line] [:span "TRADING"]]]
-     [:li.nav-item
+     ;; TODO:
+     #_[:li.nav-item
       [:a.nav-link {:href "#"}
        [:i.fas.fa-chart-pie] [:span "ANALYSIS"]]]
-     [:li.nav-item
+     #_[:li.nav-item
       [:a.nav-link {:href "#"}
        [:i.fas.fa-file-import] [:span "IMPORT"]]]
      [:li.nav-item

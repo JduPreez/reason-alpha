@@ -4,6 +4,11 @@
             [reason-alpha.utils :as utils]))
 
 (rf/reg-sub
+ :holding/default-vals
+ (fn [_ _]
+   {:instrument-type [:share ""]}))
+
+(rf/reg-sub
  :holding/instrument-type-ref-list
  :<- [:model/members-of :model/holding :holding/instrument-type]
  (fn [{{:keys [enum/titles]} :properties

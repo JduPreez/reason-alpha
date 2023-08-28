@@ -112,7 +112,6 @@
   (let [{:keys [model]} (get-in db data/active-view-model)
         _               (cljs.pprint/pprint {::action-event-1 model})
         event           [(keyword (name model) (name action))]]
-    (cljs.pprint/pprint {::action-event-2 [action event]})
     (if model
       {:dispatch event}
       {})))
@@ -149,20 +148,20 @@
 (rf/reg-event-db
  :select
  (fn [db [_ selected-ids]]
-   (let [{:keys [model]} (get-in db data/active-view-model)
-         ids             (map #(utils/maybe->uuid %) selected-ids)]
-     (assoc-in db (conj data/selected model) ids))))
+   (let [{{:keys [model]} :sheet-view} (get-in db data/active-view-model)
+         ids                           (map #(utils/maybe->uuid %) selected-ids)]
+     (assoc-in db (data/selected model) ids))))
 
 (rf/reg-event-fx
  :edit
  (fn [{:keys [db]} [_ entities]]
-   (let [{:keys [view model]} (get-in db data/active-view-model)
-         edit-evts            (mapv
-                               #(let [creation-id (->> %
-                                                       (model.utils/creation-id-key model)
-                                                       (get %))]
-                                  [:datagrid/start-edit view creation-id %])
-                               entities)]
+   (let [{{:keys [view model]} :sheet-view} (get-in db data/active-view-model)
+         edit-evts                          (mapv
+                                             #(let [creation-id (->> %
+                                                                     (model.utils/creation-id-key model)
+                                                                     (get %))]
+                                                [:datagrid/start-edit view creation-id %])
+                                             entities)]
      {:dispatch-n edit-evts})))
 
 (rf/reg-event-db

@@ -6,7 +6,11 @@
 
 (def ^:const router [:router])
 
-(def ^:const selected [:selected])
+(defn selected
+  ([]
+   [:selected])
+  ([model]
+   [:selected model]))
 
 (def ^:const active-view-model [:active-view-model])
 
@@ -91,9 +95,7 @@
      :dispatch [:select nil]}))
 
 (defn get-selected-ids [type db]
-  (let [selctd-creation-ids (->> type
-                                 (conj selected)
-                                 (get-in db))
+  (let [selctd-creation-ids (get-in db (selected type))
         creation-id-k       (model.utils/creation-id-key-by-type type)
         id-k                (model.utils/id-key-by-type type)
         idx-ents            (->> type

@@ -103,7 +103,7 @@
    (let [id-field    (get-in db [:datagrid/data id :options :id-field])
          callback-fn (get-in db [:datagrid/data id :options :on-selection-change])
          pk          (get record id-field)]
-     (update-in db [:datagrid/data  id :selected-records]
+     (update-in db [:datagrid/data id :selected-records]
                 (fn [o pk']
                   (let [n' (if (some #{pk'} o)
                              (disj o pk')
@@ -116,16 +116,10 @@
 (rf/reg-event-db
  :datagrid/create-new-record
  (fn [db [_ grid-id]]
-   (let [defaults (->> [:datagrid/data grid-id :options :default-values]
-                       (get-in db)
-                       (map (fn [[k v]]
-                              [k (if (fn? v)
-                                   (v) #_else v)]))
-                       (into {}))]
-     (-> db
-         ;;put it under 'nil' key in edit-rows
-         (assoc-in [:datagrid/data  grid-id :edit-rows nil] (or defaults {}))
-         (assoc-in [:datagrid/data  grid-id :creating?] true)))))
+   (-> db
+       ;;put it under 'nil' key in edit-rows
+       (assoc-in [:datagrid/data grid-id :edit-rows nil] {} #_(or defaults {}))
+       (assoc-in [:datagrid/data grid-id :creating?] true))))
 
 (rf/reg-event-db
  :datagrid/update-edited-record

@@ -9,7 +9,7 @@
    :id-field          :holding-creation-id
    :create-dispatch   [:holding/create]
    :update-dispatch   [:holding/update]
-   :default-values    {:instrument-type [:share ""]}})
+   :default-values    [:holding/default-vals]})
 
 (defn view []
   (let [*schema          (rf/subscribe [:model :model/holding-dto])

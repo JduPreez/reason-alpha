@@ -18,7 +18,7 @@
    :create-dispatch        [:position/create]
    :update-dispatch        [:position/update]
    :validator              (partial validation/validate schema)
-   :default-values         {:position-creation-id (constantly (utils/new-uuid))}
+   :default-values         [:position/default-vals]
    :context-subscription   [:account]})
 
 (defn view [& x]

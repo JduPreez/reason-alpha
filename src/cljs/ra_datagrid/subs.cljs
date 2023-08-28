@@ -255,10 +255,25 @@
 
 (rf/reg-sub
  :datagrid/edited-record-by-pk
- (fn [db [_ id pk]]
-   (get-in db [:datagrid/data id :edit-rows pk])))
+ (fn [db [_ grid-id pk]]
+   (get-in db [:datagrid/data grid-id :edit-rows pk])))
 
 (rf/reg-sub
+ :datagrid/edited-record-by-pk-with-validation
+ (fn [db [_ grid-id pk]]
+   (let [{:keys [validator
+                 default-values]} @(rf/subscribe [:datagrid/options grid-id])
+         r                        (if (and default-values (nil? pk))
+                                    @(rf/subscribe default-values)
+                                    @(rf/subscribe [:datagrid/edited-record-by-pk
+                                                    grid-id pk]))
+         vres                     (when validator
+                                    (validator r))]
+     (cljs.pprint/pprint {:>>>-### r})
+     (cond-> {:result r}
+       vres (assoc :validation vres)))))
+
+#_(rf/reg-sub
  :datagrid/edited-record-by-pk-with-validation
  (fn [[_ grid-id pk]]
    [(rf/subscribe [:datagrid/edited-record-by-pk grid-id pk])
