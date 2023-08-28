@@ -3,7 +3,7 @@
             [reason-alpha.views.alerts :as alerts]))
 
 (defn view
-  [& {:keys [sheet-view form-view accounts-form-view]}]
+  [& {:keys [sheet-view form-view accounts-form-view positions-sheet-view]}]
   [:div.page-main
    [:div#headerMenuCollapse.ren-navbar>div.container
     [:ul.nav
@@ -33,14 +33,16 @@
        [:a.dropdown-item {:href "login.html"}
         [:i.dropdown-icon.mdi.mdi-logout-variant] "Sign out"]]]
      [:li.nav-item
-      [:a.nav-link {:href "#"}
-       [:i.fas.fa-chart-line] [:span "TRADING"]]]
+      [:a.nav-link {:href     "#"
+                    :on-click #(do (.preventDefault %)
+                                   (rf/dispatch [:push-state positions-sheet-view]))}
+       [:i.fas.fa-chart-line] [:span "POSITIONS"]]]
      ;; TODO:
      #_[:li.nav-item
-      [:a.nav-link {:href "#"}
+        [:a.nav-link {:href "#"}
        [:i.fas.fa-chart-pie] [:span "ANALYSIS"]]]
      #_[:li.nav-item
-      [:a.nav-link {:href "#"}
+        [:a.nav-link {:href "#"}
        [:i.fas.fa-file-import] [:span "IMPORT"]]]
      [:li.nav-item
       [:a.nav-link {:href "#"}

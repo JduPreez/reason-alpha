@@ -84,7 +84,8 @@
       [main/view
        :sheet-view sv
        :form-view fv
-       :accounts-form-view ::accounts/form-view])))
+       :accounts-form-view ::accounts/form-view
+       :positions-sheet-view ::positions/view])))
 
 (defn init []
   (init-routes!)
