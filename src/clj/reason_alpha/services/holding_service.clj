@@ -214,8 +214,12 @@
                             p))
                         ps)]
             (recur (remove #(= c %) result-chnls) ps))
-          ps))
-      positions)))
+          #_else
+          {:result ps
+           :type   :success}))
+      #_else
+      {:result positions
+       :type   :success})))
 
 (defn get-holding-positions-fn
   [fn-repo-get-holding-positions fn-repo-get-acc-by-uid fns-market-data fn-get-ctx]
@@ -240,32 +244,35 @@
   [fn-repo-get-holdings-positions fn-repo-get-acc-by-uid fns-market-data
    broadcast? {:keys [fn-get-ctx account-id send-message]}]
   (let [{send-msg :send-message
-         :as      ctx}        (when fn-get-ctx
-                                (fn-get-ctx))
-        acc-id                (or account-id
-                                  (and ctx
-                                       (get-in ctx [:user-account :account/id])))
-        send-msg              (or send-msg
-                                  #(send-message acc-id %))
-        fn-assoc-close-prices (assoc-market-data-fn fn-repo-get-acc-by-uid
-                                                    fns-market-data)
-        gpositions            (->> {:account-id acc-id
-                                    :role       (if account-id
-                                                  :system
-                                                  :member)}
-                                   fn-repo-get-holdings-positions
-                                   (group-by (fn [{:keys [position-id holding-position-id]}]
-                                               (or holding-position-id
-                                                   position-id))))]
+         :as      ctx}       (when fn-get-ctx
+                               (fn-get-ctx))
+        acc-id               (or account-id
+                                 (and ctx
+                                      (get-in ctx [:user-account :account/id])))
+        send-msg             (or send-msg
+                                 #(send-message acc-id %))
+        fn-assoc-market-data (assoc-market-data-fn fn-repo-get-acc-by-uid
+                                                   fns-market-data)
+        gpositions           (->> {:account-id acc-id
+                                   :role       (if account-id
+                                                 :system
+                                                 :member)}
+                                  fn-repo-get-holdings-positions
+                                  (group-by (fn [{:keys [position-id holding-position-id]}]
+                                              (or holding-position-id
+                                                  position-id))))]
 
     (when broadcast? (swap! *broadcast-holdings-positions conj acc-id))
 
     (doseq [[_gpos-id posns] gpositions]
-      (future
+      ;; TODO: Remove deref-block here
+      @(future
         (try
-          (let [result (->> posns
-                            (fn-assoc-close-prices acc-id)
-                            aggregate-holding-positions)]
+          (let [{:keys [result type] :as r} (->> posns
+                                                 aggregate-holding-positions)
+                result                      (if (= :success type)
+                                              (fn-assoc-market-data acc-id result)
+                                              r)]
             (send-msg
              [:holding.query/get-holdings-positions-result result]))
           (catch Exception e

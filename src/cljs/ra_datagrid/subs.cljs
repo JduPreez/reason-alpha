@@ -158,6 +158,8 @@
          k   :name
          :as field}]
      ;;add formatted value
+     (cljs.pprint/pprint {(str ">>>-" k) {:F field
+                                          :R record}})
      (let [fmt (or fmt (default-formatter field))]
        (assoc rec (keyword (str (name k) "-formatted"))
               (fmt (get record k) record))))

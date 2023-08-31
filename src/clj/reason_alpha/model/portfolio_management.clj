@@ -2,6 +2,7 @@
   (:require [axel-f.excel :as axel-f]
             [malli.core :as m]
             [malli.instrument :as malli.instr]
+            [medley.core :as medley]
             [reason-alpha.model.core :as model :refer [def-model]]
             [reason-alpha.model.fin-instruments :as fin-instruments]
             [reason-alpha.model.utils :as mutils]
@@ -71,8 +72,10 @@
    [:position/account-id uuid?]
    [:position/trade-pattern-id {:optional true} uuid?]
    [:position/long-short
-    [:enum {:enum/titles {:long  "Long"
-                          :short "Short (Hedge)"}} :long :short]]
+    [:enum {:enum/titles {:long   "Long"
+                          :short  "Short"
+                          :hedged "Hedged"}}
+     :long :short :hedged]]
    [:position/stop {:optional true} number?]
    [:position/target-price {:optional true} number?]
    [:position/holding-position-id {:optional true} uuid?]])
@@ -106,7 +109,8 @@
      :optional     true
      :command-path [:holding/currency]}
     fin-instruments/Currency]
-   [:long-short {:title        "Long/Short (Hedge)"
+   [:long-short {:title        "Long/Short/Hedge"
+                 :optional     true
                  :ref          :position/long-short
                  :command-path [[:position/long-short]
                                 [:position/long-short-name]]}
@@ -236,7 +240,10 @@
     string?]
    [:holding-id {:optional     true
                  :command-path [:position/holding-id]}
-    uuid?]])
+    uuid?]
+   ;; IDs of child positions. Used to determine if a row `:can-edit`
+   [:sub-positions {:optional true}
+    [:maybe [:sequential uuid?]]]])
 
 (def-model Holding
   :model/holding
@@ -297,13 +304,16 @@
 (defn assoc-aggregate-fields
   ([{:keys [stop open-price quantity] :as position}]
    (or (and stop
+            open-price
+            quantity
             (-> stop
                 (- open-price)
                 (* quantity)
                 utils/round
                 (as-> a (assoc position :stop-loss a))))
        position))
-  ([{:keys [stop open-price quantity] :as position}
+  ([{:keys [stop open-price quantity long-short open-date
+            close-date] :as position}
     sub-positions]
 
    ;; If the stop/quantity is set on the overall holding position,
@@ -313,44 +323,65 @@
                                      amount
                                      (not= 0 quantity))
                             (/ amount quantity)))
-         total-quantity (or quantity
+         sub-positions? (seq sub-positions)
+         total-quantity (if sub-positions?
+                          (if (> (count sub-positions) 1)
                             (->> sub-positions
-                                 (reduce #(+ (or %1 0) (or %2 0)))))
-         avg-cost-open  (or open-price
-                            (->> sub-positions
-                                 (map (fn [{:keys [open-price quantity]}]
-                                        (* (or open-price 0)
-                                           (or quantity 0))))
-                                 (reduce +)
-                                 (fn-avg-cost total-quantity)))
-         ;; TODO: Remove this
-         avg-cost-open  (if (string? avg-cost-open)
-                          (read-string avg-cost-open)
-                          avg-cost-open)
-         avg-cost-stop  (or stop
-                            (->> sub-positions
-                                 (map (fn [{:keys [stop quantity]}]
-                                        (* (or stop 0)
-                                           (or quantity 0))))
-                                 (reduce +)
-                                 (fn-avg-cost total-quantity)))
-
-         ;; TODO: Remove this
-         avg-cost-stop (if (string? avg-cost-stop)
-                         (read-string avg-cost-stop)
-                         avg-cost-stop)
+                                 (reduce #(+ (or (:quantity %1) 0)
+                                             (or (:quantity %2) 0))))
+                            #_else (-> sub-positions first :quantity))
+                          #_else quantity)
+         avg-cost-open  (if sub-positions?
+                          nil
+                          #_(->> sub-positions
+                               (map (fn [{:keys [open-price quantity]}]
+                                      (* (or open-price 0)
+                                         (or quantity 0))))
+                               (reduce +)
+                               (fn-avg-cost total-quantity))
+                          #_else open-price)
+         avg-cost-stop  (if sub-positions?
+                          (->> sub-positions
+                               (map (fn [{:keys [stop quantity]}]
+                                      (* (or stop 0)
+                                         (or quantity 0))))
+                               (reduce +)
+                               (fn-avg-cost total-quantity))
+                          #_else stop)
+         sub-pids       (->> sub-positions
+                             (map #(or (:poition-id %)
+                                       (:position-creation-id %))))
+         ls-type        (if sub-positions?
+                          (if (every? #(= :long (:long-short %))
+                                      sub-positions)
+                            :long #_else [:hedged ""])
+                          #_else long-short)
+         open-date      (if sub-positions?
+                          (->> sub-positions
+                               (apply medley/least-by :open-date)
+                               :open-date)
+                          #_else open-date)
+         close-date     (if sub-positions?
+                          (->> sub-positions
+                               (apply medley/greatest-by :close-date)
+                               :close-date)
+                          #_else close-date)
          ;; TODO: When we add support for short positions, the holding position's
          ;;       `:stop-loss` should be simple sum of sub positions `:stop-loss`
          ;;       and the `:stop`'s `avg-cost-stop` should be derived only from the
          ;;       long sub positions.
-         position      (-> position
-                           (merge {:open-price avg-cost-open
-                                   :stop       avg-cost-stop
-                                   :quantity   total-quantity})
-                           assoc-aggregate-fields
-                           (merge {:open-price (utils/round avg-cost-open)
-                                   :stop       (utils/round avg-cost-stop)
-                                   :quantity   total-quantity}))]
+         position       (-> position
+                            (merge {:open-price    avg-cost-open
+                                    :stop          avg-cost-stop
+                                    :quantity      total-quantity
+                                    :sub-positions sub-pids
+                                    :long-short    ls-type
+                                    :open-date     open-date
+                                    :close-date    close-date})
+                            assoc-aggregate-fields
+                            (merge {:open-price (utils/round avg-cost-open)
+                                    :stop       (utils/round avg-cost-stop)
+                                    :quantity   total-quantity}))]
      position)))
 
 ;; (defn position-total-return

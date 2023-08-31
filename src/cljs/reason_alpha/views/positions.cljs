@@ -19,7 +19,8 @@
    :update-dispatch        [:position/update]
    :validator              (partial validation/validate schema)
    :default-values         [:position/default-vals]
-   :context-subscription   [:account]})
+   :context-subscription   [:account]
+   :can-edit-fn            #(nil? (seq (:sub-positions %)))})
 
 (defn view [& x]
   (let [*schema    (rf/subscribe [:model :model/position-dto])
