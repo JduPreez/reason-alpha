@@ -82,29 +82,115 @@
            fn-repo-get-holdings-with-positions
            (map :holding-id))))
 
-(defn- aggregate-holding-positions [positions]
-  (let [comps          (common/computations portfolio-management/PositionDto)
-        holding-pos    (-> positions
-                           (lens/view
-                            (lens/only
-                             #(nil?
-                               (:holding-position-id %))))
-                           first)
-        sub-positions  (-> positions
-                           (lens/view
-                            (lens/only
-                             :holding-position-id)))
-        holding-pos    (when holding-pos
-                         (portfolio-management/assoc-aggregate-fields
-                          holding-pos sub-positions))
-        sub-positions  (when (seq sub-positions)
-                         (map portfolio-management/assoc-aggregate-fields
-                              sub-positions))
-        pos-with-comps (cond-> []
-                         (seq sub-positions) (into sub-positions)
-                         holding-pos         (conj holding-pos)
-                         :always             (common/compute {:computations comps}))]
-    pos-with-comps))
+(def postn-comps (common/computations portfolio-management/PositionDto))
+
+(defn- idx-position-type
+  [positions]
+  (let [holding-pos (-> positions
+                        (lens/view
+                         (lens/only
+                          #(nil?
+                            (:holding-position-id %))))
+                        first)
+        positions   (-> positions
+                        (lens/view
+                         (lens/only
+                          :holding-position-id))
+                        (common/compute {:computations postn-comps}))]
+    {:holding-position holding-pos
+     :positions        positions}))
+
+(defn- compute-positions
+  [positions]
+  (-> positions
+      (lens/view
+       (lens/only
+        :holding-position-id))
+      (common/compute {:computations postn-comps})))
+
+(comment
+  (let [ps [{:open-total-acc-currency         nil,
+             :trade-pattern
+             [#uuid "018a2c43-7a96-11a5-ab21-06f37976bbf8" "Breakout"],
+             :target-profit-acc-currency      nil,
+             :stop-loss-acc-currency          nil,
+             :target-profit                   nil,
+             :holding                         [#uuid "018a26c9-4b50-9f3f-d4ae-0206dd209197" "Adyen"],
+             :profit-loss-amount              -21.729999999999563,
+             :open-total                      31333.43,
+             :open-price                      764.23,
+             :profit-loss-percent             "-0.07%",
+             :stop-loss                       -31333.43,
+             :holding-currency                :EUR,
+             :stop                            0,
+             :marketstack                     "ADYEN.XAMS",
+             :stop-loss-percent               "-100.0%",
+             :position-creation-id            #uuid "d561b5c7-57ab-49b0-84ce-2d04b78f588c",
+             :status                          :open,
+             :close-price                     763.7,
+             :position-id                     #uuid "018a2cac-c474-3ec7-962c-b5b285877385",
+             :open-date                       #inst "2023-08-24T00:00:00.000-00:00",
+             :holding-position-id             #uuid "018a2caa-ba6e-c9a5-8d51-38553003af1f",
+             :holding-id                      #uuid "018a26c9-4b50-9f3f-d4ae-0206dd209197",
+             :quantity                        41,
+             :profit-loss-amount-acc-currency nil,
+             :long-short                      [:long ""],
+             :target-profit-percent           nil}
+            {:open-total-acc-currency         nil,
+             :trade-pattern
+             [#uuid "018a2c43-7a96-11a5-ab21-06f37976bbf8" "Breakout"],
+             :target-profit-acc-currency      nil,
+             :stop-loss-acc-currency          nil,
+             :target-profit                   nil,
+             :holding                         [#uuid "018a26c9-4b50-9f3f-d4ae-0206dd209197" "Adyen"],
+             :profit-loss-amount              -21.729999999999563,
+             :open-total                      31333.43,
+             :open-price                      764.23,
+             :profit-loss-percent             "-0.07%",
+             :stop-loss                       -31333.43,
+             :holding-currency                :EUR,
+             :stop                            0,
+             :marketstack                     "ADYEN.XAMS",
+             :stop-loss-percent               "-100.0%",
+             :position-creation-id            #uuid "cf9da077-0d0c-40d6-b570-f3edd056ca79",
+             :status                          :open,
+             :close-price                     763.7,
+             :position-id                     #uuid "4b463c08-c0ce-4178-b5b8-1ebce5b7e53a",
+             :open-date                       #inst "2023-08-24T00:00:00.000-00:00",
+             :holding-position-id             #uuid "018a2caa-ba6e-c9a5-8d51-38553003af1f",
+             :holding-id                      #uuid "018a26c9-4b50-9f3f-d4ae-0206dd209197",
+             :quantity                        5,
+             :profit-loss-amount-acc-currency nil,
+             :long-short                      [:long ""],
+             :target-profit-percent           nil}
+            {:open-total-acc-currency         nil,
+             :target-profit-acc-currency      nil,
+             :stop-loss-acc-currency          nil,
+             :target-profit                   nil,
+             :holding                         [#uuid "018a465e-82bd-de65-2623-02bb30e1a1f6" "Multiple"],
+             :profit-loss-amount              375.9708007812478,
+             :open-total                      31333.42919921875,
+             :open-price                      764.23,
+             :profit-loss-percent             "1.2%",
+             :stop-loss                       -31333.42919921875,
+             :holding-currency                :SGD,
+             :stop                            0.0,
+             :stop-loss-percent               "-100.0%",
+             :sub-positions                   '(#uuid "d561b5c7-57ab-49b0-84ce-2d04b78f588c"),
+             :position-creation-id            #uuid "3cee7b50-68a9-4fa3-b9eb-5464068ad465",
+             :status                          :open,
+             :close-price                     773.4,
+             :close-date                      nil,
+             :position-id                     #uuid "018a2caa-ba6e-c9a5-8d51-38553003af1f",
+             :open-date                       #inst "2023-08-24T00:00:00.000-00:00",
+             :holding-id                      #uuid "018a465e-82bd-de65-2623-02bb30e1a1f6",
+             :quantity                        41,
+             :profit-loss-amount-acc-currency nil,
+             :long-short                      [:hedged ""],
+             :target-profit-percent           nil}]]
+    (aggregate-holding-positions ps))
+
+  )
 
 (defn get-close-prices<
   [positions & {:keys [account batch-size]}]
@@ -268,13 +354,28 @@
       ;; TODO: Remove deref-block here
       @(future
         (try
-          (let [{:keys [result type] :as r} (->> posns
-                                                 aggregate-holding-positions)
-                result                      (if (= :success type)
-                                              (fn-assoc-market-data acc-id result)
-                                              r)]
+          (let [{:keys [holding-position
+                        positions]}  (idx-position-type posns)
+                {positions :result
+                 t         :type
+                 :as       r}        (compute-positions positions)
+                {positions :result
+                 t         :type
+                 :as       r}        (if (= :success t)
+                                       (fn-assoc-market-data acc-id positions)
+                                       r)
+                {holding-position :result
+                 t                :type
+                 :as              r} (when (and (= :success t) holding-position)
+                                       (portfolio-management/aggregate-holding-position
+                                        holding-position positions))
+                positions            (if holding-position
+                                       (conj positions holding-position)
+                                       #_else positions)]
+                ;; TODO: fn-assoc-market-data-holding-position
             (send-msg
-             [:holding.query/get-holdings-positions-result result]))
+             [:holding.query/get-holdings-positions-result {:result positions
+                                                            :type   :success}]))
           (catch Exception e
             (let [err-msg "Error getting holdings positions"]
               (errorf e err-msg)

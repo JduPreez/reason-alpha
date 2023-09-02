@@ -301,88 +301,95 @@
                                        [:holding/instrument-type-name]]}
       [:tuple keyword? string?]]]])))
 
-(defn assoc-aggregate-fields
-  ([{:keys [stop open-price quantity] :as position}]
-   (or (and stop
-            open-price
-            quantity
-            (-> stop
-                (- open-price)
-                (* quantity)
-                utils/round
-                (as-> a (assoc position :stop-loss a))))
-       position))
-  ([{:keys [stop open-price quantity long-short open-date
-            close-date] :as position}
+(defn aggregate-holding-position
+  [{:keys                                                                                                                                                                                                                                                                                                                                      [stop open-price quantity long-short open-date
+                                                                                                                                                                                                                                                                                                                                   close-date] :as position}
     sub-positions]
 
    ;; If the stop/quantity is set on the overall holding position,
    ;; then assume it's manually managed & don't do a roll-up summary.
-   (let [fn-avg-cost    (fn [quantity amount]
-                          (when (and quantity
-                                     amount
-                                     (not= 0 quantity))
-                            (/ amount quantity)))
-         sub-positions? (seq sub-positions)
-         total-quantity (if sub-positions?
-                          (if (> (count sub-positions) 1)
-                            (->> sub-positions
-                                 (reduce #(+ (or (:quantity %1) 0)
-                                             (or (:quantity %2) 0))))
-                            #_else (-> sub-positions first :quantity))
-                          #_else quantity)
-         avg-cost-open  (if sub-positions?
-                          nil
-                          #_(->> sub-positions
-                               (map (fn [{:keys [open-price quantity]}]
-                                      (* (or open-price 0)
-                                         (or quantity 0))))
-                               (reduce +)
-                               (fn-avg-cost total-quantity))
-                          #_else open-price)
-         avg-cost-stop  (if sub-positions?
-                          (->> sub-positions
-                               (map (fn [{:keys [stop quantity]}]
-                                      (* (or stop 0)
-                                         (or quantity 0))))
-                               (reduce +)
-                               (fn-avg-cost total-quantity))
-                          #_else stop)
-         sub-pids       (->> sub-positions
-                             (map #(or (:poition-id %)
-                                       (:position-creation-id %))))
-         ls-type        (if sub-positions?
-                          (if (every? #(= :long (:long-short %))
-                                      sub-positions)
-                            :long #_else [:hedged ""])
-                          #_else long-short)
-         open-date      (if sub-positions?
-                          (->> sub-positions
-                               (apply medley/least-by :open-date)
-                               :open-date)
-                          #_else open-date)
-         close-date     (if sub-positions?
-                          (->> sub-positions
-                               (apply medley/greatest-by :close-date)
-                               :close-date)
-                          #_else close-date)
-         ;; TODO: When we add support for short positions, the holding position's
-         ;;       `:stop-loss` should be simple sum of sub positions `:stop-loss`
-         ;;       and the `:stop`'s `avg-cost-stop` should be derived only from the
-         ;;       long sub positions.
-         position       (-> position
-                            (merge {:open-price    avg-cost-open
-                                    :stop          avg-cost-stop
-                                    :quantity      total-quantity
-                                    :sub-positions sub-pids
-                                    :long-short    ls-type
-                                    :open-date     open-date
-                                    :close-date    close-date})
-                            assoc-aggregate-fields
-                            (merge {:open-price (utils/round avg-cost-open)
-                                    :stop       (utils/round avg-cost-stop)
-                                    :quantity   total-quantity}))]
-     position)))
+  (let [sub-positions      (or (seq sub-positions) '())
+        sub-pos-count      (count sub-positions)
+        ;; When the sub-positions have different currencies, we need to calculate
+        ;; open-price values using the account-currency
+        ;; TODO: When the sub-positions all have the same currency, then use the position's
+        ;; currency instead.
+        total-quantity     (if (> sub-pos-count 1)
+                             (->> sub-positions
+                                  (fn [{q1  :quantity
+                                        ls1 :long-short
+                                        :as total-q} {q2  :quantity
+                                                      ls2 :long-short}]
+                                    (let [q1 (if q1
+                                               (if (= :long ls1)
+                                                 open1 #_else (* -1 q1))
+                                               #_else total-q)
+                                          q2 (or q2 0)
+                                          q2 (if (= :long ls2)
+                                               q2 #_else (* -1 q2))]
+                                      (+ q1 q2))))
+                             #_else
+                             (let [{ls :long-short
+                                    q  :quantity} (first sub-positions)
+                                   q              (or q 0)]
+                               (if (= :long ls)
+                                 q #_else (* -1 q))))
+        overall-open-total (if (> sub-pos-count 1)
+                             (->> sub-positions
+                                  (reduce
+                                   (fn [{open1 :open-total-acc-currency
+                                         ls1   :long-short
+                                         :as   overall-open} {open2 :open-total-acc-currency
+                                                              ls2   :long-short}]
+                                     (let [op1 (if open1
+                                                 (if (= :long ls1)
+                                                   open1 #_else (* -1 open1))
+                                                 overall-open)
+                                           op2 (or open2 0)
+                                           op2 (if (= :long  ls2)
+                                                 op2 #_else (* -1 op2))]
+                                       (+ op1 op2)))))
+                             #_else
+                             (let [{ls :long-short
+                                    ot :open-total-acc-currency} (first sub-positions)
+                                   ot                            (or ot 0)]
+                               (if (= :long ls)
+                                 ot #_else (* -1 ot))))
+        overall-open-price (when (not= total-quantity 0)
+                             (/ overall-open-total total-quantity))
+        ;; TODO P/L-acc-currency: Sum each position's P/L in account currency
+        ;; TODO P/L %: Divide P/L-acc-currency by the `overall-open-total`
+        sub-pids           (->> sub-positions
+                                (map #(or (:poition-id %)
+                                          (:position-creation-id %))))
+        ls-type            (if (every? #(= :long (:long-short %))
+                                       sub-positions)
+                             :long #_else [:hedged ""])
+        open-date          (->> sub-positions
+                                (apply medley/least-by :open-date)
+                                :open-date)
+        close-date         (->> sub-positions
+                                (apply medley/greatest-by :close-date)
+                                :close-date)
+        ;; We want to avoid summing `:stop-loss` up as zero, if none
+        ;; of the child positions have a `:stop-loss` amount.
+        ;; Therefore check that at least one child as a stop amount
+        stop-loss          (when (and sub-positions? (some :stop-loss sub-positions))
+                             (reduce #(+ (or (:stop-loss %1) 0)
+                                         (or (:stop-loss %2) 0)) sub-positions))
+        position           (assoc position
+                                  :open-price              overall-open-price
+                                  :open-total              overall-open-total
+                                  :open-total-acc-currency overall-open-total
+                                  :stop                    nil
+                                  :quantity                total-quantity
+                                  :sub-positions           sub-pids
+                                  :long-short              ls-type
+                                  :open-date               open-date
+                                  :close-date              close-date
+                                  :stop-loss               stop-loss)]
+    {:result position
+     :type   :success}))
 
 ;; (defn position-total-return
 ;;   "Also know as the Holding Period Yield"
