@@ -82,25 +82,9 @@
            fn-repo-get-holdings-with-positions
            (map :holding-id))))
 
-(def postn-comps (common/computations portfolio-management/PositionDto))
 
-(defn- idx-position-type
-  [positions]
-  (let [holding-pos (-> positions
-                        (lens/view
-                         (lens/only
-                          #(nil?
-                            (:holding-position-id %))))
-                        first)
-        positions   (-> positions
-                        (lens/view
-                         (lens/only
-                          :holding-position-id))
-                        (common/compute {:computations postn-comps}))]
-    {:holding-position holding-pos
-     :positions        positions}))
 
-(defn- compute-positions
+#_(defn- compute-positions
   [positions]
   (-> positions
       (lens/view
@@ -307,20 +291,47 @@
       {:result positions
        :type   :success})))
 
+(def postn-comps (common/computations portfolio-management/PositionDto))
+
+(defn- complement-positions
+  [fn-repo-get-acc-by-uid fns-market-data acc-id positions]
+  (let [fn-assoc-market-data (assoc-market-data-fn fn-repo-get-acc-by-uid
+                                                   fns-market-data)
+        {:keys [holding-position
+                positions]}  (portfolio-management/idx-position-type positions)
+        {positions :result
+         t         :type
+         :as       r}        (common/compute positions {:computations postn-comps})
+        {positions :result
+         t         :type
+         :as       r}        (if (= :success t)
+                               (fn-assoc-market-data acc-id positions)
+                               r)
+        {holding-position :result
+         t                :type
+         :as              r} (when (and (= :success t) holding-position)
+                               (portfolio-management/aggregate-holding-position
+                                holding-position positions))
+        positions            (if holding-position
+                               (conj positions holding-position)
+                               #_else positions)]
+    {:result positions
+     :type   :success}))
+
 (defn get-holding-positions-fn
   [fn-repo-get-holding-positions fn-repo-get-acc-by-uid fns-market-data fn-get-ctx]
-  (let [fn-assoc-close-prices (assoc-market-data-fn fn-repo-get-acc-by-uid
-                                                    fns-market-data)]
-    (fn [{:keys [position/id position/holding-position-id]}]
-      (let [pos-id                               (or holding-position-id id)
-            {send-message         :send-message
-             {acc-id :account/id} :user-account} (fn-get-ctx)
-            result                               (->> pos-id
-                                                      fn-repo-get-holding-positions
-                                                      (fn-assoc-close-prices acc-id)
-                                                      aggregate-holding-positions)]
-        (send-message [:holding.query/get-holding-positions-result
-                       result])))))
+  (fn [{:keys [position/id position/holding-position-id]}]
+    (let [pos-id                               (or holding-position-id id)
+          {send-message         :send-message
+           {acc-id :account/id} :user-account} (fn-get-ctx)
+          result                               (->> pos-id
+                                                    fn-repo-get-holding-positions
+                                                    (complement-positions
+                                                     fn-repo-get-acc-by-uid
+                                                     fns-market-data
+                                                     acc-id))]
+      (send-message [:holding.query/get-holding-positions-result
+                     result]))))
 
 (def *broadcast-holdings-positions (atom #{}))
 
@@ -337,7 +348,7 @@
                                       (get-in ctx [:user-account :account/id])))
         send-msg             (or send-msg
                                  #(send-message acc-id %))
-        fn-assoc-market-data (assoc-market-data-fn fn-repo-get-acc-by-uid
+        #_#_fn-assoc-market-data (assoc-market-data-fn fn-repo-get-acc-by-uid
                                                    fns-market-data)
         gpositions           (->> {:account-id acc-id
                                    :role       (if account-id
@@ -354,28 +365,31 @@
       ;; TODO: Remove deref-block here
       @(future
         (try
-          (let [{:keys [holding-position
+          (let [#_#_{:keys [holding-position
                         positions]}  (idx-position-type posns)
-                {positions :result
+                #_#_{positions :result
                  t         :type
                  :as       r}        (compute-positions positions)
-                {positions :result
+                #_#_{positions :result
                  t         :type
                  :as       r}        (if (= :success t)
                                        (fn-assoc-market-data acc-id positions)
                                        r)
-                {holding-position :result
+                #_#_{holding-position :result
                  t                :type
                  :as              r} (when (and (= :success t) holding-position)
                                        (portfolio-management/aggregate-holding-position
                                         holding-position positions))
-                positions            (if holding-position
+                #_#_positions            (if holding-position
                                        (conj positions holding-position)
-                                       #_else positions)]
-                ;; TODO: fn-assoc-market-data-holding-position
+                                       #_else positions)
+                result (complement-positions
+                        fn-repo-get-acc-by-uid
+                        fns-market-data
+                        posns
+                        acc-id)]
             (send-msg
-             [:holding.query/get-holdings-positions-result {:result positions
-                                                            :type   :success}]))
+             [:holding.query/get-holdings-positions-result result]))
           (catch Exception e
             (let [err-msg "Error getting holdings positions"]
               (errorf e err-msg)

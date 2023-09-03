@@ -124,14 +124,11 @@
   (if (= s "true") true
       false))
 
-#?(:clj
-   (defn round [number & [dec-places]]
-     (when number
-       (let [dec-places (or dec-places 2)]
-         (-> number
-             bigdec
-             (.setScale dec-places BigDecimal/ROUND_HALF_UP)
-             .floatValue)))))
+(->> 500/23
+     #_4.6762882
+     (with-precision 10 :rounding BigDecimal/UNNECESSARY)
+     .floatValue
+     println)
 
 #?(:cljs
    (defn maybe-parse-number

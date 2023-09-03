@@ -6,7 +6,8 @@
             [reason-alpha.model.core :as model :refer [def-model]]
             [reason-alpha.model.fin-instruments :as fin-instruments]
             [reason-alpha.model.utils :as mutils]
-            [reason-alpha.utils :as utils]))
+            [reason-alpha.utils :as utils]
+            [traversy.lens :as lens]))
 
 (def-model TradePattern
   :model/trade-pattern
@@ -109,6 +110,11 @@
      :optional     true
      :command-path [:holding/currency]}
     fin-instruments/Currency]
+   [:holding-pos-currency
+    {:ref          :position/holding-position
+     :optional     true
+     :command-path [:holding/holding-position :holding/currency]}
+    fin-instruments/Currency]
    [:long-short {:title        "Long/Short/Hedge"
                  :optional     true
                  :ref          :position/long-short
@@ -134,6 +140,8 @@
     number?]
    [:open-fx-rate {:optional true} number?]
    [:close-fx-rate {:optional true} number?]
+   [:open-holding-pos-fx-rate {:optional true} number?]
+   [:close-holding-pos-fx-rate {:optional true} number?]
    ;; `:title` supports Mustache templating and inner HTML too: "Open Total`<br>`({{account-currency-nm}})"
    [:open-total-acc-currency {:title    "Open Total ({{account-currency-nm}})"
                               :optional true
@@ -301,10 +309,25 @@
                                        [:holding/instrument-type-name]]}
       [:tuple keyword? string?]]]])))
 
+(defn idx-position-type
+  [positions]
+  (let [holding-pos (-> positions
+                        (lens/view
+                         (lens/only
+                          #(nil?
+                            (:holding-position-id %))))
+                        first)
+        positions   (-> positions
+                        (lens/view
+                         (lens/only
+                          :holding-position-id)))]
+    {:holding-position holding-pos
+     :positions        positions}))
+
 (defn aggregate-holding-position
-  [{:keys                                                                                                                                                                                                                                                                                                                                      [stop open-price quantity long-short open-date
-                                                                                                                                                                                                                                                                                                                                   close-date] :as position}
-    sub-positions]
+  [{:keys [stop open-price quantity long-short
+           open-date close-date]
+    :as   position} sub-positions]
 
    ;; If the stop/quantity is set on the overall holding position,
    ;; then assume it's manually managed & don't do a roll-up summary.
@@ -316,18 +339,19 @@
         ;; currency instead.
         total-quantity     (if (> sub-pos-count 1)
                              (->> sub-positions
-                                  (fn [{q1  :quantity
-                                        ls1 :long-short
-                                        :as total-q} {q2  :quantity
-                                                      ls2 :long-short}]
-                                    (let [q1 (if q1
-                                               (if (= :long ls1)
-                                                 open1 #_else (* -1 q1))
-                                               #_else total-q)
-                                          q2 (or q2 0)
-                                          q2 (if (= :long ls2)
-                                               q2 #_else (* -1 q2))]
-                                      (+ q1 q2))))
+                                  (reduce
+                                   (fn [{q1      :quantity
+                                         [ls1 _] :long-short
+                                         :as     total-q} {q2      :quantity
+                                                           [ls2 _] :long-short}]
+                                     (let [q1 (if (map? total-q)
+                                                (if (= :long ls1)
+                                                  (or q1 0) #_else (* -1 q1))
+                                                #_else total-q)
+                                           q2 (or q2 0)
+                                           q2 (if (= :long ls2)
+                                                q2 #_else (* -1 q2))]
+                                       (+ q1 q2)))))
                              #_else
                              (let [{ls :long-short
                                     q  :quantity} (first sub-positions)
@@ -337,13 +361,13 @@
         overall-open-total (if (> sub-pos-count 1)
                              (->> sub-positions
                                   (reduce
-                                   (fn [{open1 :open-total-acc-currency
-                                         ls1   :long-short
-                                         :as   overall-open} {open2 :open-total-acc-currency
-                                                              ls2   :long-short}]
-                                     (let [op1 (if open1
+                                   (fn [{open1   :open-total-acc-currency
+                                         [ls1 _] :long-short
+                                         :as     overall-open} {open2   :open-total-acc-currency
+                                                                [ls2 _] :long-short}]
+                                     (let [op1 (if (map? overall-open)
                                                  (if (= :long ls1)
-                                                   open1 #_else (* -1 open1))
+                                                   (or open1 0) #_else (* -1 open1))
                                                  overall-open)
                                            op2 (or open2 0)
                                            op2 (if (= :long  ls2)
@@ -356,7 +380,7 @@
                                (if (= :long ls)
                                  ot #_else (* -1 ot))))
         overall-open-price (when (not= total-quantity 0)
-                             (/ overall-open-total total-quantity))
+                             (/ (double overall-open-total) (double total-quantity)))
         ;; TODO P/L-acc-currency: Sum each position's P/L in account currency
         ;; TODO P/L %: Divide P/L-acc-currency by the `overall-open-total`
         sub-pids           (->> sub-positions
@@ -374,7 +398,7 @@
         ;; We want to avoid summing `:stop-loss` up as zero, if none
         ;; of the child positions have a `:stop-loss` amount.
         ;; Therefore check that at least one child as a stop amount
-        stop-loss          (when (and sub-positions? (some :stop-loss sub-positions))
+        stop-loss          (when (some :stop-loss sub-positions)
                              (reduce #(+ (or (:stop-loss %1) 0)
                                          (or (:stop-loss %2) 0)) sub-positions))
         position           (assoc position
@@ -390,6 +414,92 @@
                                   :stop-loss               stop-loss)]
     {:result position
      :type   :success}))
+
+(comment
+  (let [ps                        [{:open-total-acc-currency         500,
+                                    :trade-pattern
+                                    [#uuid "018a2c43-7a96-11a5-ab21-06f37976bbf8" "Breakout"],
+                                    :target-profit-acc-currency      nil,
+                                    :stop-loss-acc-currency          nil,
+                                    :target-profit                   nil,
+                                    :holding                         [#uuid "018a26c9-4b50-9f3f-d4ae-0206dd209197" "Adyen"],
+                                    :profit-loss-amount              -21.729999999999563,
+                                    :open-total                      31333.43,
+                                    :open-price                      764.23,
+                                    :profit-loss-percent             "-0.07%",
+                                    :stop-loss                       -31333.43,
+                                    :holding-currency                :EUR,
+                                    :stop                            0,
+                                    :marketstack                     "ADYEN.XAMS",
+                                    :stop-loss-percent               "-100.0%",
+                                    :position-creation-id            #uuid "d561b5c7-57ab-49b0-84ce-2d04b78f588c",
+                                    :status                          :open,
+                                    :close-price                     763.7,
+                                    :position-id                     #uuid "018a2cac-c474-3ec7-962c-b5b285877385",
+                                    :open-date                       #inst "2023-08-24T00:00:00.000-00:00",
+                                    :holding-position-id             #uuid "018a2caa-ba6e-c9a5-8d51-38553003af1f",
+                                    :holding-id                      #uuid "018a26c9-4b50-9f3f-d4ae-0206dd209197",
+                                    :quantity                        41,
+                                    :profit-loss-amount-acc-currency nil,
+                                    :long-short                      [:long ""],
+                                    :target-profit-percent           nil}
+                                   {:open-total-acc-currency         500,
+                                    :trade-pattern
+                                    [#uuid "018a2c43-7a96-11a5-ab21-06f37976bbf8" "Breakout"],
+                                    :target-profit-acc-currency      nil,
+                                    :stop-loss-acc-currency          nil,
+                                    :target-profit                   nil,
+                                    :holding                         [#uuid "018a26c9-4b50-9f3f-d4ae-0206dd209197" "Adyen"],
+                                    :profit-loss-amount              -21.729999999999563,
+                                    :open-total                      31333.43,
+                                    :open-price                      764.23,
+                                    :profit-loss-percent             "-0.07%",
+                                    :stop-loss                       -31333.43,
+                                    :holding-currency                :EUR,
+                                    :stop                            0,
+                                    :marketstack                     "ADYEN.XAMS",
+                                    :stop-loss-percent               "-100.0%",
+                                    :position-creation-id            #uuid "cf9da077-0d0c-40d6-b570-f3edd056ca79",
+                                    :status                          :open,
+                                    :close-price                     763.7,
+                                    :position-id                     #uuid "4b463c08-c0ce-4178-b5b8-1ebce5b7e53a",
+                                    :open-date                       #inst "2023-08-24T00:00:00.000-00:00",
+                                    :holding-position-id             #uuid "018a2caa-ba6e-c9a5-8d51-38553003af1f",
+                                    :holding-id                      #uuid "018a26c9-4b50-9f3f-d4ae-0206dd209197",
+                                    :quantity                        5,
+                                    :profit-loss-amount-acc-currency nil,
+                                    :long-short                      [:long ""],
+                                    :target-profit-percent           nil}
+                                   {:open-total-acc-currency         nil,
+                                    :target-profit-acc-currency      nil,
+                                    :stop-loss-acc-currency          nil,
+                                    :target-profit                   nil,
+                                    :holding                         [#uuid "018a465e-82bd-de65-2623-02bb30e1a1f6" "Multiple"],
+                                    :profit-loss-amount              375.9708007812478,
+                                    :open-total                      31333.42919921875,
+                                    :open-price                      764.23,
+                                    :profit-loss-percent             "1.2%",
+                                    :stop-loss                       -31333.42919921875,
+                                    :holding-currency                :SGD,
+                                    :stop                            0.0,
+                                    :stop-loss-percent               "-100.0%",
+                                    :sub-positions                   '(#uuid "d561b5c7-57ab-49b0-84ce-2d04b78f588c"),
+                                    :position-creation-id            #uuid "3cee7b50-68a9-4fa3-b9eb-5464068ad465",
+                                    :status                          :open,
+                                    :close-price                     773.4,
+                                    :close-date                      nil,
+                                    :position-id                     #uuid "018a2caa-ba6e-c9a5-8d51-38553003af1f",
+                                    :open-date                       #inst "2023-08-24T00:00:00.000-00:00",
+                                    :holding-id                      #uuid "018a465e-82bd-de65-2623-02bb30e1a1f6",
+                                    :quantity                        41,
+                                    :profit-loss-amount-acc-currency nil,
+                                    :long-short                      [:hedged ""],
+                                    :target-profit-percent           nil}]
+        {:keys             [holding-position
+                positions] :as x} (idx-position-type ps)]
+    (aggregate-holding-position holding-position positions))
+
+  )
 
 ;; (defn position-total-return
 ;;   "Also know as the Holding Period Yield"

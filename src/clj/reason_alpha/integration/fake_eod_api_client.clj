@@ -25,13 +25,13 @@
                          :symbol-provider      :marketstack
                          :holding-id           hid
                          :price-time           (tick/now)
-                         :price-open           (utils/round (rand 100))
-                         :price-close          (utils/round (rand 100))
-                         :price-high           (utils/round (rand 100))
-                         :price-low            (utils/round (rand 100))
-                         :price-previous-close (utils/round (rand 100))
+                         :price-open           (double (rand 100))
+                         :price-close          (double (rand 100))
+                         :price-high           (double (rand 100))
+                         :price-low            (double (rand 100))
+                         :price-previous-close (double (rand 100))
                          :price-volume         (rand-int 1000000)
-                         :price-change         (utils/round price-change)})]
+                         :price-change         (double price-change)})]
            (deliver *reslt prices)))))
     results))
 
