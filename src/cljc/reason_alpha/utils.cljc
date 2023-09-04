@@ -124,12 +124,6 @@
   (if (= s "true") true
       false))
 
-(->> 500/23
-     #_4.6762882
-     (with-precision 10 :rounding BigDecimal/UNNECESSARY)
-     .floatValue
-     println)
-
 #?(:cljs
    (defn maybe-parse-number
      [nr]

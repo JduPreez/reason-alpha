@@ -298,21 +298,22 @@
   (let [fn-assoc-market-data (assoc-market-data-fn fn-repo-get-acc-by-uid
                                                    fns-market-data)
         {:keys [holding-position
-                positions]}  (portfolio-management/idx-position-type positions)
+                positions]
+         :as   r}            (portfolio-management/idx-position-type positions)
         {positions :result
          t         :type
-         :as       r}        (common/compute positions {:computations postn-comps})
+         :as       r}        (fn-assoc-market-data acc-id positions)
         {positions :result
          t         :type
          :as       r}        (if (= :success t)
-                               (fn-assoc-market-data acc-id positions)
+                               (common/compute positions {:computations postn-comps})
                                r)
         {holding-position :result
          t                :type
          :as              r} (when (and (= :success t) holding-position)
                                (portfolio-management/aggregate-holding-position
                                 holding-position positions))
-        positions            (if holding-position
+        positions            (if (= t :success)
                                (conj positions holding-position)
                                #_else positions)]
     {:result positions
@@ -386,8 +387,9 @@
                 result (complement-positions
                         fn-repo-get-acc-by-uid
                         fns-market-data
-                        posns
-                        acc-id)]
+                        acc-id
+                        posns)]
+            (clojure.pprint/pprint {:>>>-R result})
             (send-msg
              [:holding.query/get-holdings-positions-result result]))
           (catch Exception e

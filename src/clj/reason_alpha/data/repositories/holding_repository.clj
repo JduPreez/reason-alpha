@@ -3,6 +3,7 @@
             [reason-alpha.data.model :as data.model]
             [reason-alpha.model.mapping :as mapping]
             [reason-alpha.model.portfolio-management :as portfolio-management]
+            [reason-alpha.model.utils :as mutils]
             [taoensso.timbre :as timbre :refer (tracef debugf infof warnf errorf)]))
 
 (m/=> save-holding! [:=>
@@ -57,6 +58,12 @@
   (fn [_ args]
     (->> args keys sort vec)))
 
+(def long-short-titles
+  (-> portfolio-management/Position
+      (mutils/model-member-schema-info :position/long-short)
+      :properties
+      :enum/titles))
+
 (defmethod get-holdings-positions :default
   [db {:keys [account-id role] :as x}]
   (->> {:spec '{:find  [(pull pos [*])
@@ -69,7 +76,10 @@
         :args [account-id]
         :role (or role :member)}
        (data.model/query db)
-       (mapping/command-ents->query-dtos portfolio-management/PositionDto)))
+       (mapping/command-ents->query-dtos portfolio-management/PositionDto)
+       (map (fn [{[ls-k ls-str] :long-short :as p}]
+              (assoc p :long-short
+                     [ls-k (get long-short-titles ls-k "")])))))
 
 (defmethod get-holdings-positions [:position-ids]
   [db {:keys [position-ids]}]

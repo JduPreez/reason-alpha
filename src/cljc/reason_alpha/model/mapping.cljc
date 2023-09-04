@@ -88,9 +88,6 @@
 
 (def eval-str (memoize #(sci/eval-string %)))
 
-#_(defn- eval-str [fn-str]
-  (sci/eval-string fn-str))
-
 (defmulti path-value
   (fn [{:keys [type fun pivot _path _path-vals _arg _member-nm-key]}]
        (cond
@@ -146,57 +143,7 @@
                       val-k v})))
               (get path-vals path))))))
 
-;; (defn command-ent->query-dto [query-model [root-ent & other-ents :as ents]]
-;;   (let [all-paths-vals      (flatten-path [] root-ent)
-;;         ref-ents-paths-vals (->> other-ents
-;;                                  (map #(flatten-path [] %))
-;;                                  (apply merge))
-;;         member-nm-paths     (->> query-model
-;;                                  rest
-;;                                  (map
-;;                                   (fn [[k props type]]
-;;                                     [k props type])))]
-;;     (->> all-paths-vals
-;;          (reduce
-;;           (fn [{:keys [dto membr-nm-paths] :as dto-paths} [path v]]
-;;             (let [path-template (mapv #(if (number? %) 0 %) path)
-;;                   [nm-k
-;;                    tuple-lbl-v] (some
-;;                                  (fn [[k {p   :command-path
-;;                                           pvt :pivot} type]]
-;;                                    (let [id-lbl-tuple?   (id-label-tuple? type)
-;;                                          [p tuple-lbl-p] (if id-lbl-tuple?
-;;                                                            p [p])]
-;;                                      (when (= p path-template)
-;;                                        (cond
-;;                                          pvt
-;;                                          , (-> path
-;;                                                butlast
-;;                                                vec
-;;                                                (conj pvt)
-;;                                                (as-> x (get all-paths-vals x))
-;;                                                (as-> x (conj [] x)))
-
-;;                                          id-lbl-tuple?
-;;                                          , [k (or (get ref-ents-paths-vals tuple-lbl-p)
-;;                                                   "")]
-
-;;                                          :else [k]))))
-;;                                  membr-nm-paths)
-;;                   v         (if tuple-lbl-v [v tuple-lbl-v] v)
-;;                   dto-paths (if nm-k
-;;                               {:dto            (assoc dto nm-k v)
-;;                                :membr-nm-paths (remove
-;;                                                 (fn [[k _]]
-;;                                                   (= k nm-k))
-;;                                                 membr-nm-paths)}
-;;                               dto-paths)]
-;;               dto-paths))
-;;           {:dto            {}
-;;            :membr-nm-paths member-nm-paths})
-;;          :dto)))
-
-(defn command-ent->query-dto [query-model ents]
+(defn command-ent->query-dto [schema' ents]
   (let [mega-ent            (apply merge ents)
         path-vals           (flatten-path [] mega-ent)
         gpath-vals          (->> path-vals
@@ -204,7 +151,7 @@
                                              (mapv #(if (number? %) 0 %) path)))
                                  (map (fn [[k v]] [k (into {} v)]))
                                  (into {}))
-        schema-member-paths (->> query-model
+        schema-member-paths (->> schema'
                                  rest
                                  (mapcat
                                   (fn [[_ {:keys         [command-path pivot]

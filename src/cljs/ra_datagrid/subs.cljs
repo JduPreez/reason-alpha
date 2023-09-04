@@ -158,8 +158,6 @@
          k   :name
          :as field}]
      ;;add formatted value
-     (cljs.pprint/pprint {(str ">>>-" k) {:F field
-                                          :R record}})
      (let [fmt (or fmt (default-formatter field))]
        (assoc rec (keyword (str (name k) "-formatted"))
               (fmt (get record k) record))))
@@ -176,10 +174,11 @@
    (map (partial apply-formatters fields) records)))
 
 (defn group-records [{:keys [records group-path member-key id-field]}]
-  (if group-path
+  (if (seq group-path)
     (->> records
          (filter #(nil? (get % member-key)))
-         (map #(assoc % :datagrid/children
+         (map #(assoc %
+                      :datagrid/children
                       (filter
                        (fn [r]
                          (and (get-in % group-path)
@@ -192,6 +191,7 @@
 (rf/reg-sub
  :datagrid/sorted-records
  (fn [[_ id data-sub] _]
+   (cljs.pprint/pprint {:>>>-SR1 [id data-sub]})
    [(rf/subscribe [:datagrid/options id])
     (rf/subscribe [:datagrid/formatted-records id data-sub])
     (rf/subscribe [:datagrid/expanded? id])
@@ -201,14 +201,17 @@
  (fn [[{{:keys [group-key member-key]} :group-by
         :keys                          [id-field show-max-num-rows]
         :as                            options} formatted-records expanded? sorting fields filters] _]
+   (cljs.pprint/pprint {:>>>-SR2 formatted-records})
    (let [group-by (some (fn [{:keys [type] :as f}]
                           (when (= type :indent-group)
                             f))
                         fields)
+         _        (cljs.pprint/pprint {:>>>-SR3 group-by})
          rs       (group-records {:records    formatted-records
                                   :group-path (-> group-by :indent-group :group-path)
                                   :member-key (:name group-by)
                                   :id-field   id-field})
+         _        (cljs.pprint/pprint {:>>>-SR4 rs})
          rs       (if (and (:key sorting)
                            (:direction sorting))
                     (sort-records rs fields (:key sorting) (:direction sorting))
@@ -219,6 +222,7 @@
          rs       (if (:header-filters options)
                     (filter-by-header-filters rs filters fields)
                     rs)]
+     (cljs.pprint/pprint {:>>>-SR-X rs})
      (if (and show-max-num-rows (not expanded?))
        (take show-max-num-rows rs)
        rs))))
@@ -271,7 +275,6 @@
                                                     grid-id pk]))
          vres                     (when validator
                                     (validator r))]
-     (cljs.pprint/pprint {:>>>-### r})
      (cond-> {:result r}
        vres (assoc :validation vres)))))
 
