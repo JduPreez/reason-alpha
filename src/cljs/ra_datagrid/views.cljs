@@ -138,18 +138,17 @@
 
 (defn table-header-cell
   [grid-id {:keys [title align width can-sort hide-header-filter] :as field}]
-  (let [align   (if-not align :text-left align)
-        atts    (cond-> {:className align
-                         :key (name (:name field))}
-                  width
-                  (assoc :style {:width width}))
+  (let [align   (if-not align "text-left" align)
+        atts    {:className align
+                 :key (name (:name field))}
         sorting (rf/subscribe [:datagrid/sorting grid-id])
         options (rf/subscribe [:datagrid/options grid-id])
         ctx     (when-let [ctx-sub (:context-subscription @options)]
                   @(rf/subscribe ctx-sub))]
     (fn [grid-id {:keys [title align width can-sort menu edit]
                   :as   field}]
-      (let [sort-by-key      (:key @sorting)
+      (let [align-left?      (= align "text-left")
+            sort-by-key      (:key @sorting)
             sort-direction   (:direction @sorting)
             can-sort-global? (:can-sort @options)
             header-filters?  (:header-filters @options)
@@ -159,9 +158,12 @@
                                #_else title)]
         [:th atts
          [:div.btn-toolbar {:role "toolbar"}
-          [:div.btn-group.mr-2 {:role "group"}
+          [:div {:class ["btn-group" (if align-left? "mr2" "ml2")]
+                 :role  "group"}
            [:a.btn.btn-link {:type                    "button"
-                             :style                   {:padding-left 0}
+                             :style                   (if align-left?
+                                                        {:padding-left 0}
+                                                        {:padding-right 0})
                              :dangerouslySetInnerHTML {:__html title}}]
            (when (and can-sort-global?
                       (not= false can-sort))
@@ -391,8 +393,10 @@
         value         (or
                        (get record fmt-fieldname)
                        (get record fieldname))
-        align         (if (nil? (:align field)) :text-left (:align field))]
-    [:td {:key (:name field) :className align}
+        align         (if (nil? (:align field)) "text-left" (:align field))
+        style         (if-let [w (:width field)]
+                        {:min-width w} #_else {})]
+    [:td {:key (:name field), :className align, :style style}
      [:span (cond-> {}
               is-clickable? (assoc :on-click #((:custom-element-click field) record)))
       [(:custom-element-renderer field) record]]]))
@@ -401,6 +405,7 @@
   [id field record indent?]
   (let [options (rf/subscribe [:datagrid/options id])]
     (fn [id field record indent?]
+      (cljs.pprint/pprint [:>>> {(:name field) field}])
       (let [is-clickable?   (not (nil? (:on-click field)))
             formatter       (:formatter field)
             fieldname       (:name field)
@@ -418,10 +423,10 @@
                                                      @options)))}
                                formatted-value]
                               formatted-value)]
-
         [:td (cond-> {:key       fieldname
                       :className (str align " data-cell")}
-               indent? (assoc :style {:padding-left "30px"}))
+               indent?        (update :style #(assoc % :padding-left "30px"))
+               (:width field) (update :style #(assoc % :min-width (:width field))))
          formatted-value]))))
 
 (defn command-td

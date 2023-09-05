@@ -389,7 +389,6 @@
                         fns-market-data
                         acc-id
                         posns)]
-            (clojure.pprint/pprint {:>>>-R result})
             (send-msg
              [:holding.query/get-holdings-positions-result result]))
           (catch Exception e

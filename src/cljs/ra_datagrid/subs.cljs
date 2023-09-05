@@ -191,8 +191,7 @@
 (rf/reg-sub
  :datagrid/sorted-records
  (fn [[_ id data-sub] _]
-   (cljs.pprint/pprint {:>>>-SR1 [id data-sub]})
-   [(rf/subscribe [:datagrid/options id])
+  [(rf/subscribe [:datagrid/options id])
     (rf/subscribe [:datagrid/formatted-records id data-sub])
     (rf/subscribe [:datagrid/expanded? id])
     (rf/subscribe [:datagrid/sorting id])
@@ -201,17 +200,14 @@
  (fn [[{{:keys [group-key member-key]} :group-by
         :keys                          [id-field show-max-num-rows]
         :as                            options} formatted-records expanded? sorting fields filters] _]
-   (cljs.pprint/pprint {:>>>-SR2 formatted-records})
    (let [group-by (some (fn [{:keys [type] :as f}]
                           (when (= type :indent-group)
                             f))
                         fields)
-         _        (cljs.pprint/pprint {:>>>-SR3 group-by})
          rs       (group-records {:records    formatted-records
                                   :group-path (-> group-by :indent-group :group-path)
                                   :member-key (:name group-by)
                                   :id-field   id-field})
-         _        (cljs.pprint/pprint {:>>>-SR4 rs})
          rs       (if (and (:key sorting)
                            (:direction sorting))
                     (sort-records rs fields (:key sorting) (:direction sorting))
@@ -222,7 +218,6 @@
          rs       (if (:header-filters options)
                     (filter-by-header-filters rs filters fields)
                     rs)]
-     (cljs.pprint/pprint {:>>>-SR-X rs})
      (if (and show-max-num-rows (not expanded?))
        (take show-max-num-rows rs)
        rs))))

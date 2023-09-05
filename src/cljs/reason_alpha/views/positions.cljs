@@ -40,7 +40,8 @@
                       {:enum-titles @*ls-titles}
 
                       :holding-position-id
-                      {:indent-group {:group-path   [:position-id]
+                      {:width        "180px"
+                       :indent-group {:group-path   [:position-id]
                                       ;; holding -> then 2nd child of tuple, which is the
                                       ;; holding name
                                       :display-name (fn hoilding-pos-display-nm

@@ -2558,6 +2558,14 @@ input[type="submit"].btn-block, input[type="reset"].btn-block, input[type="butto
 	-ms-flex-pack: start;
 	justify-content: flex-start;
 }
+.text-right .btn-toolbar {
+	display: -ms-flexbox;
+	display: flex;
+	-ms-flex-wrap: wrap;
+	flex-wrap: wrap;
+	-ms-flex-pack: start;
+	justify-content: flex-end;
+}
 .btn-toolbar .input-group {
 	width: auto;
 }
@@ -2730,7 +2738,8 @@ input[type="submit"].btn-block, input[type="reset"].btn-block, input[type="butto
 	position: relative;
 }
 .table .data-cell {
-	min-width: 183px;
+	min-width: 100px;
+	padding-left: 16px;
 }
 .table thead th, .text-wrap table thead th {
 	vertical-align: middle;

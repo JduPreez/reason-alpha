@@ -88,7 +88,8 @@
                                  is-number?
                                  , (assoc :formatter
                                           #(when %
-                                             (gstr/format "%.2f" %)))
+                                             (gstr/format "%.2f" %))
+                                          :align "text-right")
                                  :default
                                  , (dissoc field-opts :ref-suffix))
         {:keys [title ref
@@ -134,7 +135,7 @@
 
       (= type (-> #'inst? meta :name))
       , (merge field-def {:type  :date
-                          :width 227})
+                          #_#_:width 227})
 
       :default
       , field-def)))

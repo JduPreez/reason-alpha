@@ -154,10 +154,12 @@
             parent          @(rf/subscribe [parent-subscription parent-id])
             formatted-value (when display-name
                               (display-name parent))
-            align           (if (nil? (:align field)) :text-left (:align field))]
+            align           (if (nil? (:align field)) :text-left (:align field))
+            w               (:width field)]
         [:td (cond-> {:key       fieldname
                       :className align}
-               indent? (assoc :style {:padding-left "30px"}))
+               indent? (update :style #(assoc % :padding-left "30px"))
+               w       (update :style #(assoc % :min-width w)))
          formatted-value]))))
 
 (defmethod edit-cell :indent-group
