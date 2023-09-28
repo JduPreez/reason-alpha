@@ -71,12 +71,11 @@
 
 (rf/reg-event-fx
  :position/update
- (fn [{:keys [db]} [_ {:keys [creation-id close-price position-id] :as pos}]]
+ (fn [{:keys [db]} [_ {:keys [creation-id close-price position-id close-date] :as pos}]]
    (let [{cur-close-pr :close-price} (data/get-entity db :position {:position-id position-id})
-         status                      (if (and close-price
-                                              (not= close-price cur-close-pr))
+         status                      (if close-date
                                        :closed
-                                       :open)
+                                       #_else :open)
          pos                         (-> pos
                                          (assoc :status status)
                                          (dissoc :holding-id))
@@ -85,6 +84,8 @@
          db                          (data/save-local! {:model-type :position
                                                         :data       pos
                                                         :db         db})]
+     (cljs.pprint/pprint {::->>>-PU-CMD cmd-pos
+                          ::->>>-PU_DTO pos})
      {:db             db
       :position/save! cmd-pos})))
 

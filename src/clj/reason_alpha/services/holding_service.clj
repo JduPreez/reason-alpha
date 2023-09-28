@@ -183,46 +183,52 @@
                             :subscription/marketstack
                             :access-key)]
     (let [result-out-chnl (as/chan)]
-      (as/go
-        (let [symbols           (->> positions
-                                     (map (fn [{:keys [holding-id marketstack]}]
-                                            (when (and holding-id marketstack)
-                                              {:symbol     marketstack
-                                               :holding-id holding-id})))
-                                     (remove nil?)
-                                     distinct)
-              quote-result-chnl (marketstack/quote-eod-share-prices
-                                 access-key symbols :batch-size batch-size)
-              idx-hid->quote    (->> symbols
-                                     (mapv (fn [_]
-                                             (let [{hid :holding-id
-                                                    err :error
-                                                    :as r} (as/<!! quote-result-chnl)]
-                                               [hid r])))
-                                     (into {}))
-              pos-with-close-pr (->> positions
-                                     (map (fn [{:keys [holding-id status position-id] :as p}]
-                                            (let [{price :price-close
-                                                   s     :symbol
-                                                   err   :error} (get idx-hid->quote
-                                                                      holding-id)]
-                                              (cond
-                                                err
-                                                , (utils/ignore
-                                                   (errorf (str "Error occurred getting the share "
-                                                                "price of '%s' (holding-id %s)")
-                                                           holding-id
-                                                           (pr-str err)))
+      (if (seq positions)
+        (do
+          (as/go
+            (let [symbols           (->> positions
+                                         (map (fn [{:keys [holding-id marketstack]}]
+                                                (when (and holding-id marketstack)
+                                                  {:symbol     marketstack
+                                                   :holding-id holding-id})))
+                                         (remove nil?)
+                                         distinct)
+                  quote-result-chnl (marketstack/quote-eod-share-prices
+                                     access-key symbols :batch-size batch-size)
+                  idx-hid->quote    (->> symbols
+                                         (mapv (fn [_]
+                                                 (let [{hid :holding-id
+                                                        err :error
+                                                        :as r} (as/<!! quote-result-chnl)]
+                                                   [hid r])))
+                                         (into {}))
+                  pos-with-close-pr (->> positions
+                                         (map (fn [{:keys [holding-id status position-id] :as p}]
+                                                (let [{price :price-close
+                                                       s     :symbol
+                                                       err   :error} (get idx-hid->quote
+                                                                          holding-id)]
+                                                  (cond
+                                                    err
+                                                    , (utils/ignore
+                                                       (errorf (str "Error occurred getting the share "
+                                                                    "price of '%s' (holding-id %s)")
+                                                               holding-id
+                                                               (pr-str err)))
 
-                                                (#{:open} status)
-                                                , [position-id {:close-price price}]))))
-                                     (into {}))]
-          (as/>! result-out-chnl pos-with-close-pr)))
-      (as/take 1 result-out-chnl))))
+                                                    (#{:open} status)
+                                                    , [position-id {:close-price price}]))))
+                                         (into {}))]
+              (as/>! result-out-chnl pos-with-close-pr)))
+          (as/take 1 result-out-chnl))
+        (do
+          (as/close! result-out-chnl)
+          result-out-chnl)))))
 
 (defn get-fx-rates<
   [positions & {{acc-currency :account/currency} :account}]
-  (when-let [currency-conversions (and acc-currency
+  (let [result-out-chnl (as/chan)]
+    (if-let [currency-conversions (and acc-currency
                                        (->> positions
                                             (mapcat (fn [{:keys [holding-currency open-time close-time]}]
                                                       [{:from holding-currency
@@ -233,38 +239,43 @@
                                                         :date open-time}]))
                                             distinct
                                             seq))]
-    (let [result-out-chnl (as/chan)]
-          (as/go
-            (let [fxrate-result-chnl         (exchangerate/convert currency-conversions)
-                  idx-currency-pair->fx-rate (->> currency-conversions
-                                                  (map
-                                                   (fn [_]
-                                                     (let [{:keys [fx-rate]
-                                                            :as   c} (as/<!! fxrate-result-chnl)]
-                                                       [(dissoc c :fx-rate) fx-rate])))
-                                                  (into {}))
-                  pos-with-fx-rates          (->> positions
-                                                  (map
-                                                   (fn [{:keys [holding-currency position-id
-                                                                open-time close-time]
-                                                         :as   p}]
-                                                     (let [open-dte  (tick/date (or open-time (tick/now)))
-                                                           close-dte (tick/date (or close-time (tick/now)))
-                                                           open-k    {:from holding-currency
-                                                                      :to   acc-currency
-                                                                      :date open-dte}
-                                                           close-k   {:from holding-currency
-                                                                      :to   acc-currency
-                                                                      :date close-dte}
-                                                           open-fxr  (get idx-currency-pair->fx-rate open-k)
-                                                           close-fxr (get idx-currency-pair->fx-rate close-k)
-                                                           fxrs      (cond-> {}
-                                                                       open-fxr  (assoc :open-fx-rate open-fxr)
-                                                                       close-fxr (assoc :close-fx-rate close-fxr))]
-                                                       [position-id fxrs])))
-                                                  (into {}))]
-              (as/>! result-out-chnl pos-with-fx-rates)))
-          (as/take 1 result-out-chnl))))
+      (do
+        (clojure.pprint/pprint {::->>>-GFX-1 currency-conversions})
+        (as/go
+          (let [fxrate-result-chnl         (exchangerate/convert currency-conversions)
+                idx-currency-pair->fx-rate (->> currency-conversions
+                                                (map
+                                                 (fn [_]
+                                                   (let [{:keys [fx-rate]
+                                                          :as   c} (as/<!! fxrate-result-chnl)]
+                                                     [(dissoc c :fx-rate) fx-rate])))
+                                                (into {}))
+                pos-with-fx-rates          (->> positions
+                                                (map
+                                                 (fn [{:keys [holding-currency position-id
+                                                              open-time close-time]
+                                                       :as   p}]
+                                                   (let [open-dte  (tick/date (or open-time (tick/now)))
+                                                         close-dte (tick/date (or close-time (tick/now)))
+                                                         open-k    {:from holding-currency
+                                                                    :to   acc-currency
+                                                                    :date open-dte}
+                                                         close-k   {:from holding-currency
+                                                                    :to   acc-currency
+                                                                    :date close-dte}
+                                                         open-fxr  (get idx-currency-pair->fx-rate open-k)
+                                                         close-fxr (get idx-currency-pair->fx-rate close-k)
+                                                         fxrs      (cond-> {}
+                                                                     open-fxr  (assoc :open-fx-rate open-fxr)
+                                                                     close-fxr (assoc :close-fx-rate close-fxr))]
+                                                     [position-id fxrs])))
+                                                (into {}))]
+          (as/>! result-out-chnl pos-with-fx-rates)))
+        (as/take 1 result-out-chnl))
+      #_else
+      (do
+        (as/close! result-out-chnl)
+        result-out-chnl))))
 
 ;; TODO: This can be made completely generic, by allowing the primary key,
 ;;       in this case `:position-id` to be specified.
@@ -295,27 +306,33 @@
 
 (defn- complement-positions
   [fn-repo-get-acc-by-uid fns-market-data acc-id positions]
+  (clojure.pprint/pprint {::->>>-CP-1 positions})
   (let [fn-assoc-market-data (assoc-market-data-fn fn-repo-get-acc-by-uid
                                                    fns-market-data)
         {:keys [holding-position
                 positions]
          :as   r}            (portfolio-management/idx-position-type positions)
+        _                    (clojure.pprint/pprint {::->>>-CP-2 positions})
         {positions :result
          t         :type
          :as       r}        (fn-assoc-market-data acc-id positions)
+        _                    (clojure.pprint/pprint {::->>>-CP-3 positions})
         {positions :result
          t         :type
          :as       r}        (if (= :success t)
                                (common/compute positions {:computations postn-comps})
                                r)
+        _                    (clojure.pprint/pprint {::->>>-CP-4 positions})
         {holding-position :result
          t                :type
          :as              r} (when (and (= :success t) holding-position)
                                (portfolio-management/aggregate-holding-position
                                 holding-position positions))
+        _                    (clojure.pprint/pprint {::->>>-CP-5 holding-position})
         positions            (if (= t :success)
                                (conj positions holding-position)
                                #_else positions)]
+    (clojure.pprint/pprint {::->>>-CP-6 positions})
     {:result positions
      :type   :success}))
 
@@ -342,23 +359,21 @@
   [fn-repo-get-holdings-positions fn-repo-get-acc-by-uid fns-market-data
    broadcast? {:keys [fn-get-ctx account-id send-message]}]
   (let [{send-msg :send-message
-         :as      ctx}       (when fn-get-ctx
-                               (fn-get-ctx))
-        acc-id               (or account-id
-                                 (and ctx
-                                      (get-in ctx [:user-account :account/id])))
-        send-msg             (or send-msg
-                                 #(send-message acc-id %))
-        #_#_fn-assoc-market-data (assoc-market-data-fn fn-repo-get-acc-by-uid
-                                                   fns-market-data)
-        gpositions           (->> {:account-id acc-id
-                                   :role       (if account-id
-                                                 :system
-                                                 :member)}
-                                  fn-repo-get-holdings-positions
-                                  (group-by (fn [{:keys [position-id holding-position-id]}]
-                                              (or holding-position-id
-                                                  position-id))))]
+         :as      ctx} (when fn-get-ctx
+                         (fn-get-ctx))
+        acc-id         (or account-id
+                           (and ctx
+                                (get-in ctx [:user-account :account/id])))
+        send-msg       (or send-msg
+                           #(send-message acc-id %))
+        gpositions     (->> {:account-id acc-id
+                             :role       (if account-id
+                                           :system
+                                           :member)}
+                            fn-repo-get-holdings-positions
+                            (group-by (fn [{:keys [position-id holding-position-id]}]
+                                        (or holding-position-id
+                                            position-id))))]
 
     (when broadcast? (swap! *broadcast-holdings-positions conj acc-id))
 
@@ -366,25 +381,7 @@
       ;; TODO: Remove deref-block here
       @(future
         (try
-          (let [#_#_{:keys [holding-position
-                        positions]}  (idx-position-type posns)
-                #_#_{positions :result
-                 t         :type
-                 :as       r}        (compute-positions positions)
-                #_#_{positions :result
-                 t         :type
-                 :as       r}        (if (= :success t)
-                                       (fn-assoc-market-data acc-id positions)
-                                       r)
-                #_#_{holding-position :result
-                 t                :type
-                 :as              r} (when (and (= :success t) holding-position)
-                                       (portfolio-management/aggregate-holding-position
-                                        holding-position positions))
-                #_#_positions            (if holding-position
-                                       (conj positions holding-position)
-                                       #_else positions)
-                result (complement-positions
+          (let [result (complement-positions
                         fn-repo-get-acc-by-uid
                         fns-market-data
                         acc-id
@@ -465,20 +462,19 @@
                                                                      :trade-transaction/quantity   quantity}))
                                  (nil? status) (assoc :position/status :open))
         {:keys [send-message]} (fn-get-ctx)]
-      (try
-        (if-let [v (model/validate :position pos)]
-          (do
-            (send-message
-             [:holding.command/save-position!-result
-              {:error       v
-               :type        :failed-validation
-               :description "Invalid position"}]))
-          (send-message
-           [:holding.command/save-position!-result
-            {:result (-> pos
-                         fn-repo-save!
-                         (select-keys [:position/creation-id :position/id :position/holding-position-id]))
-             :type   :success}]))
+    (try
+      (if-let [v (model/validate :position pos)]
+        (send-message
+         [:holding.command/save-position!-result
+          {:error       v
+           :type        :failed-validation
+           :description "Invalid position"}])
+        (send-message
+         [:holding.command/save-position!-result
+          {:result (-> pos
+                       fn-repo-save!
+                       (select-keys [:position/creation-id :position/id :position/holding-position-id]))
+           :type   :success}]))
         (catch Exception e
           (let [err-msg "Error saving position"]
             (errorf e err-msg)

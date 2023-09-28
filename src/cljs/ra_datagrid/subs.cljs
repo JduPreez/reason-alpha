@@ -270,17 +270,8 @@
                                                     grid-id pk]))
          vres                     (when validator
                                     (validator r))]
-     (cond-> {:result r}
-       vres (assoc :validation vres)))))
-
-#_(rf/reg-sub
- :datagrid/edited-record-by-pk-with-validation
- (fn [[_ grid-id pk]]
-   [(rf/subscribe [:datagrid/edited-record-by-pk grid-id pk])
-    (rf/subscribe [:datagrid/options grid-id])])
- (fn [[r {:keys [validator]}] [_ _ _]]
-   (let [vres (when validator
-                (validator r))]
+     (cljs.pprint/pprint {::->>>-VALIDATED-RES {:R r
+                                                :V vres}})
      (cond-> {:result r}
        vres (assoc :validation vres)))))
 

@@ -78,7 +78,7 @@
    ;;which url to PUT data to upon saving?
    ;;which url to POST data to upon saving?
    (s/optional-key :checkbox-select)             s/Bool
-   (s/optional-key :on-selection-change)         s/Any
+   (s/optional-key :select-dispatch)             s/Any
    ;;callback fn that gets set of all selected records as argumentlist
    :data-subscription                            s/Any
    (s/optional-key :create-dispatch)             s/Any

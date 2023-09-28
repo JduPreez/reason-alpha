@@ -64,6 +64,12 @@
       :properties
       :enum/titles))
 
+(defn map-tuples [qry-dtos]
+  (map (fn [{[ls-k ls-str] :long-short :as p}]
+         (assoc p :long-short
+                [ls-k (get long-short-titles ls-k "")]))
+       qry-dtos))
+
 (defmethod get-holdings-positions :default
   [db {:keys [account-id role] :as x}]
   (->> {:spec '{:find  [(pull pos [*])
@@ -77,9 +83,7 @@
         :role (or role :member)}
        (data.model/query db)
        (mapping/command-ents->query-dtos portfolio-management/PositionDto)
-       (map (fn [{[ls-k ls-str] :long-short :as p}]
-              (assoc p :long-short
-                     [ls-k (get long-short-titles ls-k "")])))))
+       map-tuples))
 
 (defmethod get-holdings-positions [:position-ids]
   [db {:keys [position-ids]}]
@@ -93,7 +97,8 @@
                 :in    [[pid ...]]}
         :args [position-ids]}
        (data.model/query db)
-       (mapping/command-ents->query-dtos portfolio-management/PositionDto)))
+       (mapping/command-ents->query-dtos portfolio-management/PositionDto)
+       map-tuples))
 
 (defn get-holding-positions [db id]
   (->> {:spec '{:find  [(pull pos [*])

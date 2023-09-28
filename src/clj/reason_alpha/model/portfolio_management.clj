@@ -136,9 +136,9 @@
     number?]
    [:open-total {:title    "Open Total"
                  :optional true
-                 :compute  {:function  "quantity * open-price * IF(long-short.[1] <> 'Long', -1, 1)"
+                 :compute  {:function "quantity * open-price * IF(long-short.[1] <> 'Long', -1, 1)"
                             :use      [:quantity :open-price :long-short]}}
-    number?]
+    [:maybe number?]]
    [:open-fx-rate {:optional true} number?]
    [:close-fx-rate {:optional true} number?]
    [:open-holding-pos-fx-rate {:optional true} number?]
@@ -149,12 +149,12 @@
                               :compute  {:function "open-total * open-fx-rate"
                                          :use      [:open-fx-rate]
                                          :require  [:open-total]}}
-    number?]
+    [:maybe number?]]
    [:close-price {:title        "Close"
                   :optional     true
                   :command-path [:position/close
                                  :trade-transaction/price]}
-    number?]
+    [:maybe number?]]
    [:close-date {:title        "Close Date"
                  :optional     true
                  :command-path [:position/close
@@ -171,7 +171,7 @@
                                       :compute  {:function "profit-loss-amount * close-fx-rate"
                                                  :use      [:close-fx-rate]
                                                  :require  [:profit-loss-amount]}}
-    number?]
+    [:maybe number?]]
    [:profit-loss-percent {:title    "Profit/Loss %"
                           :optional true
                           :compute  {:function "TPERCENT(profit-loss-amount / open-total)"
@@ -322,17 +322,15 @@
                         (lens/view
                          (lens/only
                           :holding-position-id)))]
-    {:holding-position holding-pos
-     :positions        positions}))
+    {:holding-position (when (seq positions) holding-pos)
+     :positions        (if (seq positions) positions #_else [holding-pos])}))
 
 (defn aggregate-holding-position
   [{:keys [stop open-price quantity long-short
            open-date close-date]
     :as   position} sub-positions]
-  #_(clojure.pprint/pprint {:AGGREGATE-HOLDING-POS/P  position
-                            :AGGREGATE-HOLDING-POS/SP sub-positions})
    ;; If the stop/quantity is set on the overall holding position,
-   ;; then assume it's manually managed & don't do a roll-up summary.
+  ;; then assume it's manually managed & don't do a roll-up summary.
   (let [sub-positions           (or (seq sub-positions) '())
         more-than1?             (-> sub-positions count (> 1))
         ;; When the sub-positions have different currencies, we need to calculate
@@ -404,13 +402,14 @@
                                                (:position-creation-id %))))
         ls-type                 (if (every? #(= :long (:long-short %))
                                             sub-positions)
-                                  :long #_else [:hedged ""])
+                                  [:long ""] #_else [:hedged ""])
         open-date               (->> sub-positions
                                      (apply medley/least-by :open-date)
                                      :open-date)
-        close-date              (->> sub-positions
-                                     (apply medley/greatest-by :close-date)
-                                     :close-date)
+        close-date              (when (every? :close-date sub-positions)
+                                  (->> sub-positions
+                                       (apply medley/greatest-by :close-date)
+                                       :close-date))
         ;; We want to avoid summing `:stop-loss` up as zero, if none
         ;; of the child positions have a `:stop-loss` amount.
         ;; Therefore check that at least one child as a stop amount
@@ -440,7 +439,6 @@
                                        :close-date                      close-date
                                        :close-price                     nil
                                        :stop-loss-acc-currency          stop-loss-acc-currency)]
-    ;;(clojure.pprint/pprint {:>>>-AHP-X position})
     {:result position
      :type   :success}))
 

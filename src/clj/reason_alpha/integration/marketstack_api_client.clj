@@ -88,18 +88,23 @@
 
 (defn quote-eod-share-prices
   [access-key symbols & {:keys [batch-size]}]
-  (let [buffer-size     (count symbols)
-        result-out-chnl (chan buffer-size)
-        symbols         (quote-cached-eod-share-prices symbols result-out-chnl)]
-    (if (seq symbols)
-      (let [batch-size (or batch-size 2)
-            batches    (if (< (count symbols) batch-size)
-                         [symbols]
-                         (vec (partition-all batch-size symbols)))]
-        (go
-          (doseq [b batches]
-            (request-eod-share-prices access-key result-out-chnl b)))))
-    (as/take buffer-size result-out-chnl)))
+  (if (seq symbols)
+    (let [buffer-size     (count symbols)
+          result-out-chnl (chan buffer-size)
+          symbols         (quote-cached-eod-share-prices symbols result-out-chnl)
+          batch-size      (or batch-size 2)
+          batches         (if (< (count symbols) batch-size)
+                            [symbols]
+                            (vec (partition-all batch-size symbols)))]
+      (go
+        (doseq [b batches]
+          (request-eod-share-prices access-key result-out-chnl b)))
+      (as/take buffer-size result-out-chnl))
+    ;; No `symbols` were specified, so just return a closed channel,
+    ;; that will return `nil` when read from.
+    (let [c (as/chan)]
+      (as/close! c)
+      c)))
 
 (comment
   (let [result-chnl (quote-eod-share-prices

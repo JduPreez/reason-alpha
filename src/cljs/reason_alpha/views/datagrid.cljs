@@ -25,7 +25,7 @@
    ;;:can-reorder                true
    :can-create                 true
    :checkbox-select            true
-   :on-selection-change        #(rf/dispatch [:select %1])
+   :select-dispatch            :select ;;#(rf/dispatch [:select %1 %2])
    ;;:loading-subscription       [:my-loading]
    ;;:sort-dispatch              [:sort]
    ;;:header-filter-dispatch     [:header-filter-dispatch]

@@ -405,7 +405,6 @@
   [id field record indent?]
   (let [options (rf/subscribe [:datagrid/options id])]
     (fn [id field record indent?]
-      (cljs.pprint/pprint [:>>> {(:name field) field}])
       (let [is-clickable?   (not (nil? (:on-click field)))
             formatter       (:formatter field)
             fieldname       (:name field)

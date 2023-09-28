@@ -99,7 +99,7 @@
      {:dispatch [:push-state r nil {:form f}]})))
 
 (defn entity-event-or-fx-key [db action]
-  (let [{:keys [model]} (get-in db data/active-view-model)]
+  (let [{{:keys [model]} :sheet-view} (get-in db data/active-view-model)]
     (when model
       (-> model
           name
@@ -147,7 +147,7 @@
 
 (rf/reg-event-db
  :select
- (fn [db [_ selected-ids]]
+ (fn [db [_ selected-ids _entities]]
    (let [{{:keys [model]} :sheet-view} (get-in db data/active-view-model)
          ids                           (map #(utils/maybe->uuid %) selected-ids)]
      (assoc-in db (data/selected model) ids))))

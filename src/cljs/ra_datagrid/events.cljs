@@ -82,36 +82,39 @@
                   (update-in [:datagrid/data  grid-id :sorting :direction] get-next-sort-direction))}
        extra-dispatch (assoc :dispatch extra-dispatch)))))
 
-(rf/reg-event-db
+(rf/reg-event-fx
  :datagrid/toggle-mass-select
- (fn [db [_ id all-records]]
-   (let [id-field (get-in db [:datagrid/data  id :options :id-field])
-         checked? (get-in db [:datagrid/data  id :mass-select-check])]
-     (-> db
-         (update-in [:datagrid/data  id :mass-select-check] not)
-         (assoc-in [:datagrid/data  id :selected-records]
-                   (if checked? ;;now it won't be
-                     #{}
-                     (->>
-                      all-records
-                      (map id-field)
-                      set)))))))
+ (fn [{:keys [db]} [_ id all-records]]
+   (let [id-field        (get-in db [:datagrid/data id :options :id-field])
+         checked?        (get-in db [:datagrid/data id :mass-select-check])
+         select-dispatch (get-in db [:datagrid/data id :options :select-dispatch])
+         selected        (if checked? ;;now it won't be
+                           #{}
+                           (->>
+                            all-records
+                            (map id-field)
+                            set))]
+     (cond-> {:db db}
+       select-dispatch (assoc :dispatch [select-dispatch selected all-records])
+       :always         (update :db #(-> %
+                                        (update-in [:datagrid/data id :mass-select-check] not)
+                                        (assoc-in [:datagrid/data id :selected-records]
+                                                  selected)))))))
 
-(rf/reg-event-db
+(rf/reg-event-fx
  :datagrid/toggle-checkbox
- (fn [db [_ id record]]
-   (let [id-field    (get-in db [:datagrid/data id :options :id-field])
-         callback-fn (get-in db [:datagrid/data id :options :on-selection-change])
-         pk          (get record id-field)]
-     (update-in db [:datagrid/data id :selected-records]
-                (fn [o pk']
-                  (let [n' (if (some #{pk'} o)
-                             (disj o pk')
-                             (conj o pk'))]
-                    (when callback-fn
-                      (callback-fn n' record))
-                    n'))
-                pk))))
+ (fn [{:keys [db]} [_ grid-id record]]
+   (let [id-field        (get-in db [:datagrid/data grid-id :options :id-field])
+         select-dispatch (get-in db [:datagrid/data grid-id :options :select-dispatch])
+         pk              (get record id-field)
+         prev-selected   (get-in db [:datagrid/data grid-id :selected-records])
+         next-selected   (if (some #{pk} prev-selected)
+                           (disj prev-selected pk)
+                           (conj prev-selected pk))]
+     (cond-> {:db db}
+       select-dispatch (assoc :dispatch [select-dispatch next-selected [record]])
+       :always         (update-in [:db :datagrid/data grid-id :selected-records]
+                                  (constantly next-selected))))))
 
 (rf/reg-event-db
  :datagrid/create-new-record
