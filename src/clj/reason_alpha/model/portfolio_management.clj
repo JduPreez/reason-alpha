@@ -238,7 +238,7 @@
                           :optional     true
                           :ref          :position/holding-position
                           :command-path [:position/holding-position-id]}
-    uuid?]
+    [:maybe uuid?]]
    [:marketstack {:optional     true
                   :fn-value     {:arg :symbol/provider
                                  :fun '(fn [{p :symbol/provider

@@ -240,7 +240,6 @@
                                             distinct
                                             seq))]
       (do
-        (clojure.pprint/pprint {::->>>-GFX-1 currency-conversions})
         (as/go
           (let [fxrate-result-chnl         (exchangerate/convert currency-conversions)
                 idx-currency-pair->fx-rate (->> currency-conversions
@@ -270,7 +269,7 @@
                                                                      close-fxr (assoc :close-fx-rate close-fxr))]
                                                      [position-id fxrs])))
                                                 (into {}))]
-          (as/>! result-out-chnl pos-with-fx-rates)))
+            (as/>! result-out-chnl pos-with-fx-rates)))
         (as/take 1 result-out-chnl))
       #_else
       (do
@@ -306,33 +305,27 @@
 
 (defn- complement-positions
   [fn-repo-get-acc-by-uid fns-market-data acc-id positions]
-  (clojure.pprint/pprint {::->>>-CP-1 positions})
   (let [fn-assoc-market-data (assoc-market-data-fn fn-repo-get-acc-by-uid
                                                    fns-market-data)
         {:keys [holding-position
                 positions]
          :as   r}            (portfolio-management/idx-position-type positions)
-        _                    (clojure.pprint/pprint {::->>>-CP-2 positions})
         {positions :result
          t         :type
          :as       r}        (fn-assoc-market-data acc-id positions)
-        _                    (clojure.pprint/pprint {::->>>-CP-3 positions})
         {positions :result
          t         :type
          :as       r}        (if (= :success t)
                                (common/compute positions {:computations postn-comps})
                                r)
-        _                    (clojure.pprint/pprint {::->>>-CP-4 positions})
         {holding-position :result
          t                :type
          :as              r} (when (and (= :success t) holding-position)
                                (portfolio-management/aggregate-holding-position
                                 holding-position positions))
-        _                    (clojure.pprint/pprint {::->>>-CP-5 holding-position})
         positions            (if (= t :success)
                                (conj positions holding-position)
                                #_else positions)]
-    (clojure.pprint/pprint {::->>>-CP-6 positions})
     {:result positions
      :type   :success}))
 
@@ -378,8 +371,7 @@
     (when broadcast? (swap! *broadcast-holdings-positions conj acc-id))
 
     (doseq [[_gpos-id posns] gpositions]
-      ;; TODO: Remove deref-block here
-      @(future
+      (future
         (try
           (let [result (complement-positions
                         fn-repo-get-acc-by-uid

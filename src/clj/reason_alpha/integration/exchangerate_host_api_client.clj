@@ -5,10 +5,13 @@
             [clojure.instant :as instant]
             [clojure.string :as str]
             [malli.core :as m]
+            [outpace.config :refer [defconfig]]
             [reason-alpha.model.fin-instruments :as model]
             [reason-alpha.utils :as utils]
             [tick.core :as tick])
   (:import [java.util Date]))
+
+(defconfig access-key)
 
 (def ^:const base-uri "https://api.exchangerate.host/")
 
@@ -50,9 +53,10 @@
                      (map name)
                      (str/join ","))
         *result (promise)]
-    (GET latest-uri {:params          {:base    base
-                                       :symbols syms
-                                       :places  6}
+    (GET latest-uri {:params          {:base       base
+                                       :symbols    syms
+                                       :places     6
+                                       :access_key access-key}
                      :handler         #(latest-success *result %)
                      :error-handler   #(latest-error *result %)
                      :response-format :json
@@ -82,8 +86,9 @@
   (str date "-" from "-" to))
 
 (defn- convert-success
-  [result-out-chnl conversion {:keys [result]}]
+  [result-out-chnl conversion {:keys [result] :as x}]
   (let [c (assoc conversion :fx-rate result)]
+    (clojure.pprint/pprint {:-_### x})
     (as/>!! result-out-chnl c)
     (utils/set-cache-item *cache (cache-key c) c)))
 
@@ -96,9 +101,11 @@
   (as/go
     (let [f   (if (keyword? from) (name from) from)
           t   (if (keyword? to) (name to) to)
-          req {:params          {:from f
-                                 :to   t
-                                 :date (str date)}
+          req {:params          {:from       f
+                                 :to         t
+                                 :date       (str date)
+                                 :amount     1
+                                 :access_key access-key}
                :format          :json
                :response-format :json
                :handler         (partial convert-success
@@ -110,39 +117,42 @@
 
 (defn- convert-cached
   [result-out-chnl currency-conversions]
-  (filterv (fn [{:keys [from to] :as convr}]
-             (let [c (utils/get-cache-item *cache (cache-key convr))]
-               (if (= ::utils/nil-cache-item c)
-                 convr
-                 #_else (utils/ignore
-                         (as/>!! result-out-chnl c)))))
-           currency-conversions))
+  (->> currency-conversions
+       (filterv (fn [{:keys [from to] :as convr}]
+                  (let [c (utils/get-cache-item *cache (cache-key convr))]
+                    (if (= ::utils/nil-cache-item c)
+                      convr
+                      #_else (utils/ignore
+                              (as/>!! result-out-chnl c))))))
+       (remove nil?)))
 
 (defn convert
   [currency-conversions]
   (let [buffer-size     (count currency-conversions)
-        result-out-chnl (as/chan buffer-size)
-        convrs          (->> currency-conversions
-                             (map (fn [{:keys [date] :as c}]
-                                    (->> (tick/inst)
-                                         (or date)
-                                         tick/date
-                                         #_(tick/at "00:00")
-                                         #_tick/inst
-                                         (assoc c :date))))
-                             (convert-cached result-out-chnl))]
+        result-out-chnl (as/chan buffer-size)]
     (as/go
-      (doseq [c convrs]
-        (request-convert result-out-chnl c)))
+      (let [convrs (->> currency-conversions
+                        (map (fn [{:keys [date] :as c}]
+                               (->> (tick/inst)
+                                    (or date)
+                                    tick/date
+                                    #_(tick/at "00:00")
+                                    #_tick/inst
+                                    (assoc c :date))))
+                        (convert-cached result-out-chnl))]
+        (doseq [c convrs]
+          (request-convert result-out-chnl c))))
     (as/take buffer-size result-out-chnl)))
 
 (comment
-  (let [c (convert [{:from :USD :to :ZAR}
-                    {:from :EUR :to :ZAR}
-                    {:from :GEL :to :ZAR}])]
+  (let [c (convert '({:from :EUR,
+                      :to   :ZAR,
+                      :date nil}) #_[{:from :USD :to :ZAR}
+                                     {:from :EUR :to :ZAR}
+                                     {:from :GEL :to :ZAR}])]
     (println (as/<!! c))
-    (println (as/<!! c))
-    (println (as/<!! c)))
+    #_(println (as/<!! c))
+    #_(println (as/<!! c)))
 
 
   (-> (tick/now)

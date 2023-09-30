@@ -22,7 +22,7 @@
    :context-subscription   [:account]
    :can-edit-fn            #(nil? (seq (:sub-positions %)))})
 
-(defn view [& x]
+(defn view []
   (let [*schema    (rf/subscribe [:model :model/position-dto])
         *ls-titles (rf/subscribe [:position/long-short-titles])
         fields     (datagrid/model->fields

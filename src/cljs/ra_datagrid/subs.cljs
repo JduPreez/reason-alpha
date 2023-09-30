@@ -264,14 +264,15 @@
  (fn [db [_ grid-id pk]]
    (let [{:keys [validator
                  default-values]} @(rf/subscribe [:datagrid/options grid-id])
-         r                        (if (and default-values (nil? pk))
-                                    @(rf/subscribe default-values)
-                                    @(rf/subscribe [:datagrid/edited-record-by-pk
-                                                    grid-id pk]))
+         defaults                 (when (and default-values (nil? pk))
+                                    @(rf/subscribe default-values))
+         r                        (merge defaults
+                                         @(rf/subscribe [:datagrid/edited-record-by-pk
+                                                         grid-id pk]))
          vres                     (when validator
                                     (validator r))]
-     (cljs.pprint/pprint {::->>>-VALIDATED-RES {:R r
-                                                :V vres}})
+     #_(cljs.pprint/pprint {::->>>-VALIDATED-RES {:R r
+                                                  :V vres}})
      (cond-> {:result r}
        vres (assoc :validation vres)))))
 

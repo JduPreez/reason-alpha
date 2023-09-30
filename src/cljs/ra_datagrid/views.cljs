@@ -628,24 +628,24 @@
                [table-footer id fields @records])
              (cond
                @loading?
-               [:tbody
-                [:tr
-                 [:td {:col-span (count fields)}
-                  [:div.p-30
-                   {:style {:text-align :center}}
-                   [:div.preloader.pl-xl
-                    [:svg.pl-circular
-                     {:viewBox "25 25 50 50"}
-                     [:circle.plc-path {:r "20", :cy "50", :cx "50"}]]]]]]]
+               , [:tbody
+                  [:tr
+                   [:td {:col-span (count fields)}
+                    [:div.p-30
+                     {:style {:text-align :center}}
+                     [:div.preloader.pl-xl
+                      [:svg.pl-circular
+                       {:viewBox "25 25 50 50"}
+                       [:circle.plc-path {:r "20", :cy "50", :cx "50"}]]]]]]]
 
                (and (empty? @records) (not @creating?))
-               [:tbody
-                [:tr
-                 [:td.nodata {:style    {:padding-top "20px"}
-                              :col-span colspan}
-                  [:i (or (:no-records-text options) "No rows")]]]]
+               , [:tbody
+                  [:tr
+                   [:td.nodata {:style    {:padding-top "20px"}
+                                :col-span colspan}
+                    [:i (or (:no-records-text options) "No rows")]]]]
 
                :else
-               [table-data id (:data-subscription options)])]
+               , [table-data id (:data-subscription options)])]
             (when (:progressive-loading options)
               [:div.re-datagrid-read-more-marker])]])))))

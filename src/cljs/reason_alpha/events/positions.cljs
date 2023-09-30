@@ -84,8 +84,6 @@
          db                          (data/save-local! {:model-type :position
                                                         :data       pos
                                                         :db         db})]
-     (cljs.pprint/pprint {::->>>-PU-CMD cmd-pos
-                          ::->>>-PU_DTO pos})
      {:db             db
       :position/save! cmd-pos})))
 

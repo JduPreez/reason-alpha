@@ -102,7 +102,7 @@
    (s/optional-key :custom-element-edit-renderer) s/Any
    ;;click callback which gets passed in a record that was being clicked
    (s/optional-key :custom-element-click)         s/Any
-   (s/optional-key :width)                        s/Num
+   (s/optional-key :width)                        s/Any
    (s/optional-key :placeholder)                  s/Any
    (s/optional-key :hide-header-filter)           s/Bool
    (s/optional-key :type)                         s/Any

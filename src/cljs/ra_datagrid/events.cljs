@@ -126,10 +126,11 @@
 
 (rf/reg-event-db
  :datagrid/update-edited-record
- (fn [db [_ id pk k v]]
+ (fn [db [_ grid-id pk k v]]
+   (cljs.pprint/pprint [grid-id pk k v])
    (if (not (nil? v))
-     (assoc-in db [:datagrid/data id :edit-rows pk k] v)
-     (dissoc-in db [:datagrid/data id :edit-rows pk k]))))
+     (assoc-in db [:datagrid/data grid-id :edit-rows pk k] v)
+     (dissoc-in db [:datagrid/data grid-id :edit-rows pk k]))))
 
 ;;rec-with-only-grid-fields (if is-update?
  ;;                           (assoc (remove-keys-not-in-gridfields @edit-record fields)
