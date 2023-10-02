@@ -1308,6 +1308,10 @@ code {
   margin-right: 0 !important;
 }
 
+.rc-datepicker-dropdown-wrapper .rc-point-wrapper .rc-popover-point {
+  z-index: 6 !important;
+}
+
 /*----------------------------------------------------------------------------------------
   row-button
 ----------------------------------------------------------------------------------------*/

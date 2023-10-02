@@ -1,5 +1,6 @@
 (ns reason-alpha.utils
-  #?(:clj (:require [clojure.edn :as edn]
+  #?(:clj (:require [clojure.core.cache :as cache]
+                    [clojure.edn :as edn]
                     [clojure.java.io :as io]
                     [clojure.string :as str]
                     [taoensso.timbre :as timbre :refer-macros (tracef debugf infof warnf errorf)])
@@ -51,7 +52,8 @@
              [(keyword k) v])))
 
 #?(:cljs
-   (defn log [location {:keys [type description error] :as log}]
+   (defn log
+     [location {:keys [type description error] :as log}]
      (let [l {location log}]
        (case type
          :error
@@ -61,6 +63,41 @@
          , (do (warnf "%s %s" location description)
                (cljs.pprint/pprint {:log/warn l}))
          (cljs.pprint/pprint {:log/info l})))))
+
+#?(:clj
+   (defn ttl-memoize
+     [f & {ttl :ttl, :or {ttl 3600000}}] ;; TTL 1 hour
+     (let [mem (atom (cache/ttl-cache-factory {} :ttl ttl))]
+       (fn [& args]
+         (let [e (cache/lookup @mem args ::nil)]
+           (if (= ::nil e)
+             (let [ret (apply f args)]
+               (swap! mem cache/miss args ret)
+               ret)
+             (do
+               (swap! mem cache/hit args)
+               e)))))))
+
+#?(:clj
+   (defn ttl-cache
+     [& {ttl :ttl, :or {ttl 3600000}}]
+     (atom (cache/ttl-cache-factory {} :ttl ttl))))
+
+#?(:clj
+   (defn get-cache-item
+     [*cache k]
+     ;; Use `:cache.item/nil` to enable caching `nil` values
+     (let [i (cache/lookup @*cache k ::nil-cache-item)]
+       (if (= ::nil-cache-item i)
+         ::nil-cache-item
+         (do
+           (swap! *cache cache/hit k)
+           i)))))
+
+#?(:clj
+   (defn set-cache-item
+     [*cache k v]
+     (swap! *cache cache/miss k v)))
 
 #?(:clj
    (defn list-resource-files [dir file-type]
@@ -87,17 +124,19 @@
   (if (= s "true") true
       false))
 
-#?(:clj
-   (defn round [number & [dec-places]]
-     (let [dec-places (or dec-places 2)]
-       (-> number
-           BigDecimal/valueOf
-           (.setScale dec-places BigDecimal/ROUND_HALF_UP)
-           .floatValue))))
-
 #?(:cljs
-   (defn maybe-parse-number [nr]
+   (defn maybe-parse-number
+     [nr]
      (cond
        (re-find #"^-?\d+\.\d+$" nr) (js/parseFloat nr)
        (re-find #"^-?\d+$" nr)      (js/parseInt nr)
        :else                        nr)))
+
+(defn ignore
+  [r]
+  nil)
+
+#?(:clj
+   (defn percent-str
+     [n]
+     (java.lang.String/format java.util.Locale/US "%.2f%%" (to-array [n]))))

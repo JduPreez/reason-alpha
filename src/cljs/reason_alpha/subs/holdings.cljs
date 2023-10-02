@@ -4,6 +4,11 @@
             [reason-alpha.utils :as utils]))
 
 (rf/reg-sub
+ :holding/default-vals
+ (fn [_ _]
+   {:instrument-type [:share ""]}))
+
+(rf/reg-sub
  :holding/instrument-type-ref-list
  :<- [:model/members-of :model/holding :holding/instrument-type]
  (fn [{{:keys [enum/titles]} :properties
@@ -41,7 +46,6 @@
  (fn [{{:keys [enum/titles]} :properties
        mbrs                  :members
        :as                   _currencies} _]
-   (cljs.pprint/pprint {:holding/currency-ref-list _currencies})
    (for [m    mbrs
          :let [t (get titles m)]]
      {:id m :label t})))

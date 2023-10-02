@@ -78,7 +78,7 @@
    ;;which url to PUT data to upon saving?
    ;;which url to POST data to upon saving?
    (s/optional-key :checkbox-select)             s/Bool
-   (s/optional-key :on-selection-change)         s/Any
+   (s/optional-key :select-dispatch)             s/Any
    ;;callback fn that gets set of all selected records as argumentlist
    :data-subscription                            s/Any
    (s/optional-key :create-dispatch)             s/Any
@@ -86,24 +86,23 @@
    (s/optional-key :update-dispatch)             s/Any
    (s/optional-key :delete-dispatch)             s/Any
    (s/optional-key :additional-css-class-names)  s/Str ; additional css-class-names to be applied to the <table> tag.
-   (s/optional-key :group-by)                    s/Any})
+   (s/optional-key :group-by)                    s/Any
+   (s/optional-key :validator)                   s/Any
+   (s/optional-key :context-subscription)        s/Any})
 
 (def GridField
   "A schema for grid field configuration"
   {:name                                          s/Keyword
    :title                                         s/Any
-   ;;list of validators, a validator should return [true nil] if valid
-   ;;and [false "some error msg] if invalid
-   ;;the first validator to fail will return
+   (s/optional-key :optional?)                    s/Any
    (s/optional-key :on-click)                     s/Any
    (s/optional-key :footer-cell)                  s/Any
-   (s/optional-key :validators)                   s/Any
    (s/optional-key :align)                        s/Any
    (s/optional-key :custom-element-renderer)      s/Any
    (s/optional-key :custom-element-edit-renderer) s/Any
    ;;click callback which gets passed in a record that was being clicked
    (s/optional-key :custom-element-click)         s/Any
-   (s/optional-key :width)                        s/Num
+   (s/optional-key :width)                        s/Any
    (s/optional-key :placeholder)                  s/Any
    (s/optional-key :hide-header-filter)           s/Bool
    (s/optional-key :type)                         s/Any

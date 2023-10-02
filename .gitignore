@@ -22,3 +22,4 @@ sqlite.5.db
 jwt.key
 *.~undo-tree~
 .envrc
+*.log

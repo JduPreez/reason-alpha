@@ -19,7 +19,7 @@ $(window).on("load", function(e) {
   
   // ______________ countUp
   $('.counter').countUp();
-})
+});
 
 
 // ______________ BACK TO TOP BUTTON
@@ -63,9 +63,10 @@ $(function(e) {
   $('[data-toggle="tooltip"]').tooltip();
 
   /** Initialize popovers */
-  $('[data-toggle="popover"]').popover({
-  html: true
-  });
+  //$('[data-toggle="popover"]').popover({
+  //    html: false
+  //});
+
      /** Function for remove card */
   $('[data-toggle="card-remove"]').on('click', function(e) {
   let $card = $(this).closest(DIV_CARD);

@@ -1,5 +1,6 @@
 (ns reason-alpha.model.fin-instruments
-  (:require [reason-alpha.model.core :as model :refer [def-model]]))
+  (:require [malli.core :as m]
+            [reason-alpha.model.core :as model :refer [def-model]]))
 
 (def-model Symbol
   :model/symbol
@@ -7,10 +8,10 @@
    [:symbol/ticker {:min 1} string?]
    [:symbol/holding-id {:optional true} uuid?]
    [:symbol/provider
-    [:enum {:enum/titles {:eod-historical-data "EOD Historical Data"
-                          :saxo-dma            "Saxo/DMA"
-                          :easy-equities       "Easy Equities"}}
-                         :eod-historical-data :saxo-dma :easy-equities]]])
+    [:enum {:enum/titles {:marketstack   "Marketstack"
+                          :saxo-dma      "Saxo/DMA"
+                          :easy-equities "Easy Equities"}}
+                         :marketstack :saxo-dma :easy-equities]]])
 
 (def-model Price
   :model/price
@@ -87,74 +88,27 @@
    :PLN :THB :IDR :HUF :CZK :ILS :CLP :PHP :AED :COP :SAR
    :MYR :RON])
 
-(comment
-  (let [x {:USD "USD"
-           :EUR "EUR"
-           :JPY "JPY"
-           :GBP "GBP"
-           :AUD "AUD"
-           :CAD "CAD"
-           :CHF "CHF"
-           :CNY "CNY"
-           :HKD "HKD"
-           :NZD "NZD"
-           :SEK "SEK"
-           :KRW "KRW"
-           :SGD "SGD"
-           :NOK "NOK"
-           :MXN "MXN"
-           :INR "INR"
-           :RUB "RUB"
-           :ZAR "ZAR"
-           :TRY "TRY"
-           :BRL "BRL"
-           :TWD "TWD"
-           :DKK "DKK"
-           :PLN "PLN"
-           :THB "THB"
-           :IDR "IDR"
-           :HUF "HUF"
-           :CZK "CZK"
-           :ILS "ILS"
-           :CLP "CLP"
-           :PHP "PHP"
-           :AED "AED"
-           :COP "COP"
-           :SAR "SAR"
-           :MYR "MYR"
-           :RON "RON"}]
-    (into (sorted-map) x))
+(def-model CurrencyPair
+  :model/currency-pair
+  [:tuple
+   Currency Currency])
 
-  (letfn [(get-model-members-of [schema member-k]
-            (let [member        (->> schema
-                                     rest
-                                     (some #(when (= member-k (first %)) %)))
-                  type-spec     (last member)
-                  maybe-props   (second type-spec)
-                  has-props?    (map? maybe-props)
-                  child-members (if has-props?
-                                  (nnext type-spec)
-                                  (next type-spec))]
-              {:properties maybe-props
-               :members    child-members}))]
-    (get-model-members-of
-     Symbol
-     :symbol/provider)
-    #_(let [{{ptitles :enum/titles} :properties
-             providers              :members} (get-model-members-of
-                                               Symbol
-                                               :symbol/provider)
-            providers-schema                  (for [p    providers
-                                                    :let [t (get ptitles p)]]
-                                                [p {:title    t
-                                                    :optional true} keyword?])]
-      (into
-       [:map
-        [:instrument-name {:title    "Instrument"
-                           :optional true} string?]]
-       cat
-       [providers-schema
-        [[:instrument-type {:title    "Type"
-                            :optional true} keyword?]]])))
+(def-model ExchangeRate
+  :model/exchange-rate
+  [:map
+   [:exchange-rate/creation-id uuid?]
+   [:exchange-rate/id {:optional true} uuid?]
+   [:exchange-rate/base-currency Currency]
+   [:exchange-rate/other-currency Currency]
+   [:exchange-rate/rate number?]
+   [:exchange-rate/date-time inst?]])
 
-  )
+(def-model ExchangeRateDto
+  :model/exchange-rate-dto
+  [:map
+   [:exchange-rate-creation-id uuid?]
+   [:exchange-rate-id {:optional true} uuid?]
+   [:base-currency Currency]
+   [:other-currency Currency]
+   [:rate number?]
+   [:date-time inst?]])

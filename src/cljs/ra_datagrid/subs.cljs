@@ -8,12 +8,9 @@
 (defn sensible-sort
   [k r]
   (let [v (get r k)]
-    (cond
-      (nil? v)    v
-      (number? v) v
-      (string? v) (clojure.string/lower-case v)
-      :else       (str v))))
-
+    (if (string? v)
+      (clojure.string/lower-case v)
+      #_else (str v))))
 
 (defn sort-records
   "Assumes a `:<k>-formatted` key exists in each record for k"
@@ -25,7 +22,7 @@
           fmt-key (keyword (str (name k) "-formatted"))
           field   (first (filter #(= (:name %) k) fields))
           sort-fn (if (:sort-value-fn field)
-                    #((:sort-value-fn field) (or (str (get % k)) (str (get % fmt-key))) %)
+                    #((:sort-value-fn field) (or (get % k) (get % fmt-key)) %)
                     (partial sensible-sort fmt-key))
           do-sort #(->> %
                         (sort-by sort-fn)
@@ -177,10 +174,11 @@
    (map (partial apply-formatters fields) records)))
 
 (defn group-records [{:keys [records group-path member-key id-field]}]
-  (if group-path
+  (if (seq group-path)
     (->> records
          (filter #(nil? (get % member-key)))
-         (map #(assoc % :datagrid/children
+         (map #(assoc %
+                      :datagrid/children
                       (filter
                        (fn [r]
                          (and (get-in % group-path)
@@ -193,7 +191,7 @@
 (rf/reg-sub
  :datagrid/sorted-records
  (fn [[_ id data-sub] _]
-   [(rf/subscribe [:datagrid/options id])
+  [(rf/subscribe [:datagrid/options id])
     (rf/subscribe [:datagrid/formatted-records id data-sub])
     (rf/subscribe [:datagrid/expanded? id])
     (rf/subscribe [:datagrid/sorting id])
@@ -248,18 +246,42 @@
 
 (rf/reg-sub
  :datagrid/editing-record?
- (fn [[_ id _] _]
-   [(rf/subscribe [:datagrid/options id])
-    (rf/subscribe [:datagrid/edit-rows id])])
- (fn [[options edit-rows] [_ id record]]
+ (fn [[_ grid-id _] _]
+   [(rf/subscribe [:datagrid/options grid-id])
+    (rf/subscribe [:datagrid/edit-rows grid-id])])
+ (fn [[options edit-rows] [_ grid-id record]]
    (let [pk     (:id-field options)
          rec-id (get record pk)]
      (get edit-rows rec-id))))
 
 (rf/reg-sub
  :datagrid/edited-record-by-pk
- (fn [db [_ id pk]]
-   (get-in db [:datagrid/data id :edit-rows pk])))
+ (fn [db [_ grid-id pk]]
+   (get-in db [:datagrid/data grid-id :edit-rows pk])))
+
+(rf/reg-sub
+ :datagrid/edited-record-by-pk-with-validation
+ (fn [db [_ grid-id pk]]
+   (let [{:keys [validator
+                 default-values]} @(rf/subscribe [:datagrid/options grid-id])
+         defaults                 (when (and default-values (nil? pk))
+                                    @(rf/subscribe default-values))
+         r                        (merge defaults
+                                         @(rf/subscribe [:datagrid/edited-record-by-pk
+                                                         grid-id pk]))
+         vres                     (when validator
+                                    (validator r))]
+     #_(cljs.pprint/pprint {::->>>-VALIDATED-RES {:R r
+                                                  :V vres}})
+     (cond-> {:result r}
+       vres (assoc :validation vres)))))
+
+(rf/reg-sub
+ :datagrid/edited-record-valid?
+ (fn [[_ grid-id pk]]
+   (rf/subscribe [:datagrid/edited-record-by-pk-with-validation grid-id pk]))
+ (fn [{v :validation} [_ _ _]]
+   (empty? v)))
 
 (rf/reg-sub
  :datagrid/selected-record-pks-internal

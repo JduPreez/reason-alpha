@@ -5,6 +5,20 @@
             [reason-alpha.utils :as utils]))
 
 (rf/reg-sub
+ :position/default-vals
+ (fn [db _]
+   (let [ps             (get-in db (data/entity-data :position))
+         selected-id    (->> db (data/get-selected-ids :position) first)
+         {parent-holding-pos-id
+          :position-id} (some (fn [{:keys [holding-position-id position-id] :as p}]
+                                (when (and (= position-id selected-id)
+                                           (not holding-position-id))
+                                  p))
+                              ps)]
+     {:position-creation-id (utils/new-uuid)
+      :holding-position-id  parent-holding-pos-id})))
+
+(rf/reg-sub
  :position/list
  (fn [db _]
    (sort-by (juxt :instrument-name :open-time)

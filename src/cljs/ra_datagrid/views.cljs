@@ -2,6 +2,8 @@
   (:require [cljs-time.coerce :as coerce]
             [cljs-time.format :as fmt]
             [cljs.pprint :as pprint]
+            [clojure.string :as str]
+            [pogonos.core :as pg]
             [ra-datagrid.events]
             [ra-datagrid.schema :as ds]
             [ra-datagrid.subs]
@@ -67,20 +69,23 @@
      [:i.fas.fa-plus-square]]))
 
 (defn save-cell-button
-  [id pk]
-  [:td.commands {:key "SAVECELLBUTTON" :className "save"}
-   [:button.btn.btn-icon.btn-primary.btn-success
-    {:on-click #(rf/dispatch [:datagrid/save-edited-record id pk])}
-    [:i.fe.fe-check]]])
+  [grid-id pk]
+  (let [*valid? (rf/subscribe [:datagrid/edited-record-valid? grid-id pk])]
+    (fn [grid-id pk]
+      [:td.commands {:key       "SAVECELLBUTTON"
+                     :className "save"}
+       [:button.btn.btn-icon.btn-primary.btn-success
+        {:on-click #(rf/dispatch [:datagrid/save-edited-record grid-id pk])
+         :disabled (false? @*valid?)}
+        [:i.fe.fe-check-square]]])))
 
 (defn delete-cell-button
   [id record]
-  (let []
-    (fn [id record]
-      [:span {:key "DELETE" :className "delete"}
-       [:button.btn.btn-xs.btn-danger.waves-effect.waves-circle.waves-float
-        {:on-click #(rf/dispatch [:datagrid/delete-record-maybe id record])}
-        [:i.zmdi.zmdi-close]]])))
+  (fn [id record]
+    [:span {:key "DELETE" :className "delete"}
+     [:button.btn.btn-xs.btn-danger.waves-effect.waves-circle.waves-float
+      {:on-click #(rf/dispatch [:datagrid/delete-record-maybe id record])}
+      [:i.zmdi.zmdi-close]]]))
 
 (defn reorder-cell-button-up
   [callback]
@@ -132,25 +137,34 @@
          :type        :number}]])))
 
 (defn table-header-cell
-  [id {:keys [title align width can-sort hide-header-filter] :as field}]
-  (let [align   (if-not align :text-left align)
-        atts    (cond-> {:className align
-                         :key (name (:name field))}
-                  width
-                  (assoc :style {:width width}))
-        sorting (rf/subscribe [:datagrid/sorting id])
-        options (rf/subscribe [:datagrid/options id])]
-    (fn [id {:keys [title align width can-sort menu edit]
-             :as   field}]
-      (let [sort-by-key      (:key @sorting)
+  [grid-id {:keys [title align width can-sort hide-header-filter] :as field}]
+  (let [align   (if-not align "text-left" align)
+        atts    {:className align
+                 :key (name (:name field))}
+        sorting (rf/subscribe [:datagrid/sorting grid-id])
+        options (rf/subscribe [:datagrid/options grid-id])
+        ctx     (when-let [ctx-sub (:context-subscription @options)]
+                  @(rf/subscribe ctx-sub))]
+    (fn [grid-id {:keys [title align width can-sort menu edit]
+                  :as   field}]
+      (let [align-left?      (= align "text-left")
+            sort-by-key      (:key @sorting)
             sort-direction   (:direction @sorting)
             can-sort-global? (:can-sort @options)
-            header-filters?  (:header-filters @options)]
+            header-filters?  (:header-filters @options)
+            title            (if (and (not-empty ctx)
+                                      (str/includes? title "{{"))
+                               (pg/render-string title ctx)
+                               #_else title)]
         [:th atts
          [:div.btn-toolbar {:role "toolbar"}
-          [:div.btn-group.mr-2 {:role "group"}
-           [:a.btn.btn-link {:type  "button"
-                             :style {:padding-left 0}} title]
+          [:div {:class ["btn-group" (if align-left? "mr2" "ml2")]
+                 :role  "group"}
+           [:a.btn.btn-link {:type                    "button"
+                             :style                   (if align-left?
+                                                        {:padding-left 0}
+                                                        {:padding-right 0})
+                             :dangerouslySetInnerHTML {:__html title}}]
            (when (and can-sort-global?
                       (not= false can-sort))
              [:a.btn.btn-link {:type "button"} [:i.fas.fa-arrows-alt-v]])
@@ -173,7 +187,7 @@
 
             [:span.text.m-r-5
              {:style    {:cursor :pointer}
-              :on-click #(rf/dispatch [:datagrid/sort-field id (:name field)])}
+              :on-click #(rf/dispatch [:datagrid/sort-field grid-id (:name field)])}
              title]
             (cond
               (and
@@ -206,7 +220,7 @@
          (when (and header-filters?
                     (or (nil? hide-header-filter)
                         (not hide-header-filter)))
-           [table-header-filter id field])
+           [table-header-filter grid-id field])
 
          (when (and header-filters? hide-header-filter)
            [:div.m-b-10 {:style {:height "35px"}} " "])]))))
@@ -225,52 +239,65 @@
         [:i.input-helper]]])))
 
 (defn table-header
-  [id data-sub]
-  (let [fields           (rf/subscribe [:datagrid/fields id])
-        sorting          (rf/subscribe [:datagrid/sorting id])
-        options          (rf/subscribe [:datagrid/options id])
-        selected-records (rf/subscribe [:datagrid/selected-record-pks id data-sub])]
-    (fn [id data-sub]
+  [grid-id data-sub]
+  (let [fields           (rf/subscribe [:datagrid/fields grid-id])
+        sorting          (rf/subscribe [:datagrid/sorting grid-id])
+        options          (rf/subscribe [:datagrid/options grid-id])
+        selected-records (rf/subscribe [:datagrid/selected-record-pks grid-id data-sub])]
+    (fn [grid-id data-sub]
       (let [cells (map (fn [f]
                          ^{:key (:name f)}
-                         [table-header-cell id f]) @fields)
+                         [table-header-cell grid-id f]) @fields)
             cells
             (cond->> cells
               (:checkbox-select @options)
               (concat [^{:key "check"}
                        [:th.check
                         {:key "check"}
-                        [mass-select id data-sub]]]))]
+                        [mass-select grid-id data-sub]]]))]
         [:thead  {:key "head"}
          (when (:extra-header-row @options)
            (:extra-header-row @options))
          (when-not (:hide-heading @options)
            [:tr
             (if (:can-create @options)
-              (concat cells [ ^{:key "cmds"}
-                             [:th.commands
-                              [create-button id]]])
+              (concat [ ^{:key "cmds"}
+                       [:th.commands
+                        [create-button grid-id]]] cells)
               cells)])]))))
 
 (defmulti edit-cell
   (fn [_ {t :type} _]
     (or t :string)))
 
+(defn invalid-feedback
+  [feedback]
+  [:div.invalid-tooltip
+   [:<>
+    (for [f feedback]
+      ^{:key (js/encodeURI "edit-cell-validation" f)}
+      [:span f])]])
+
 (defmethod edit-cell :number
-  [id field pk]
-  (let [r (rf/subscribe [:datagrid/edited-record-by-pk id pk])]
-    (fn [id field pk]
-      (let [v (get @r (:name field))]
+  [grid-id field pk]
+  (let [*r (rf/subscribe [:datagrid/edited-record-by-pk-with-validation grid-id pk])]
+    (fn [grid-id field pk]
+      (let [field-nm   (:name field)
+            validation (-> @*r :validation (get field-nm))
+            v          (-> @*r :result (get field-nm))]
         [:td {:key       (:name field)
-              :className "editing"}
-         [:div.fg-line
+              :className "editing data-cell"}
+         [:div
           [:input.form-control {:type      "number"
                                 :value     v
-                                :on-change #(rf/dispatch [:datagrid/update-edited-record id pk
+                                :class     (when (seq validation)
+                                             "is-invalid")
+                                :on-change #(rf/dispatch [:datagrid/update-edited-record grid-id pk
                                                           (:name field) (-> %
                                                                             .-target
                                                                             .-value
-                                                                            cljs.reader/read-string)])}]]]))))
+                                                                            cljs.reader/read-string)])}]
+          (invalid-feedback validation)]]))))
 
 (defmethod edit-cell :custom
   [id field pk]
@@ -278,7 +305,7 @@
     (fn [id field pk]
       (let [v (get @r (:name field))]
         [:td {:key (:name field)
-              :className "editing"}
+              :className "editing data-cell"}
          ((:custom-element-edit-renderer field) field @r
           #(rf/dispatch [:datagrid/update-edited-record id pk (:name field) %]) v)]))))
 
@@ -294,9 +321,9 @@
            [:select.form-control
             {:value     (if v "true" "false")
              :on-change #(rf/dispatch [:datagrid/update-edited-record id pk
-                                      (:name field) (= "true" (.-target.value ^js %))])}
-            [:option {:value "true"}  "ja"]
-            [:option {:value "false"} "nee"]]]]]))))
+                                       (:name field) (= "true" (.-target.value ^js %))])}
+            [:option {:value "true"}  "Yes"]
+            [:option {:value "false"} "No"]]]]]))))
 
 (defmethod edit-cell :no-edit
   [id field pk]
@@ -304,7 +331,7 @@
     (fn [id field pk]
       (let [v (get @r (:name field))]
         [:td {:key       (:name field)
-              :className "editing"}
+              :className "editing data-cell"}
          (if (:formatter field)
            ((:formatter field) v @r)
            v)]))))
@@ -321,7 +348,7 @@
     (fn [id field pk]
       (let [v (get @r (:name field))]
         [:td {:key       (:name field)
-              :className "editing"}
+              :className "editing data-cell"}
          [:div.fg-line
           [:input.form-control {:type      "text"
                                 :value     v
@@ -337,21 +364,21 @@
 
 (defn edit-row
   "shows a row with inline editing elements"
-  [id pk]
-  (let [options (rf/subscribe [:datagrid/options id])
-        fields  (rf/subscribe [:datagrid/fields id])]
-    (fn [id pk]
+  [grid-id pk]
+  (let [options (rf/subscribe [:datagrid/options grid-id])
+        fields  (rf/subscribe [:datagrid/fields grid-id])]
+    (fn [grid-id pk]
       (let [{:keys [checkbox-select]} @options
-            save-button               ^{:key (or pk -1)} [save-cell-button id pk]
+            save-button               ^{:key (or pk -1)} [save-cell-button grid-id pk]
             cells                     (cond->> (doall
                                                 (map (fn [f]
                                                        ^{:key (:name f)}
-                                                       [edit-cell id f pk]) @fields))
+                                                       [edit-cell grid-id f pk]) @fields))
                                         checkbox-select
                                         (concat [^{:key "checkbox__"}
-                                                 [edit-cell id {:name (str "checkbox-" id)
+                                                 [edit-cell grid-id {:name (str "checkbox-" grid-id)
                                                                 :type :empty-edit}]]))]
-        [:tr.editing {:key pk} (concat cells [save-button])]))))
+        [:tr.editing {:key pk} (concat [save-button] cells)]))))
 
 
 (defmulti table-cell
@@ -366,8 +393,10 @@
         value         (or
                        (get record fmt-fieldname)
                        (get record fieldname))
-        align         (if (nil? (:align field)) :text-left (:align field))]
-    [:td {:key (:name field) :className align}
+        align         (if (nil? (:align field)) "text-left" (:align field))
+        style         (if-let [w (:width field)]
+                        {:min-width w} #_else {})]
+    [:td {:key (:name field), :className align, :style style}
      [:span (cond-> {}
               is-clickable? (assoc :on-click #((:custom-element-click field) record)))
       [(:custom-element-renderer field) record]]]))
@@ -383,7 +412,7 @@
             formatted-value (or
                              (get record fmt-fieldname)
                              (get record fieldname))
-            align           (if (nil? (:align field)) :text-left (:align field))
+            align           (if (nil? (:align field)) "text-left" (:align field))
             formatted-value (if is-clickable?
                               [:a.table-link {:on-click
                                               (fn [e]
@@ -393,10 +422,10 @@
                                                      @options)))}
                                formatted-value]
                               formatted-value)]
-
         [:td (cond-> {:key       fieldname
-                      :className align}
-               indent? (assoc :style {:padding-left "30px"}))
+                      :className (str align " data-cell")}
+               indent?        (update :style #(assoc % :padding-left "30px"))
+               (:width field) (update :style #(assoc % :min-width (:width field))))
          formatted-value]))))
 
 (defn command-td
@@ -484,7 +513,7 @@
                     (concat [^{:key "checkbox__"}
                              [cell-select-checkbox id record]]))]
         [:tr atts
-         (cond-> cells
+         (cond->> cells
            (or (:can-update @options) (:can-edit @options) (:can-delete @options))
            (concat [^{:key "commands"}
                     [command-td id @options record]]))]))))
@@ -557,7 +586,6 @@
   "Creates a datagrid"
   [options :- ds/GridConfiguration
    fields  :- [ds/GridField]]
-  (cljs.pprint/pprint ::datagrid)
   (let [id              (:grid-id options)
         data-sub        (:data-subscription options)
         loading-sub     (:loading-subscription options)
@@ -600,24 +628,24 @@
                [table-footer id fields @records])
              (cond
                @loading?
-               [:tbody
-                [:tr
-                 [:td {:col-span (count fields)}
-                  [:div.p-30
-                   {:style {:text-align :center}}
-                   [:div.preloader.pl-xl
-                    [:svg.pl-circular
-                     {:viewBox "25 25 50 50"}
-                     [:circle.plc-path {:r "20", :cy "50", :cx "50"}]]]]]]]
+               , [:tbody
+                  [:tr
+                   [:td {:col-span (count fields)}
+                    [:div.p-30
+                     {:style {:text-align :center}}
+                     [:div.preloader.pl-xl
+                      [:svg.pl-circular
+                       {:viewBox "25 25 50 50"}
+                       [:circle.plc-path {:r "20", :cy "50", :cx "50"}]]]]]]]
 
                (and (empty? @records) (not @creating?))
-               [:tbody
-                [:tr
-                 [:td.nodata {:style    {:padding-top "20px"}
-                              :col-span colspan}
-                  [:i (or (:no-records-text options) "No rows")]]]]
+               , [:tbody
+                  [:tr
+                   [:td.nodata {:style    {:padding-top "20px"}
+                                :col-span colspan}
+                    [:i (or (:no-records-text options) "No rows")]]]]
 
                :else
-               [table-data id (:data-subscription options)])]
+               , [table-data id (:data-subscription options)])]
             (when (:progressive-loading options)
               [:div.re-datagrid-read-more-marker])]])))))

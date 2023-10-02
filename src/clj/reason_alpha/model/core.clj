@@ -42,18 +42,18 @@
 (defn get-defs [model-ks]
   (select-keys @*model model-ks))
 
-#_(defmacro def-model [sym new-m]
-  `(let [ns#      (str *ns*)
-         sym-nm#  (name '~sym)
-         malli-k# (keyword (str ns# "/" sym-nm#))
-         add-def# {malli-k# ~new-m}]
-     (do
-       (def ~sym ~new-m)
-       (+def! add-def#))))
+;; (defmacro def-model [sym new-m]
+;;   `(let [ns#      (str *ns*)
+;;          sym-nm#  (name '~sym)
+;;          malli-k# (keyword (str ns# "/" sym-nm#))
+;;          add-def# {malli-k# ~new-m}]
+;;      (do
+;;        (def ~sym ~new-m)
+;;        (+def! add-def#))))
 
-#_(defn get-def [model-k]
-  (let [ns-model-k (get @*model-keys-mapping model-k)]
-    [:schema {:registry @*model} ns-model-k]))
+;; (defn get-def [model-k]
+;;   (let [ns-model-k (get @*model-keys-mapping model-k)]
+;;     [:schema {:registry @*model} ns-model-k]))
 
 (defn validate [model-k entity]
   (let [model-k (if (= "model" (namespace model-k))

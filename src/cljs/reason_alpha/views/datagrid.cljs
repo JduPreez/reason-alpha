@@ -1,9 +1,18 @@
 (ns reason-alpha.views.datagrid
   (:require [clojure.string :as str]
+            [goog.string :as gstr]
+            [goog.string.format]
+            [malli.core :as m]
             [medley.core :as medley]
             [ra-datagrid.views :as ra-datagrid]
             [re-frame.core :as rf]
-            [reagent.core :as r]))
+            [reagent.core :as r]
+            [reason-alpha.model.utils :as mutils]
+            [reason-alpha.views.utils :as vutils]
+            [tick.core :as tick]
+            [tick.locale-en-us]))
+
+(def date-formatter (tick/formatter "yyyy-MM-dd"))
 
 (def default-opts
   {;;:grid-id                    :my-grid
@@ -16,7 +25,7 @@
    ;;:can-reorder                true
    :can-create                 true
    :checkbox-select            true
-   :on-selection-change        #(rf/dispatch [:select %1])
+   :select-dispatch            :select ;;#(rf/dispatch [:select %1 %2])
    ;;:loading-subscription       [:my-loading]
    ;;:sort-dispatch              [:sort]
    ;;:header-filter-dispatch     [:header-filter-dispatch]
@@ -45,6 +54,7 @@
                            @(rf/subscribe [:datagrid/history grid-id]))
                       [])]
       [:div.card-header.bg-gradient-indigo.br-tr-3.br-tl-3
+       {:style {:padding "0.5rem 0.5rem"}}
        [:div.btn-list
         (for [hgrid-id history]
           (if (= hgrid-id grid-id)
@@ -54,52 +64,49 @@
             [history-item hgrid-id]))]])))
 
 (defn view [fields {:keys [grid-id] :as options}]
+  (cljs.pprint/pprint {::->>>-DGV-F-1 fields})
   (fn [fields {:keys [grid-id title] :as options}]
     (let[*options (rf/subscribe [:datagrid/options grid-id])
          opts     (or options @*options)]
+      (cljs.pprint/pprint {::->>>-DGV-F-2 fields})
       [:div.card
        [history-list grid-id title]
-       [:div.card-body {:style {:padding-top    0
-                                :padding-bottom 0}}
+       [:div.card-body.card-body-datagrid
         [ra-datagrid/datagrid (merge default-opts opts) fields]]])))
 
 (defn model-member->field
-  [[member-nm & schema] & [{:keys [enum-titles] :as field-opts}]]
-  (let [ref-suffix             "ref"
-        ref-suffix-list        (str ref-suffix "-list")
-        id-member              (-> member-nm
-                                   name
-                                   (str/ends-with? "-id"))
+  [[member-nm {:keys                         [type schema order]
+               {o? :optional :as properties} :properties
+               :as                           s}] &
+   [{:keys [enum-titles] :as field-opts}]]
+  (let [id-member?             (mutils/id-member? member-nm)
+        is-number?             (or (= type (-> #'number? meta :name))
+                                   (= type (-> #'float? meta :name)))
         field-def              (cond-> field-opts
                                  (not (contains? field-opts :can-sort))
                                  , (assoc :can-sort true)
+                                 o?
+                                 , (assoc :optional? o?)
+                                 is-number?
+                                 , (assoc :formatter
+                                          #(when %
+                                             (gstr/format "%.2f" %))
+                                          :align "text-right")
                                  :default
                                  , (dissoc field-opts :ref-suffix))
-        props-or-type          (first schema)
-        has-props?             (map? props-or-type)
         {:keys [title ref
-                command-path]} props-or-type
+                command-path]} properties
         field-def              (merge field-def {:title title
                                                  :name  member-nm})
-        ref-nm                 (when ref
-                                 (name ref))
-        ref-ns                 (when ref
-                                 (namespace ref))
-        [type tuple-id-type]   (some #(when (not (map? %))
-                                        (if (sequential? %)
-                                          %
-                                          [%])) schema)
-        data-subscr            (if ref-ns
-                                 (keyword ref-ns (str ref-nm "-" ref-suffix-list))
-                                 (keyword ref-nm ref-suffix-list))
-        parent-subscr          (if ref-ns
-                                 (keyword ref-ns (str ref-nm "-" ref-suffix))
-                                 (keyword ref-nm ref-suffix))]
+        tuple-id-type          (when (= type :tuple)
+                                 (second schema))
+        data-subscr            (vutils/ref->data-sub ref)
+        parent-subscr          (vutils/ref->parent-data-sub ref)]
     (cond
       ;; Id members are either the current entity's `:id` or `:creation-id` fields
       ;; or they should be 'foreign keys' with a `:ref` pointing to another entity
       ;; using an `<select>`
-      (and id-member
+      (and id-member?
            (not ref))
       , nil
 
@@ -110,34 +117,35 @@
       , (assoc field-def :type :no-edit)
 
       (and ref
-           (not id-member))
+           (not id-member?))
       , (merge
          (cond-> {:type              :select
-                  :data-subscription [data-subscr]}
+                  :data-subscription data-subscr}
            (= tuple-id-type keyword?) (assoc :enum-titles enum-titles))
          field-def)
 
       (and ref
-           id-member)
+           id-member?)
       , (medley/deep-merge field-def
                            {:type              :indent-group
-                            :data-subscription [data-subscr]
+                            :data-subscription data-subscr
                             :indent-group
                             {:parent-subscription parent-subscr}})
 
-      (or (= type (-> #'number? meta :name))
-          (= type (-> #'float? meta :name)))
+      is-number?
       , (merge field-def {:type :number})
 
       (= type (-> #'inst? meta :name))
       , (merge field-def {:type  :date
-                          :width 227})
+                          #_#_:width 227})
 
       :default
       , field-def)))
 
-(defn model->fields [[_ & members] & [{fields-opts :fields-opts}]]
-  (->> members
-       (mapv (fn [[membr-k & _ :as m]]
-               (model-member->field m (get fields-opts membr-k))))
+(defn model->fields [model-schema & [{fields-opts :fields-opts}]]
+  (->> model-schema
+       mutils/model-member-schema-info
+       (sort-by (fn [[k {:keys [order]}]] order))
+       (mapv (fn [[membr-nm :as sch-inf]]
+               (model-member->field sch-inf (get fields-opts membr-nm))))
        (remove nil?)))

@@ -7,8 +7,8 @@
             [ra-datagrid.config :as conf]
             [ra-datagrid.subs :as subs :refer [default-formatter]]
             [ra-datagrid.views :as views :refer [edit-cell table-cell]]
+            [ra-datagrid.views.components.datepicker :as datepicker]
             [re-com.core :as re-com]
-            [re-com.datepicker :as datepicker]
             [re-com.dropdown :as dropdown]
             [re-frame.core :as rf]
             [reagent.core :as reagent]
@@ -47,48 +47,61 @@
     (str v)))
 
 (defn choice-id->val [ctype choices cid]
-  (let [label (some (fn [{:keys [id label]}]
-                      (when (= id cid) label)) choices)
-        id    (case ctype
-                :keyword (keyword cid)
-                :uuid    (medley/uuid cid)
-                :bool    (utils/str->bool cid)
-                cid)]
-    [id label]))
+  (when cid
+    (let [label (some (fn [{:keys [id label]}]
+                        (when (= id cid) label)) choices)
+          id    (case ctype
+                  :keyword (keyword cid)
+                  :uuid    (medley/uuid cid)
+                  :bool    (utils/str->bool cid)
+                  cid)]
+      [id label])))
 
 (defmethod edit-cell :select
-  [id field pk]
-  (let [*r            (rf/subscribe [:datagrid/edited-record-by-pk id pk])
+  [grid-id field pk]
+  (let [*r            (rf/subscribe [:datagrid/edited-record-by-pk-with-validation grid-id pk])
         *choices      (or (rf/subscribe (:data-subscription field))
                           (reagent/atom []))
         ctype         (-> @*choices first :id choice-type)
-        *selected-val (reagent/atom (->> field
-                                         :name
-                                         (get @*r)
-                                         first
-                                         (val->choice-id ctype)))]
-    (fn [id field pk]
-      (let [ctype   (-> @*choices first :id choice-type)
-            choices (map (fn [{:keys [id] :as c}]
-                           (update
-                            c :id
-                            #(val->choice-id ctype %)))
-                         @*choices)]
+        *selected-val (reagent/atom (-> @*r
+                                        :result
+                                        (get (:name field))
+                                        first
+                                        (as-> v (val->choice-id ctype v))))]
+    (fn [grid-id field pk]
+      (let [{field-nm :name
+             opt?     :optional?} field
+            validation            (-> @*r :validation (get field-nm))
+            ctype                 (-> @*choices first :id choice-type)
+            choices               (map (fn [{:keys [grid-id] :as c}]
+                                         (update
+                                          c :id
+                                          #(val->choice-id ctype %)))
+                                       @*choices)
+            disabled?             (empty? choices)
+            choices               (if opt?
+                                    (cons {:id nil, :label [:div {:style {:margin-top    "1rem"
+                                                                          :margin-bottom "1rem"}}]} choices)
+                                    #_else choices)]
         [:td {:key       (:name field)
-              :className "editing"}
+              :className "editing data-cell"}
          [dropdown/single-dropdown
           :src         (re-com/at)
           :choices     choices
+          :disabled?   disabled?
           :model       *selected-val
           :width       "100%"
           :max-height  "200px"
-          :class       "form-control"
+          :class       (cond-> "form-control"
+                         (seq validation) (str " is-invalid"))
           :style       {:padding "0"}
           :filter-box? true
           :on-change   #(let [valu (choice-id->val ctype choices %)]
                           (reset! *selected-val %)
-                          (rf/dispatch [:datagrid/update-edited-record id pk
-                                        (:name field) valu]))]]))))
+                          (rf/dispatch [:datagrid/update-edited-record grid-id pk
+                                        (:name field) valu]))]
+         (views/invalid-feedback validation)]))))
+
 ;; Select)
 ;; -------
 
@@ -96,28 +109,31 @@
 ;; -----
 
 (defmethod edit-cell :date
-  [id field pk]
-  (let [*r             (rf/subscribe [:datagrid/edited-record-by-pk id pk])
-        dte            (->> field :name (get @*r))
+  [grid-id {:keys [name] :as field} pk]
+  (let [*r             (rf/subscribe [:datagrid/edited-record-by-pk-with-validation grid-id pk])
+        dte            (-> @*r :result name)
         *selected-date (reagent/atom
                         (when dte
                           (coerce/to-date-time dte)))]
-    (fn [id field pk]
-      [:td {:key       (:name field)
-            :className "editing"}
-       [datepicker/datepicker-dropdown
-        :src           (re-com/at)
-        :model         *selected-date
-        :show-today?   true
-        :show-weeks?   false
-        :start-of-week 0
-        :placeholder   "Select a date"
-        :format        conf/date-format
-        :width         "227px"
-        :on-change     #(do
-                          (reset! *selected-date %)
-                          (rf/dispatch [:datagrid/update-edited-record id pk
-                                        (:name field) (coerce/to-date %)]))]])))
+    (fn [grid-id field pk]
+      (let [validation (-> @*r :validation (get (:name field)))]
+        [:td {:key       (:name field)
+              :className "editing data-cell"}
+         [datepicker/datepicker-dropdown
+          :src           (re-com/at)
+          :model         *selected-date
+          :show-today?   true
+          :show-weeks?   false
+          :start-of-week 0
+          :placeholder   "Select a date"
+          :format        conf/date-format
+          :width         "227px"
+          :invalid-feedback validation ;;(when (seq validation) "is-invalid")
+          :parts {:wrapper {:class "form-control is-invalid"}}
+          :on-change     #(do
+                            (reset! *selected-date %)
+                            (rf/dispatch [:datagrid/update-edited-record grid-id pk
+                                          (:name field) (coerce/to-date %)]))]]))))
 ;; Date)
 ;; -----
 
@@ -129,29 +145,34 @@
   (let [*options (rf/subscribe [:datagrid/options id])]
     (fn [id field record indent?]
       (let [{:keys [parent-subscription
-                    display-name-path]} (:indent-group field)
-            is-clickable?               (not (nil? (:on-click field)))
-            formatter                   (:formatter field)
-            fieldname                   (:name field)
-            parent-id                   (get record fieldname)
-            parent                      @(rf/subscribe [parent-subscription parent-id])
-            formatted-value             (get-in parent display-name-path)
-            align                       (if (nil? (:align field)) :text-left (:align field))]
+                    display-name]
+             :as   x}       (:indent-group field)
+            is-clickable?   (not (nil? (:on-click field)))
+            formatter       (:formatter field)
+            fieldname       (:name field)
+            parent-id       (get record fieldname)
+            parent          @(rf/subscribe [parent-subscription parent-id])
+            formatted-value (when display-name
+                              (display-name parent))
+            align           (if (nil? (:align field)) :text-left (:align field))
+            w               (:width field)]
         [:td (cond-> {:key       fieldname
                       :className align}
-               indent? (assoc :style {:padding-left "30px"}))
+               indent? (update :style #(assoc % :padding-left "30px"))
+               w       (update :style #(assoc % :min-width w)))
          formatted-value]))))
 
 (defmethod edit-cell :indent-group
-  [grid-id {member-key                  :name
-            data-subscr                 :data-subscription
+  [grid-id {member-key             :name
+            data-subscr            :data-subscription
             {:keys [group-path
-                    display-name-path]} :indent-group
-            :as                         _field} pk]
-  (let [*r (rf/subscribe [:datagrid/edited-record-by-pk grid-id pk])]
+                    display-name]} :indent-group
+            :as                    _field} pk]
+  (let [*r (rf/subscribe [:datagrid/edited-record-by-pk-with-validation grid-id pk])]
     (fn [grid-id field pk]
-      (let [id               (get-in @*r group-path)
-            parent-id        (get @*r member-key)
+      (let [validation       (-> @*r :validation (get (:name field)))
+            id               (-> @*r :result (get-in group-path))
+            parent-id        (-> @*r :result (get member-key))
             records          @(rf/subscribe data-subscr)
             eligible-parents (->> records
                                   (remove #(let [ep-id        (get-in % group-path)
@@ -163,10 +184,13 @@
                                                          (and id
                                                               (= (get r member-key) id)))
                                                        records))))
-                                  (sort-by (fn [r] (get-in r display-name-path))))]
+                                  (sort-by display-name))]
         [:td {:key       member-key
               :className "editing"}
          [:select.form-control {:value     (or parent-id "")
+                                :style     {:display (if (seq eligible-parents)
+                                                       "block"
+                                                       "none")}
                                 :on-change #(let [v (as-> % v
                                                       (.-target v)
                                                       (.-value v)
@@ -181,9 +205,11 @@
           [:option {:value ""} ""]
           (for [ep   eligible-parents
                 :let [ep-id   (get-in ep group-path)
-                      ep-name (get-in ep display-name-path)]]
+                      ep-name (when display-name
+                                (display-name ep))]]
             ^{:key (str member-key "-option-" id "-" ep-id)}
-            [:option {:value ep-id} ep-name])]]))))
+            [:option {:value ep-id} ep-name])]
+         (views/invalid-feedback validation)]))))
 
 ;; Indent Group)
 ;; -------------

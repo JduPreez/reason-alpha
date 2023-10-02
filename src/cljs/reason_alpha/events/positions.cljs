@@ -14,8 +14,9 @@
    {:position/get-holdings-positions nil
     :holding/get-holdings            nil
     :trade-pattern.query/getn        nil
-    :dispatch                        [:model.query/getn
-                                      [:model/position :model/position-dto]]}))
+    :dispatch-n                      [[:account/load]
+                                      [:model.query/getn
+                                       [:model/position :model/position-dto]]]}))
 
 (rf/reg-fx
  :position/get-holdings-positions
@@ -70,13 +71,14 @@
 
 (rf/reg-event-fx
  :position/update
- (fn [{:keys [db]} [_ {:keys [creation-id close-price position-id] :as pos}]]
+ (fn [{:keys [db]} [_ {:keys [creation-id close-price position-id close-date] :as pos}]]
    (let [{cur-close-pr :close-price} (data/get-entity db :position {:position-id position-id})
-         status                      (if (and close-price
-                                              (not= close-price cur-close-pr))
+         status                      (if close-date
                                        :closed
-                                       :open)
-         pos                         (assoc pos :status status)
+                                       #_else :open)
+         pos                         (-> pos
+                                         (assoc :status status)
+                                         (dissoc :holding-id))
          query-dto-model             (get-in db (data/model :model/position-dto))
          cmd-pos                     (mapping/query-dto->command-ent query-dto-model pos)
          db                          (data/save-local! {:model-type :position

@@ -1,8 +1,16 @@
 (ns reason-alpha.data
   (:require [reason-alpha.model.utils :as model.utils]
-            [reason-alpha.web.api-client :as api-client]))
+            [reason-alpha.web.api-client :as api-client]
+            [reason-alpha.model.utils :as mutils]
+            [reason-alpha.utils :as utils]))
 
-(def ^:const selected [:selected])
+(def ^:const router [:router])
+
+(defn selected
+  ([]
+   [:selected])
+  ([model]
+   [:selected model]))
 
 (def ^:const active-view-model [:active-view-model])
 
@@ -17,6 +25,43 @@
 (def ^:const alerts [:data :alert])
 
 (def ^:const holdings [:data :holding])
+
+(def ^:const accounts [:data :account])
+
+(def ^:const current-route [:current-route])
+
+(defn- view-data
+  ([view field]
+   [:view-data view field])
+  ([view]
+   [:view-data view]))
+
+(defn update-view-data
+  [db view field value]
+  (assoc-in db (view-data view field) value))
+
+(defn get-view-data
+  ([db view field]
+   (get-in db (view-data view field)))
+  ([db view]
+   (get-in db (view-data view))))
+
+(defn init-view-data
+  [db view model-type entity]
+  (let [e             (-> db
+                          (get-view-data view)
+                          (merge entity))
+        creation-id-k (mutils/creation-id-key-by-type model-type)
+        e             (->> (utils/new-uuid)
+                           (get e creation-id-k)
+                           (assoc e creation-id-k))]
+    (assoc-in db (view-data view) e)))
+
+(defn save-view-data
+  [db view save-event-fx]
+  (let [e (get-view-data db view)]
+    {:db       db
+     :dispatch [save-event-fx e]}))
 
 (defn model [model-k]
   (conj models model-k))
@@ -50,9 +95,7 @@
      :dispatch [:select nil]}))
 
 (defn get-selected-ids [type db]
-  (let [selctd-creation-ids (->> type
-                                 (conj selected)
-                                 (get-in db))
+  (let [selctd-creation-ids (get-in db (selected type))
         creation-id-k       (model.utils/creation-id-key-by-type type)
         id-k                (model.utils/id-key-by-type type)
         idx-ents            (->> type

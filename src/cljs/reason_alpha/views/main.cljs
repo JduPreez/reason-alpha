@@ -2,7 +2,8 @@
   (:require [re-frame.core :as rf]
             [reason-alpha.views.alerts :as alerts]))
 
-(defn view [child-view]
+(defn view
+  [& {:keys [sheet-view form-view accounts-form-view positions-sheet-view]}]
   [:div.page-main
    [:div#headerMenuCollapse.ren-navbar>div.container
     [:ul.nav
@@ -13,9 +14,12 @@
        [:i.fas.fa-cog {:style {:height       "18px"
                                :margin-right "0"}}]
        [:span " "]]
-      [:div.dropdown-menu ;;.dropdown-menu-right.dropdown-menu-arrow
-       [:a.dropdown-item {:href "#"}
-        [:i.dropdown-icon.mdi.mdi-account-outline] " Profile"]
+      [:div.dropdown-menu
+       [:a.dropdown-item {:href     "#"
+                          :on-click #(do (.preventDefault %)
+                                         (when accounts-form-view
+                                           (rf/dispatch [:push-state/active-form accounts-form-view])))}
+        [:i.dropdown-icon.mdi.mdi-account-outline] " Account Profile"]
        [:a.dropdown-item {:href "#"}
         [:i.dropdown-icon.mdi.mdi-settings] " Settings"]
        [:a.dropdown-item {:href "#"}
@@ -29,14 +33,20 @@
        [:a.dropdown-item {:href "login.html"}
         [:i.dropdown-icon.mdi.mdi-logout-variant] "Sign out"]]]
      [:li.nav-item
-      [:a.nav-link {:href "#"}
-       [:i.fas.fa-chart-line] [:span "TRADING"]]]
-     [:li.nav-item
-      [:a.nav-link {:href "#"}
+      [:a.nav-link {:href     "#"
+                    :on-click #(do (.preventDefault %)
+                                   (rf/dispatch [:push-state positions-sheet-view]))}
+       [:i.fas.fa-chart-line] [:span "POSITIONS"]]]
+     ;; TODO:
+     #_[:li.nav-item
+        [:a.nav-link {:href "#"}
        [:i.fas.fa-chart-pie] [:span "ANALYSIS"]]]
+     #_[:li.nav-item
+        [:a.nav-link {:href "#"}
+       [:i.fas.fa-file-import] [:span "IMPORT"]]]
      [:li.nav-item
       [:a.nav-link {:href "#"}
-       [:i.fas.fa-file-import] [:span "IMPORT"]]]
+       [:i.fas.fa-archive] [:span "SAVE"]]]
      [:li.nav-item
       [:a.nav-link {:href     "#"
                     :on-click #(do (.preventDefault %)
@@ -46,21 +56,16 @@
       [:a.nav-link {:href     "#"
                     :on-click #(do (.preventDefault %)
                                    (rf/dispatch [:delete!]))}
-       [:i.fas.fa-minus-square] [:span "DELETE"]]]
+       [:i.fe.fe-trash-2] [:span "DELETE"]]]
      [:li.nav-item
-      [:a.nav-link {:href "#"}
+      [:a.nav-link {:href     "#"
+                    :on-click #(do (.preventDefault %)
+                                   (rf/dispatch [:cancel]))}
        [:i.fas.fa-undo-alt] [:span "CANCEL"]]]]]
    [:div.container.full-height>div.hor-content.full-height
     [alerts/view]
+    (when form-view
+      [:div.row {:style {:margin-top "10px"}}
+       [form-view]])
     [:div.row.full-height {:style {:margin-top "10px"}}
-     [child-view]
-     #_[:div.card
-      [:div.card-header.bg-gradient-indigo.br-tr-3.br-tl-3
-       [:div.btn-list
-        [:button.btn.btn-primary {:type "button"} "Trades"]
-        [:button.btn.btn-outline-primary "Trade Patterns"]]
-       #_[:h2.card-title "Portfolio Trades"]]
-      ;;[:div.card-status.bg-yellow.br-tr-3.br-tl-3]
-        [:div.card-body {:style {:padding-top    0
-                                 :padding-bottom 0}}
-       [child-view]]]]]])
+     [sheet-view]]]])
