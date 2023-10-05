@@ -55,11 +55,8 @@
 ;;   (let [ns-model-k (get @*model-keys-mapping model-k)]
 ;;     [:schema {:registry @*model} ns-model-k]))
 
-(defn validate [model-k entity]
-  (let [model-k (if (= "model" (namespace model-k))
-                  model-k
-                  (keyword "model" (name model-k)))]
-    (m/explain (get-def model-k) entity)))
+(defn validate [schema-k entity]
+  (m/explain (get-def schema-k) entity))
 
 (defn entity-type [entity-map]
   (-> entity-map
@@ -79,9 +76,9 @@
 
   
 
-  (validate :trade-pattern {:trade-pattern/id          #uuid "8ffd2541-0bbf-4a4b-adee-f3a2bd56d83f"
-                            :trade-pattern/creation-id #uuid "8ffd2541-0bbf-4a4b-adee-f3a2bd56d83f"
-                            :trade-pattern/name        "-"})
+  (validate :model/trade-pattern {:trade-pattern/id          #uuid "8ffd2541-0bbf-4a4b-adee-f3a2bd56d83f"
+                                  :trade-pattern/creation-id #uuid "8ffd2541-0bbf-4a4b-adee-f3a2bd56d83f"
+                                  :trade-pattern/name        "-"})
 
 
   ((m/validator [:map

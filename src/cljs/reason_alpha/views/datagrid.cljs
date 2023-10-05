@@ -64,11 +64,9 @@
             [history-item hgrid-id]))]])))
 
 (defn view [fields {:keys [grid-id] :as options}]
-  (cljs.pprint/pprint {::->>>-DGV-F-1 fields})
   (fn [fields {:keys [grid-id title] :as options}]
     (let[*options (rf/subscribe [:datagrid/options grid-id])
          opts     (or options @*options)]
-      (cljs.pprint/pprint {::->>>-DGV-F-2 fields})
       [:div.card
        [history-list grid-id title]
        [:div.card-body.card-body-datagrid

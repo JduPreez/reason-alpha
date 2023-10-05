@@ -1,4 +1,4 @@
-(ns reason-alpha.integration.exchangerate-host-api-client
+(ns reason-alpha.integration.market-data.integration.exchangerate-host-api-client
   (:require [ajax.core :as ajax :refer [GET]]
             [clojure.core [memoize :as memo]]
             [clojure.core.async :as as]
@@ -6,6 +6,7 @@
             [clojure.string :as str]
             [malli.core :as m]
             [outpace.config :refer [defconfig]]
+            [reason-alpha.infrastructure.caching :as caching]
             [reason-alpha.model.fin-instruments :as model]
             [reason-alpha.utils :as utils]
             [tick.core :as tick])
@@ -79,7 +80,7 @@
           (deliver *result r))))
     *result))
 
-(def *cache (utils/ttl-cache))
+(def *cache (caching/ttl-cache))
 
 (defn- cache-key
   [{:keys [from to date]}]
@@ -88,9 +89,8 @@
 (defn- convert-success
   [result-out-chnl conversion {:keys [result] :as x}]
   (let [c (assoc conversion :fx-rate result)]
-    (clojure.pprint/pprint {:-_### x})
     (as/>!! result-out-chnl c)
-    (utils/set-cache-item *cache (cache-key c) c)))
+    (caching/set-cache-item *cache (cache-key c) c)))
 
 (defn- convert-error
   [result-out-chnl conversion r]
@@ -119,8 +119,8 @@
   [result-out-chnl currency-conversions]
   (->> currency-conversions
        (filterv (fn [{:keys [from to] :as convr}]
-                  (let [c (utils/get-cache-item *cache (cache-key convr))]
-                    (if (= ::utils/nil-cache-item c)
+                  (let [c (caching/get-cache-item *cache (cache-key convr))]
+                    (if (= ::caching/nil-cache-item c)
                       convr
                       #_else (utils/ignore
                               (as/>!! result-out-chnl c))))))

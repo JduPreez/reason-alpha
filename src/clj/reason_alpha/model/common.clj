@@ -164,3 +164,6 @@
         {:error       (ex-data e)
          :description (str err-msg ":" (ex-message e))
          :type        :error}))))
+
+;; (defn exec-when-valid
+;;   [ent ])

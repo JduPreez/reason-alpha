@@ -2,8 +2,8 @@
   (:require [clojure.core.async :as as :refer (<! <!! go-loop close!)]
             [malli.core :as m]
             [outpace.config :refer [defconfig]]
-            [reason-alpha.integration.marketstack-api-client :as marketstack]
-            [reason-alpha.integration.exchangerate-host-api-client :as exchangerate]
+            [reason-alpha.integration.market-data.integration.marketstack-api-client :as marketstack]
+            [reason-alpha.integration.market-data.integration.exchangerate-host-api-client :as exchangerate]
             [reason-alpha.model.accounts :as accounts]
             [reason-alpha.model.common :as common]
             [reason-alpha.model.core :as model]
@@ -81,16 +81,6 @@
       (->> holding-ids
            fn-repo-get-holdings-with-positions
            (map :holding-id))))
-
-
-
-#_(defn- compute-positions
-  [positions]
-  (-> positions
-      (lens/view
-       (lens/only
-        :holding-position-id))
-      (common/compute {:computations postn-comps})))
 
 (comment
   (let [ps [{:open-total-acc-currency         nil,
@@ -310,22 +300,27 @@
         {:keys [holding-position
                 positions]
          :as   r}            (portfolio-management/idx-position-type positions)
+        _                    (clojure.pprint/pprint {:->>>-CP-1 r})
         {positions :result
          t         :type
          :as       r}        (fn-assoc-market-data acc-id positions)
+        _                    (clojure.pprint/pprint {:->>>-CP-2 r})
         {positions :result
          t         :type
          :as       r}        (if (= :success t)
                                (common/compute positions {:computations postn-comps})
                                r)
+        _                    (clojure.pprint/pprint {:->>>-CP-3 r})
         {holding-position :result
          t                :type
          :as              r} (when (and (= :success t) holding-position)
                                (portfolio-management/aggregate-holding-position
                                 holding-position positions))
+        _                    (clojure.pprint/pprint {:->>>-CP-4 r})
         positions            (if (= t :success)
                                (conj positions holding-position)
                                #_else positions)]
+    (clojure.pprint/pprint {:->>>-CP-5 r})
     {:result positions
      :type   :success}))
 
@@ -371,7 +366,8 @@
     (when broadcast? (swap! *broadcast-holdings-positions conj acc-id))
 
     (doseq [[_gpos-id posns] gpositions]
-      (future
+      ;; TODO: REMOVE DEREF
+      @(future
         (try
           (let [result (complement-positions
                         fn-repo-get-acc-by-uid
@@ -455,7 +451,7 @@
                                  (nil? status) (assoc :position/status :open))
         {:keys [send-message]} (fn-get-ctx)]
     (try
-      (if-let [v (model/validate :position pos)]
+      (if-let [v (model/validate :model/position pos)]
         (send-message
          [:holding.command/save-position!-result
           {:error       v

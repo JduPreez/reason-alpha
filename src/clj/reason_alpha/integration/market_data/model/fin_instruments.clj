@@ -1,50 +1,36 @@
-(ns reason-alpha.model.fin-instruments
-  (:require [malli.core :as m]
-            [reason-alpha.model.core :as model :refer [def-model]]))
-
-(def-model Symbol
-  ::symbol
-  [:map
-   [:symbol/ticker {:min 1} string?]
-   [:symbol/holding-id {:optional true} uuid?]
-   [:symbol/provider
-    [:enum {:enum/titles {:marketstack   "Marketstack"
-                          :saxo-dma      "Saxo/DMA"
-                          :easy-equities "Easy Equities"}}
-                         :marketstack :saxo-dma :easy-equities]]])
+(ns reason-alpha.integration.market-data.model.fin-instruments
+  (:require [reason-alpha.model.core :as model :refer [def-model]]))
 
 (def-model Price
   ::price
   [:map
+   [:price/id {:optional true} uuid?]
    [:price/creation-id uuid?]
-   [:price/id uuid?]
-   [:price/symbol Symbol] ;; Symbol or Instrument ID?
+   [:price/symbol-ticker string?]
+   [:price/symbol-provider keyword?]
    [:price/time inst?]
-   [:price/open float?]
-   [:price/close float?]
-   [:price/previous-close float?]
-   [:price/high float?]
-   [:price/low float?]
-   [:price/adj-close float?]
+   [:price/open number?]
+   [:price/close number?]
+   [:price/high number?]
+   [:price/low number?]
    [:price/volume int?]
-   [:price/change float?]])
+   [:price/adj-open {:optional true} [:maybe number?]]
+   [:price/adj-high {:optional true} [:maybe number?]]
+   [:price/adj-low {:optional true} [:maybe number?]]
+   [:price/adj-close {:optional true} [:maybe number?]]
+   [:price/adj-volume {:optional true} [:maybe int?]]])
 
-(def-model PriceDto
-  ::price-dto
+(def-model SharePricesResult
+  ::prices-result
   [:map
-   [:price-id {:optional true} uuid?]
-   [:price-creation-id uuid?]
-   [:symbol-ticker string?]
-   [:symbol-provider keyword?]
-   [:holding-id uuid?]
-   [:price-time inst?]
-   [:price-open number?]
-   [:price-close number?]
-   [:price-high number?]
-   [:price-low number?]
-   [:price-previous-close {:optional true} [:maybe number?]]
-   [:price-volume int?]
-   [:price-change {:optional true} [:maybe number?]]])
+   [:result-id uuid?]
+   [:result {:optional true} [:sequential Price]]
+   [:type [:enum :error :success :warn :info :failed-validation]]
+   [:title {:optional true} string?]
+   [:error {:optional true} any?]
+   [:description {:optional true}
+    [:or string? [:sequential string?]]]
+   [:nr-items {:optional true} int?]])
 
 (def-model Currency
   ::currency
@@ -102,13 +88,3 @@
    [:exchange-rate/other-currency Currency]
    [:exchange-rate/rate number?]
    [:exchange-rate/date-time inst?]])
-
-(def-model ExchangeRateDto
-  ::exchange-rate-dto
-  [:map
-   [:exchange-rate-creation-id uuid?]
-   [:exchange-rate-id {:optional true} uuid?]
-   [:base-currency Currency]
-   [:other-currency Currency]
-   [:rate number?]
-   [:date-time inst?]])

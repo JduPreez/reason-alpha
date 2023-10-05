@@ -6,4 +6,5 @@
  reason-alpha.services.holding-service/price-quote-interval       1
  reason-alpha.integration.eod-api-client/api-token                #config/env "EOD_API_TOKEN"
  reason-alpha.integration.marketstack-api-client/dev-access-key   #config/env "DEV_MARKETSTACK_ACCESS_KEY"
- reason-alpha.integration.exchangerate-host-api-client/access-key #config/env "EXCHANGE_RATE_HOST_ACCESS_KEY"}
+ reason-alpha.integration.exchangerate-host-api-client/access-key #config/env "EXCHANGE_RATE_HOST_ACCESS_KEY"
+ reason-alpha.infrastructure.caching/settings                     {:cache? true}}

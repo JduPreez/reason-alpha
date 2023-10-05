@@ -1,4 +1,4 @@
-(ns reason-alpha.integration.marketstack-api-client
+(ns reason-alpha.integration.market-data.integration.marketstack-api-client
   (:require [ajax.core :as ajax :refer [GET]]
             [clojure.core.async
              :as as
@@ -6,6 +6,7 @@
                      alts! go-loop]]
             [clojure.string :as str]
             [outpace.config :refer [defconfig]]
+            [reason-alpha.infrastructure.caching :as caching]
             [reason-alpha.utils :as utils]
             [tick.core :as tick]))
 
@@ -13,7 +14,7 @@
 
 (def eod-url "eod/latest")
 
-(def *cache (utils/ttl-cache))
+(def *cache (caching/ttl-cache))
 
 ;; Only used for testing
 (defconfig dev-access-key)
@@ -50,14 +51,14 @@
               s-inf (get idx-symbol->s-inf symbol)
               p     (merge s-inf p)]
           (>! result-out-chnl p)
-          (utils/set-cache-item *cache (cache-key symbol) p)
+          (caching/set-cache-item *cache (cache-key symbol) p)
           (recur (pop d)))))))
 
 (defn err-handler
   [result-out-chnl symbols {:keys [status status-text] :as r}]
   (let [idx-symbol->s-inf (build-idx-symbol->s-inf symbols)]
     (go-loop [syms symbols]
-      (when-let [s (peek symbols)]
+      (when-let [s (peek syms)]
         (do
           (>! result-out-chnl (assoc (get idx-symbol->s-inf s)
                                      :error r))
@@ -80,8 +81,8 @@
 (defn- quote-cached-eod-share-prices
   [symbols result-out-chnl]
   (filterv (fn [{s :symbol :as s-info}]
-             (let [share-price (utils/get-cache-item *cache (cache-key s))]
-               (if (= ::utils/nil-cache-item share-price)
+             (let [share-price (caching/get-cache-item *cache (cache-key s))]
+               (if (= ::caching/nil-cache-item share-price)
                 s-info
                 #_else (let [_ (>!! result-out-chnl share-price)]))))
           symbols))
