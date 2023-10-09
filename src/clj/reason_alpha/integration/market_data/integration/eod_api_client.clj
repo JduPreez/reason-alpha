@@ -1,4 +1,4 @@
-(ns reason-alpha.integration.eod-api-client
+(ns reason-alpha.integration.market-data.integration.eod-api-client
   (:require [ajax.core :refer [GET]]
             [cheshire.core :as json]
             [clojure.string :as str]

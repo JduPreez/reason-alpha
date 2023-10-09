@@ -9,6 +9,8 @@
    [:price/symbol-ticker string?]
    [:price/symbol-provider keyword?]
    [:price/time inst?]
+   [:price/type [:enum :historic-eod :intraday]]
+   [:prine/year-quarter string?]
    [:price/open number?]
    [:price/close number?]
    [:price/high number?]

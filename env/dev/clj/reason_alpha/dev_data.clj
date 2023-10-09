@@ -1,6 +1,6 @@
 (ns reason-alpha.dev-data
   (:require [malli.core :as malli]
-            [reason-alpha.data.model :refer [add-all! query disconnect connect]]
+            [reason-alpha.data.model :refer [save-all! query disconnect connect]]
             [reason-alpha.data.xtdb :as xtdb]
             [reason-alpha.utils :as utils]))
 
@@ -17,7 +17,8 @@
    (xtdb/drop-db! xtdb/db-name)
    (connect db)
    (doseq [ents (utils/edn-files->clj test-data-dir)]
-     (add-all! db ents))))
+     (save-all! db ents
+                {:role :system}))))
 
 (comment
   (load-entity-test-data)
@@ -30,7 +31,8 @@
   (require '[crux.api :as c])
 
   (doseq [ents (utils/edn-files->clj "test_data")]
-    (add-all! xtdb/db ents))
+    (save-all! xtdb/db ents
+               {:role :system}))
 
   (c/q (c/db @xtdb/crux-node)
        '{:find  [nm creation-id]

@@ -104,3 +104,7 @@
    (defn percent-str
      [n]
      (java.lang.String/format java.util.Locale/US "%.2f%%" (to-array [n]))))
+
+#?(:clj
+   (defn round-up [n]
+     (Math/ceil n)))

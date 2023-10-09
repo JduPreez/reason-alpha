@@ -17,4 +17,6 @@
   (save!
     [_ _entity]
     [_ _entity _options])
-  (add-all! [_ _entities] _))
+  (save-all!
+    [_ _entities]
+    [_ _entities _options] _))
