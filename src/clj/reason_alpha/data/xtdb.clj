@@ -111,7 +111,8 @@
     acc))
 
 (defn- get-account [fn-get-ctx db-node]
-  (let [{{:keys [account/user-id]} :user-account} (fn-get-ctx)]
+  (let [{{:keys [account/user-id]} :user-account
+         :as                       ctx} (fn-get-ctx)]
     (when user-id
       (get-account-by-user-id db-node user-id))))
 
@@ -122,9 +123,9 @@
            all))
        query-result))
 
-(defn- entities-owners [db-node entities]
-  (let [id-k        (mutils/some-ns-key :id entities)
-        acc-id-k    (mutils/some-ns-key :account-id entities)
+(defn- entities-owners [db-node [e1 :as entities]]
+  (let [id-k        (mutils/some-ns-key :id e1)
+        acc-id-k    (mutils/some-ns-key :account-id e1)
         ids         (mapv id-k entities)
         qry         {:spec `{:find  [e aid]
                              :where [[e ~id-k id]
@@ -138,8 +139,8 @@
                       [])]
     ents-owners))
 
-(defn- xtdb-save! [entities & {:keys [*db-node fn-get-ctx role fn-authorize]}]
-  (let [id-k        (mutils/some-ns-key :id entities)
+(defn- xtdb-save! [[e1 :as entities] & {:keys [*db-node fn-get-ctx role fn-authorize]}]
+  (let [id-k        (mutils/some-ns-key :id e1)
         fn-get-acc  #(get-account fn-get-ctx @*db-node)
         ents-owners (when id-k (entities-owners @*db-node entities))
         ents        (fn-authorize {:fn-get-account  fn-get-acc
@@ -206,36 +207,26 @@
           del-cmd              (assoc delete-cmd :account-id acc-id)]
       (fn-delete! @*db-node del-cmd)))
 
-  (save! [this entity role]
-    (-> [entity]
+  (save! [this entity {:keys [role]}]
+    (-> [[entity]]
         (fn-save!
          :fn-get-ctx fn-get-ctx
          :*db-node *db-node
          :role (or role :member)
          :fn-authorize fn-authorize)
-         first)
-    #_(let [ent         [entity]
-            id-k        (mutils/some-ns-key :id ent)
-            fn-get-acc  #(get-account fn-get-ctx @*db-node)
-            ents-owners (when id-k (entities-owners @*db-node ent))]
-      (->> [ent]
-           (fn-authorize {:fn-get-account  fn-get-acc
-                          :crud            (if id-k [:update] [:create])
-                          :role            role
-                          :entities-owners ents-owners})
-           (fn-save! @*db-node)
-           first)))
+         first))
 
   (save! [this entity]
     (.save! this entity nil))
 
   (save-all! [this entities role]
-    (fn-save!
-     entities
-     :fn-get-ctx fn-get-ctx
-     :*db-node *db-node
-     :role (or role :member)
-     :fn-authorize fn-authorize))
+    (let [es (map #(vec %) entities)]
+      (fn-save!
+       es
+       :fn-get-ctx fn-get-ctx
+       :*db-node *db-node
+       :role (or role :member)
+       :fn-authorize fn-authorize)))
 
   (save-all! [this entities]
     (.save-all! this entities nil)))

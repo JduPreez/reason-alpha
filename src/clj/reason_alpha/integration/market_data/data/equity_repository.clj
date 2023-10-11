@@ -43,12 +43,11 @@
             :args [account-id]})
     nil))
 
-(def get-historic-prices-per-quarter (caching/wrap get-historic-prices*
-                                                   :fn-cache-key (fn [[_ & {:keys [symbol dates] :as args}]]
-                                                    (println ">>> " symbol ": " dates)
-                                                                   symbol)))
-
-(defn get)
+(def get-historic-prices-per-quarter (caching/wrap get-historic-prices-per-quarter*
+                                                   :fn-cache-key
+                                                   (fn [[_ & {:keys [symbol dates] :as args}]]
+                                                     (println ">>> " symbol ": " dates)
+                                                     symbol)))
 
 (comment
   (-> #inst "2023-08-21T12:12:00.000-00:00"

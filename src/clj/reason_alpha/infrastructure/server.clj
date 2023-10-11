@@ -69,8 +69,8 @@
       (debugf "Verified login of user %s (%s): %b" userUuid email is-valid?)
 
       (if is-valid?
-        (let [acc               (auth/account request)
-              {aid :account/id} (fn-save-account! acc)]
+        (let [acc                     (auth/account request)
+              {aid :account/id :as x} (fn-save-account! acc)]
           {:status  200
            :session (assoc session :uid aid)
            :body    {:result "Access granted"}})
@@ -156,19 +156,21 @@
 
   (let [fun     (get handlers id)
         account (-> ring-req
-                    auth/account
-                    (assoc :account/id uid))]
+                    auth/account)
+        account (if (and uid (not= uid ::sente/nil-uid))
+                  (assoc account :account/id uid)
+                  account)]
     ;;future
     (if fun
       (binding [common/*context* {:*connected-users connected-uids
                                   :user-account     account
                                   :send-message     #(chsk-send! uid %)}]
-        (let [_      (debugf "Event handler found: %s" id ) ;; Log before calling `fun` might throw exception
+        (let [_      (debugf "Event handler found: %s" id) ;; Log before calling `fun` might throw exception
               result (if ?data
                        (do
                          (clojure.pprint/pprint {::server-event-msg-handler-2 ?data})
                          (fun ?data))
-                       (fun))]
+                       #_else (fun))]
           (clojure.pprint/pprint {::server-event-msg-handler-3 {id result}})
               (when ?reply-fn
                 (?reply-fn result))))

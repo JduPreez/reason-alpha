@@ -129,6 +129,7 @@
                  :get-holdings-positions       (as-> db d
                                                  (partial holding-repo/get-holdings-positions d)
                                                  (partial holding-svc/get-holdings-positions d
+                                                          fn-repo-get-acc-by-uid
                                                           fn-repo-get-acc-by-aid
                                                           [holding-svc/get-close-prices<
                                                            holding-svc/get-fx-rates<]
@@ -143,6 +144,7 @@
                  :broadcast-holdings-positions (as-> db d
                                                  (partial holding-repo/get-holdings-positions d)
                                                  (partial holding-svc/get-holdings-positions d
+                                                          fn-repo-get-acc-by-uid
                                                           fn-repo-get-acc-by-aid
                                                           [holding-svc/get-close-prices<
                                                            holding-svc/get-fx-rates<]

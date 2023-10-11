@@ -269,9 +269,9 @@
 ;; TODO: This can be made completely generic, by allowing the primary key,
 ;;       in this case `:position-id` to be specified.
 (defn- assoc-market-data-fn
-  [fn-repo-get-acc-by-uid fns-market-data & {:keys [batch-size]}]
+  [fn-repo-get-acc-by-aid fns-market-data & {:keys [batch-size]}]
   (fn assoc-market-data [account-id positions]
-    (if-let [acc (fn-repo-get-acc-by-uid account-id)]
+    (if-let [acc (fn-repo-get-acc-by-aid account-id)]
       (loop [result-chnls (pmap #(% positions
                                     :batch-size batch-size
                                     :account acc) fns-market-data)
@@ -294,33 +294,28 @@
 (def postn-comps (common/computations portfolio-management/PositionDto))
 
 (defn- complement-positions
-  [fn-repo-get-acc-by-uid fns-market-data acc-id positions]
-  (let [fn-assoc-market-data (assoc-market-data-fn fn-repo-get-acc-by-uid
+  [fn-repo-get-acc-by-aid fns-market-data acc-id positions]
+  (let [fn-assoc-market-data (assoc-market-data-fn fn-repo-get-acc-by-aid
                                                    fns-market-data)
         {:keys [holding-position
                 positions]
          :as   r}            (portfolio-management/idx-position-type positions)
-        _                    (clojure.pprint/pprint {:->>>-CP-1 r})
         {positions :result
          t         :type
          :as       r}        (fn-assoc-market-data acc-id positions)
-        _                    (clojure.pprint/pprint {:->>>-CP-2 r})
         {positions :result
          t         :type
          :as       r}        (if (= :success t)
                                (common/compute positions {:computations postn-comps})
                                r)
-        _                    (clojure.pprint/pprint {:->>>-CP-3 r})
         {holding-position :result
          t                :type
          :as              r} (when (and (= :success t) holding-position)
                                (portfolio-management/aggregate-holding-position
                                 holding-position positions))
-        _                    (clojure.pprint/pprint {:->>>-CP-4 r})
         positions            (if (= t :success)
                                (conj positions holding-position)
                                #_else positions)]
-    (clojure.pprint/pprint {:->>>-CP-5 r})
     {:result positions
      :type   :success}))
 
@@ -344,14 +339,18 @@
 (defconfig price-quote-interval)
 
 (defn get-holdings-positions
-  [fn-repo-get-holdings-positions fn-repo-get-acc-by-uid fns-market-data
-   broadcast? {:keys [fn-get-ctx account-id send-message]}]
+  [fn-repo-get-holdings-positions fn-repo-get-acc-by-uid fn-repo-get-acc-by-aid
+   fns-market-data broadcast? {:keys [fn-get-ctx account-id send-message]}]
   (let [{send-msg :send-message
          :as      ctx} (when fn-get-ctx
                          (fn-get-ctx))
-        acc-id         (or account-id
-                           (and ctx
-                                (get-in ctx [:user-account :account/id])))
+        {acc-id :account/id
+         :as    acc}   (if account-id
+                         (fn-repo-get-acc-by-aid account-id)
+                         #_else
+                         (-> ctx
+                             (get-in [:user-account :account/user-id])
+                             fn-repo-get-acc-by-uid))
         send-msg       (or send-msg
                            #(send-message acc-id %))
         gpositions     (->> {:account-id acc-id
@@ -363,6 +362,7 @@
                                         (or holding-position-id
                                             position-id))))]
 
+    ;; After 1st request message, start broadcasting
     (when broadcast? (swap! *broadcast-holdings-positions conj acc-id))
 
     (doseq [[_gpos-id posns] gpositions]
@@ -370,7 +370,7 @@
       @(future
         (try
           (let [result (complement-positions
-                        fn-repo-get-acc-by-uid
+                        fn-repo-get-acc-by-aid
                         fns-market-data
                         acc-id
                         posns)]
@@ -410,13 +410,14 @@
               (println (str i ") Broadcast holdings positions " acc-id))
               (fn-get-holdings-positions {:send-message send-message
                                           :account-id   acc-id}))))]
+
     (reset!
      *holdings-positions-ch
      (go-loop [i 0]
        (println "Broadcast holdings positions " i)
        (<! (as/timeout quote-interval))
-       (broadcast! i)
        (when @*broadcast?
+         (broadcast! i)
          (recur (inc i)))))
 
     (.addShutdownHook (Runtime/getRuntime)

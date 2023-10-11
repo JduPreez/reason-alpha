@@ -29,8 +29,9 @@
                        acc)
         updated-acc  (if-let [c (:account/currency updated-acc)]
                        updated-acc
-                       (assoc updated-acc :account/currency :USD))]
-    (fn-repo-save! updated-acc)))
+                       (assoc updated-acc :account/currency :USD))
+        saved-acc    (fn-repo-save! updated-acc)]
+    saved-acc))
 
 (defn save!
   [fn-get-acc fn-repo-save! {:keys [account/user-id] :as acc}]
