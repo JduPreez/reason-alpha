@@ -10,15 +10,10 @@
   [{msg-type :msg/type :as msg}]
   ;; Get the custom topic filter, otherwise default to filtering on
   ;; the value of `msg-type`
-  (println "filter-topic")
   (if-let [fn-topic (get @*topic-fns msg-type)]
-    (do
-      (println "filter-topic fn found " msg)
-      (fn-topic msg))
+    (fn-topic msg)
     #_else
-    (do
-      (println "filter-topic fn NOT found")
-      msg-type)))
+    msg-type))
 
 (def message-pub (as/pub message-chan filter-topic (constantly
                                                     (as/sliding-buffer 10))))
@@ -45,10 +40,8 @@
           s (as/sub message-pub result-topic c)]
       (as/go
         (try
-          (println "AAA")
           (let [r (as/<! c)]
-            (fn-receive-msg r)
-            (println "BBB"))
+            (fn-receive-msg r))
           (catch Exception e
             (if fn-error
               (fn-error e)
@@ -57,10 +50,8 @@
             (stop-receive-msg result-topic c))))
       (as/>!! message-chan msg))
     #_else
-    (do
-      (println "Sending message without result sub")
-      (utils/ignore
-       (as/>!! message-chan msg)))))
+    (utils/ignore
+     (as/>!! message-chan msg))))
 
 (defn receive-msg [topic]
   (let [c (as/chan)
@@ -95,19 +86,6 @@
       :msg/id    mid}
      :result-topic t
      :fn-receive-msg #(clojure.pprint/pprint {:Final-result-message-received %})))
-
-  #_(let [mid "Test1234"]
-      (send-msg
-       {:msg/type  :market-data/get-equity-prices
-        :msg/value "Hello Pub/Sub :-)"
-        :msg/id    mid})
-      #_(as/close! c)
-      #_(as/unsub message-pub t c))
-
-
-
-  ;;(send-msg {:market } :market-data/get-equit-prices-result)
-
 
   ;; Each module has it's own `model` ns with a configured system,
   ;; and uses `model/handlers` to 
