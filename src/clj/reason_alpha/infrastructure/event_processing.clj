@@ -21,13 +21,17 @@
       msg-type)))
 
 (def message-pub (as/pub message-chan filter-topic (constantly
-                                                     (as/sliding-buffer 10))))
+                                                    (as/sliding-buffer 10))))
 
 (defn register-topic-fn
   [msg-type f]
   (swap! *topic-fns assoc msg-type f))
 
-(defn send-msg [msg & [result-topic]]
+(defn stop-receive-msg [topic chanl]
+  (as/unsub message-pub topic chanl)
+  (as/close! chanl))
+
+(defn send-msg [msg & {:keys [result-topic fn-receive-msg fn-error]}]
   ;; Message has the same structure as how the front-end
   ;; sends messages.
   ;; From the message structure we can figure out which `module.service/command-or-query`
@@ -37,13 +41,21 @@
   ;; Once it's received the result message it's interested in, then the `sub` channel must
   ;; be closed (or timed-out).
   (if result-topic
-    ;; TODO: `take` doesn't automatically close the channel
-    (let [c (as/take 1 (as/chan 1))
+    (let [c (as/chan)
           s (as/sub message-pub result-topic c)]
-      (println "AAA")
-      (as/>!! message-chan msg)
-      (println "BBB")
-      [c s])
+      (as/go
+        (try
+          (println "AAA")
+          (let [r (as/<! c)]
+            (fn-receive-msg r)
+            (println "BBB"))
+          (catch Exception e
+            (if fn-error
+              (fn-error e)
+              (clojure.pprint/pprint (ex-data e))))
+          (finally
+            (stop-receive-msg result-topic c))))
+      (as/>!! message-chan msg))
     #_else
     (do
       (println "Sending message without result sub")
@@ -54,9 +66,6 @@
   (let [c (as/chan)
         s (as/sub message-pub topic c)]
     c))
-
-(defn stop-receive-msg [topic chanl]
-  (as/unsub message-pub topic chanl))
 
 (comment
 
@@ -78,28 +87,22 @@
                        (println "Topic fn: " [msg-type src-mid])
                        [msg-type src-mid]))
 
-  (let [mid   "Test1234"
-        t     [:market-data/get-equity-prices-result mid]
-        [c s] (send-msg
-               {:msg/type  :market-data/get-equity-prices
-                :msg/value "Hello Pub/Sub :-)"
-                :msg/id    mid}
-               t)]
-    (as/go
-      (let [_   (println "Waiting for result")
-            res (as/<! c)]
-        (println "RESULT!!!: " res)
-        (stop-receive-msg t c)))
-    #_(as/close! c)
-    #_(as/unsub message-pub t c))
-
-  (let [mid "Test1234"]
+  (let [mid "Test1234"
+        t   [:market-data/get-equity-prices-result mid]]
     (send-msg
      {:msg/type  :market-data/get-equity-prices
       :msg/value "Hello Pub/Sub :-)"
-      :msg/id    mid})
-    #_(as/close! c)
-    #_(as/unsub message-pub t c))
+      :msg/id    mid}
+     :result-topic t
+     :fn-receive-msg #(clojure.pprint/pprint {:Final-result-message-received %})))
+
+  #_(let [mid "Test1234"]
+      (send-msg
+       {:msg/type  :market-data/get-equity-prices
+        :msg/value "Hello Pub/Sub :-)"
+        :msg/id    mid})
+      #_(as/close! c)
+      #_(as/unsub message-pub t c))
 
 
 
@@ -111,6 +114,4 @@
 
   {:module-x (as/chan)
    :module-y (as/chan)
-   :modeul-z (as/chan)}
-
-  )
+   :modeul-z (as/chan)})
