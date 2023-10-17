@@ -22,7 +22,7 @@
    [:price/adj-close {:optional true} [:maybe number?]]
    [:price/adj-volume {:optional true} [:maybe int?]]])
 
-(def-model SharePricesResult
+(def-model PricesResult
   ::prices-result
   [:map
    [:result-id uuid?]

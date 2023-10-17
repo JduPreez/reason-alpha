@@ -18,16 +18,13 @@
   (:import [com.github.f4b6a3.uuid UuidCreator])
   (:require [clojure.java.io :as io]
             [me.raynes.fs :as fs]
-            [outpace.config :refer [defconfig]]
             [reason-alpha.data.model :as data.model :refer [DataBase]]
             [reason-alpha.model.core :as model]
             [reason-alpha.model.utils :as mutils]
             [xtdb.api :as xt]))
 
-(defconfig data-dir) ;; "data"
-(defconfig db-name) ;; "dev"
-
-(defn drop-db! [db]
+(defn drop-db! [{db       :db-instance
+                 data-dir :data-dir}]
   (fs/delete-dir (str data-dir "/" db)))
 
 (defn- put-delete-fn!
@@ -59,7 +56,7 @@
                                  (remove nil?)
                                  vec))}]]))))
 
-(defn xtdb-start! []
+(defn xtdb-start! [data-dir db-name]
   (let [fn-kv-store (fn [dir]
                       {:kv-store {:xtdb/module 'xtdb.rocksdb/->kv-store
                                   :db-dir      (-> data-dir
@@ -231,9 +228,9 @@
   (save-all! [this entities]
     (.save-all! this entities nil)))
 
-(defn db [fn-get-ctx fn-authorize]
+(defn db [& {:keys [fn-get-ctx fn-authorize data-dir db-name]}]
   (XTDB. (atom nil) xtdb-query xtdb-save! xtdb-delete!
-         xtdb-start! fn-get-ctx fn-authorize))
+         #(xtdb-start! data-dir db-name) fn-get-ctx fn-authorize))
 
 (comment
 

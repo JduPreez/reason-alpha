@@ -14,6 +14,7 @@
                  [com.cognitect/transit-clj  "1.0.324"]
                  [com.cognitect/transit-cljs "0.8.264"]
                  [com.github.f4b6a3/uuid-creator "1.4.2"]
+                 [com.github.hden/cuid2 "0.1.0-SNAPSHOT"]
                  [com.github.igrishaev/pact "0.1.1"]
                  [com.google.javascript/closure-compiler-unshaded "v20210505" :scope "provided"]
                  [com.lucasbradstreet/cljs-uuid-utils "1.0.2"]

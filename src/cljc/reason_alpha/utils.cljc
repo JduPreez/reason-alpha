@@ -2,6 +2,7 @@
   #?(:clj (:require [clojure.edn :as edn]
                     [clojure.java.io :as io]
                     [clojure.string :as str]
+                    [cuid2.core :refer [cuid]]
                     [taoensso.timbre :as timbre :refer-macros (tracef debugf infof warnf errorf)])
 
      :cljs (:require [clojure.string :as str]
@@ -26,6 +27,10 @@
 (defn new-uuid []
   #?(:clj (java.util.UUID/randomUUID)
      :cljs (random-uuid)))
+
+#?(:clj
+   (defn new-id []
+     (cuid)))
 
 (defn get-ns [a-var]
   (-> a-var meta :ns))

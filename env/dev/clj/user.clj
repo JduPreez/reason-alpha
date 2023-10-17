@@ -9,7 +9,9 @@
   ([load-test-data?]
    (reason-alpha/start)
    (when load-test-data?
-     (dev-data/load-entity-test-data (::model/db @model/*system))))
+     (let [{:keys [db-name]} model/db-conf]
+       (dev-data/load-entity-test-data (::model/db @model/*system)
+                                       db-name))))
   ([]
    (reason-alpha/start)))
 

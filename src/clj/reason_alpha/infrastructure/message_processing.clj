@@ -35,28 +35,37 @@
   ;; Return result message contains original in message & the result out message.
   ;; Once it's received the result message it's interested in, then the `sub` channel must
   ;; be closed (or timed-out).
-  (if result-topic
-    (let [c (as/chan)
-          s (as/sub message-pub result-topic c)]
-      (as/go
-        (try
-          (let [r (as/<! c)]
-            (fn-receive-msg r))
-          (catch Exception e
-            (if fn-error
-              (fn-error e)
-              (clojure.pprint/pprint (ex-data e))))
-          (finally
-            (stop-receive-msg result-topic c))))
-      (as/>!! message-chan msg))
-    #_else
-    (utils/ignore
-     (as/>!! message-chan msg))))
+  (let [msg (if (contains? msg :msg/id)
+              msg
+              (assoc msg :msg/id (utils/new-id)))]
+    (if result-topic
+      (let [c (as/chan)
+            s (as/sub message-pub result-topic c)]
+        (as/go
+          (try
+            (let [r (as/<! c)]
+              (fn-receive-msg r))
+            (catch Exception e
+              (if fn-error
+                (fn-error e)
+                (clojure.pprint/pprint (ex-data e))))
+            (finally
+              (stop-receive-msg result-topic c))))
+        (as/>!! message-chan msg))
+      #_else
+      (utils/ignore
+       (as/>!! message-chan msg)))))
 
 (defn receive-msg [topic]
   (let [c (as/chan)
         s (as/sub message-pub topic c)]
     c))
+
+(defn start-receive-msg [fn-receive-msg chanl]
+  (as/go-loop []
+    (let [m (as/<! chanl)]
+      (fn-receive-msg m)
+      (recur))))
 
 (comment
 
@@ -66,7 +75,7 @@
         (println value)
         (send-msg {:msg/type   :market-data/get-equity-prices-result
                    :msg/value  (str "Received '" value "' and this is the reply")
-                   :msg/id     (utils/new-uuid)
+                   :msg/id     (utils/new-id)
                    :msg/source m})
         (recur))))
 
