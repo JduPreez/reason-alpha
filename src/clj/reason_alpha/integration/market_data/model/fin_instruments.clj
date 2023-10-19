@@ -4,12 +4,12 @@
 (def-model Price
   ::price
   [:map
-   [:price/id {:optional true} uuid?]
-   [:price/creation-id uuid?]
+   [:price/id {:optional true} string?]
+   [:price/creation-id string?]
    [:price/symbol-ticker string?]
    [:price/symbol-provider keyword?]
    [:price/time inst?]
-   [:price/type [:enum :historic-eod :intraday]]
+   [:price/type [:enum :historic :intraday]]
    [:prine/year-quarter string?]
    [:price/open number?]
    [:price/close number?]
@@ -84,8 +84,8 @@
 (def-model ExchangeRate
   ::exchange-rate
   [:map
-   [:exchange-rate/creation-id uuid?]
-   [:exchange-rate/id {:optional true} uuid?]
+   [:exchange-rate/creation-id string?]
+   [:exchange-rate/id {:optional true} string?]
    [:exchange-rate/base-currency Currency]
    [:exchange-rate/other-currency Currency]
    [:exchange-rate/rate number?]

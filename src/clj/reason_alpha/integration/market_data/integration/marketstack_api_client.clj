@@ -107,6 +107,12 @@
       (as/close! c)
       c)))
 
+(defn quote-eod-share-prices-v2
+  [access-key & {:keys [symbol-ticker date-from date-to]}]
+  (let [res (promise)]
+
+    res))
+
 (comment
   (let [result-chnl (quote-eod-share-prices
                      dev-access-key

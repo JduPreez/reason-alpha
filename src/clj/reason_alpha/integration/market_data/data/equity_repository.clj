@@ -10,11 +10,7 @@
 (defn- fix-time [{t :price/time :as p}]
   (let [year (-> t tick/year str)]
     (assoc p
-           :price/time         (-> t
-                                   tick/date
-                                   tick/beginning
-                                   (tick/in "UTC")
-                                   tick/inst)
+           :price/time         (utils/time-at-beginning-of-day t)
            :price/year-quarter (-> t
                                    tick/date
                                    tick/month
@@ -30,24 +26,36 @@
        (map fix-time)
        (data.model/save-all! db)))
 
-(defn get-historic-prices-per-quarter*
-  [db & {:keys [symbol dates] :as args}]
+(defn get-prices-per-quarter*
+  [db & {:keys [symbol-ticker dates] :as args}]
   (let [yr-quarters (->> dates
                          (map #(-> {:price/time %} fix-time :price/year-quarter))
                          distinct)]
     ;; Now fetch all prices for the symbol and where the `:price/year-quarter` match
-    #_(->> {:spec '{:find  [(pull e [*])]
-                    :where [[e :price/account-id account-id]]
-                    :in    [account-id]}
-            :role :system
-            :args [account-id]})
-    nil))
+    (->> {:spec '{:find  [(pull e [*])]
+                  :in    [[yrq ...] s]
+                  :where [[e :price/year-quarter yrq]
+                          [e :price/symbol-ticker s]]}
+          :role :system
+          :args [yr-quarters symbol-ticker]}
+         (data.model/query db))))
 
-(def get-historic-prices-per-quarter (caching/wrap get-historic-prices-per-quarter*
-                                                   :fn-cache-key
-                                                   (fn [[_ & {:keys [symbol dates] :as args}]]
-                                                     (println ">>> " symbol ": " dates)
-                                                     symbol)))
+(def get-prices-per-quarter (caching/wrap get-prices-per-quarter*
+                                          :fn-cache-key
+                                          (fn [[_ & {:keys [symbol-ticker dates] :as args}]]
+                                            (println ">>> " symbol-ticker ": " dates)
+                                            symbol-ticker)))
+
+;; TODO: Once working, switch to mem cached function
+(defn get-prices
+  [db & {st :symbol-ticker, ds :dates}]
+  (let [ps (->> ds
+                (get-prices-per-quarter*
+                 :symbol-ticker  st
+                 :dates)
+                (filter (fn [{:price/keys [time] :as p}]
+                          (= time d) p)))]
+    ps))
 
 (comment
   (-> #inst "2023-08-21T12:12:00.000-00:00"

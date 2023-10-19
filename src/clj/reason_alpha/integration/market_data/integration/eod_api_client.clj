@@ -6,12 +6,59 @@
             [reason-alpha.utils :as utils]
             [tick.core :as tick]))
 
-;; TODO: Get this from each user's own profile
-(defconfig api-token)
+(defconfig dev-api-token)
 
-(defconfig live-stock-prices-api)
+(defconfig conf)
 
-(defn- handle-quote-live-price [*result idx-hid-tkrs response]
+(def *real-time-api (delay (:real-time-api conf)))
+
+(def *historic-eod-api (delay (:historic-eod conf)))
+
+(defn- handle-historic-prices-err
+  [*res result])
+
+(defn- handle-historic-prices
+  [*res result])
+
+(defn- request-historic-prices
+  [api-token symbol-ticker [start-date end-date]]
+  (let [*res (promise)
+        uri  (format @*historic-eod-api main-sym)]
+    (GET uri
+         {:params          {:api_token api-token
+                            :fmt       "json"}
+          :handler         #(handle-historic-prices *res %)
+          :error-handler   #(handle-historic-prices-err *res %)
+          :response-format :json
+          :keywords?       true})
+    *res))
+
+(defn get-historic-prices
+  [api-token symbol-ticker->date-ranges]
+  (let [*result (promise)]
+    (future
+      (let [r (->> symbol-ticker->date-ranges
+                   (mapcat (fn [[symbol-ticker date-ranges]
+                                (for [dr date-ranges]
+                                  [symbol-ticker dr])]))
+                   (pmap
+                    (fn [[symbol-ticker date-range]]
+                      (let [*res :*result (request-historic-prices
+                                           api-token
+                                           symbol-ticker
+                                           date-range)]
+                        {:symbol-ticker symbol-ticker
+                         :date-range    date-range
+                         :prices        @*res})))
+                   (reduce (fn [symtic->dt-range {st :symbol-ticker
+                                                  dr :date-range
+                                                  ps :prices}]
+                             (assoc-in symtic->dt-range [st dr] ps))
+                           {}))]
+        (deliver *result r)))
+    *result))
+
+#_(defn- handle-quote-live-price [*result idx-hid-tkrs response]
   (let [r (map (fn [{:keys [code timestamp open previousClose
                             high low volume change close] :as quote}]
                  (let [ptime (-> timestamp
@@ -34,7 +81,7 @@
              {:result r
               :type   :success})))
 
-(defn- handle-quote-live-price-err
+#_(defn- handle-quote-live-price-err
   [*result idx-hid-tkrs {:keys [status status-text]
                          :as   response}]
   (deliver *result
@@ -42,7 +89,7 @@
             :description (str "Error occurred quoting live stock prices: " status " " status-text)
             :type        :error}))
 
-(defn- quote-live-prices*
+#_(defn- quote-live-prices*
   [api-token' ticker-promises]
   (for [[tkrs *res] ticker-promises
         :let        [idx-hid-tkrs   (->> tkrs
@@ -64,7 +111,7 @@
                :response-format :json
                :keywords?       true}}))
 
-(defn quote-live-prices
+#_(defn quote-live-prices
   [api-token' tickers & [{:keys [batch-size]}]]
   (let [batch-size (or batch-size 2)
         parts      (if (< (count tickers) batch-size)
@@ -80,6 +127,7 @@
 
 
 (comment
+
   (let [ticker-parts [[[[1 "ADS.XETRA"]
                         [2 "0700.HK"]
                         [3 "SBUX.US"]] (promise)]

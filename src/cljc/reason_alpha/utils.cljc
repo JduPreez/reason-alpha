@@ -3,13 +3,18 @@
                     [clojure.java.io :as io]
                     [clojure.string :as str]
                     [cuid2.core :refer [cuid]]
-                    [taoensso.timbre :as timbre :refer-macros (tracef debugf infof warnf errorf)])
+                    [taoensso.timbre :as timbre :refer-macros (tracef debugf infof warnf errorf)]
+                    [tick.alpha.interval :as t.i]
+                    [tick.core :as tick])
 
      :cljs (:require [clojure.string :as str]
                      [cljs-uuid-utils.core :as uuid]
                      [goog.string :as gstring]
                      [goog.string.format]
-                     [taoensso.timbre :as timbre :refer-macros (infof warnf errorf)]))
+                     [taoensso.timbre :as timbre :refer-macros (infof warnf errorf)]
+                     [tick.alpha.interval :as t.i]
+                     [tick.core :as tick]))
+
   #?(:clj (:import [java.math BigDecimal])))
 
 (defn maybe->uuid [v]
@@ -113,3 +118,43 @@
 #?(:clj
    (defn round-up [n]
      (Math/ceil n)))
+
+(defn time-at-beginning-of-day
+  [t]
+  (-> t
+      tick/date
+      tick/beginning
+      (tick/in "UTC")
+      tick/inst))
+
+(defn quarter-bounds
+  [t]
+  (let [yr                (-> t tick/year str)
+        qr-start-month-nr (-> t
+                              tick/date
+                              tick/month
+                              tick/int
+                              (/ 3)
+                              round-up
+                              int
+                              dec
+                              (* 3)
+                              inc
+                              #_(as-> q (format "%02d" q)))
+        qr-end-month-nr   (+ qr-start-month-nr 2)
+        bounds-start-date (-> yr
+                              (str (format "-%02d" qr-start-month-nr))
+                              tick/year-month
+                              t.i/bounds
+                              :tick/beginning
+                              (tick/in "UTC")
+                              tick/inst)
+        bounds-end-date   (-> yr
+                              (str (format "-%02d" qr-end-month-nr))
+                              tick/year-month
+                              t.i/bounds
+                              :tick/end
+                              (tick/<< (tick/new-duration 1 :days))
+                              (tick/in "UTC")
+                              tick/inst)]
+    [bounds-start-date bounds-end-date]))
