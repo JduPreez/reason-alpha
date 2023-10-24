@@ -8,17 +8,8 @@
             [tick.core :as tick]))
 
 (defn- fix-time [{t :price/time :as p}]
-  (let [year (-> t tick/year str)]
-    (assoc p
-           :price/time         (utils/time-at-beginning-of-day t)
-           :price/year-quarter (-> t
-                                   tick/date
-                                   tick/month
-                                   tick/int
-                                   (/ 3)
-                                   utils/round-up
-                                   int
-                                   (as-> q (str year "-Q" q))))))
+  (assoc p
+         :price/time (utils/time-at-beginning-of-day t)))
 
 (defn save!
   [db prices]
@@ -26,28 +17,28 @@
        (map fix-time)
        (data.model/save-all! db)))
 
-(defn get-prices-per-quarter*
-  [db & {:keys [symbol-ticker dates] :as args}]
-  (let [yr-quarters (->> dates
-                         (map #(-> {:price/time %} fix-time :price/year-quarter))
-                         distinct)]
-    ;; Now fetch all prices for the symbol and where the `:price/year-quarter` match
-    (->> {:spec '{:find  [(pull e [*])]
-                  :in    [[yrq ...] s]
-                  :where [[e :price/year-quarter yrq]
-                          [e :price/symbol-ticker s]]}
-          :role :system
-          :args [yr-quarters symbol-ticker]}
-         (data.model/query db))))
+(defn get-prices*
+  [db & {:keys [type symbol-ticker date-range] :as args}]
+  ;; Now fetch all prices for the symbol and where the `:price/year-quarter` match
+  (->> {:spec '{:find  [(pull e [*])]
+                :in    [t st [from to]]
+                :where [[e :price/type t]
+                        [e :price/symbol-ticker st]
+                        [e :price/time tm]
+                        [(>= tm from)]
+                        [(<= tm to)]]}
+        :role :system
+        :args [(or type :historic) symbol-ticker date-range]}
+       (data.model/query db)))
 
-(def get-prices-per-quarter (caching/wrap get-prices-per-quarter*
-                                          :fn-cache-key
-                                          (fn [[_ & {:keys [symbol-ticker dates] :as args}]]
-                                            (println ">>> " symbol-ticker ": " dates)
-                                            symbol-ticker)))
+(def get-prices (caching/wrap get-prices*
+                              :fn-cache-key
+                              (fn [[_ & {:keys [symbol-ticker date] :as args}]]
+                                (println ">>> " symbol-ticker ": " dates)
+                                symbol-ticker)))
 
 ;; TODO: Once working, switch to mem cached function
-(defn get-prices
+#_(defn get-prices
   [db & {st :symbol-ticker, ds :dates}]
   (let [ps (->> ds
                 (get-prices-per-quarter*

@@ -115,15 +115,22 @@
      [n]
      (java.lang.String/format java.util.Locale/US "%.2f%%" (to-array [n]))))
 
-#?(:clj
-   (defn round-up [n]
-     (Math/ceil n)))
+(defn round-up [n]
+  (Math/ceil n))
 
 (defn time-at-beginning-of-day
   [t]
   (-> t
       tick/date
       tick/beginning
+      (tick/in "UTC")
+      tick/inst))
+
+(defn time-at-end-of-day
+  [t]
+  (-> t
+      tick/date
+      tick/end
       (tick/in "UTC")
       tick/inst))
 

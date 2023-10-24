@@ -2,34 +2,46 @@
   (:require [reason-alpha.utils :as utils]
             [tick.core :as tick]))
 
-(defn- set-by-type
+(defn- type+date-range
   [symbol-ticker time r]
-  (let [today     (utils/time-at-beginning-of-day (tick/now))
-        t         (or time (tick/now))
-        date      (utils/time-at-beginning-of-day t)
-        type      (if (= today date) :intraday #_else :historic)
-        qr-bounds (when (= type :historic)
-                    (utils/quarter-bounds t))]
-    ;; Not really going to use the `set` of times for `:intraday`,
-    ;; but it's easier to just keep the data structure similar
-    ;; between the 2.
-    (update-in r [type symbol-ticker]
-               #(conj (or % #{})
-                      (or qr-bounds t)))))
+  (let [today    (utils/time-at-beginning-of-day (tick/now))
+        t        (or time (tick/now))
+        date     (utils/time-at-beginning-of-day t)
+        type     (if (= today date) :intraday #_else :historic)
+        dt-range (if (= type :historic)
+                   (utils/quarter-bounds t)
+                   #_else
+                   (let [n (tick/now)]
+                     [(utils/time-at-beginning-of-day n)
+                      (utils/time-at-end-of-day n)]))]
+    (update r type #(conj (or % #{})
+                          {:symbol-ticker symbol-ticker
+                           :date-range    dt-range
+                           :type          type}))))
 
 (defn get-position-prices
-  [positions & {:keys [access-key]}]
+  [fn-repo-get-prices positions & {:keys [access-key]}]
   ;; Split into historic & intraday prices
-  (let [today         (utils/time-at-beginning-of-day (tick/now))
-        by-price-type (reduce
-                       (fn [r {:keys [close-date open-date eodhd]}]
-                         (->> r
-                              (set-by-type eodhd open-date)
-                              (set-by-type eodhd close-date)))
-                       {:historic nil
-                        :intraday nil}
-                       positions)]
-    by-price-type)
+  (let [today                            (utils/time-at-beginning-of-day (tick/now))
+        {cached             :cached
+         {hist   :historic
+          intrad :intraday} :not-cached} (->> positions
+                                              (pmap type+date-range)
+                                              (reduce
+                                               (fn [r {[from to] :date-range
+                                                       st        :symbol-ticker
+                                                       t         :type
+                                                       :as       price-info}]
+                                                 (let [db-ps        (fn-repo-get-prices
+                                                                     :type t
+                                                                     :date-range [from to]
+                                                                     :symbol-ticker st)
+                                                       cache-status (if (seq db-ps) :cached
+                                                                        #_else :not-cached)]
+                                                   (update-in r [cache-status t]
+                                                              #(conj (or % #{}) refresh-info))))
+                                               {}))]
+    intrad)
 
   ;; Try to get the historic prices from the DB
 
@@ -42,6 +54,8 @@
   )
 
 (comment
+
+  (utils/time-at-end-of-day #inst "2023-08-24T00:00:00.000-00:00")
 
   (let [ps [{:eodhd                           "EL"
              :open-date                       #inst "2023-08-24T00:00:00.000-00:00",
