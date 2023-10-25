@@ -10,7 +10,6 @@
    [:price/symbol-provider keyword?]
    [:price/time inst?]
    [:price/type [:enum :historic :intraday]]
-   [:prine/year-quarter string?]
    [:price/open number?]
    [:price/close number?]
    [:price/high number?]
@@ -25,7 +24,7 @@
 (def-model PricesResult
   ::prices-result
   [:map
-   [:result-id uuid?]
+   [:result-id string?]
    [:result {:optional true} [:sequential Price]]
    [:type [:enum :error :success :warn :info :failed-validation]]
    [:title {:optional true} string?]

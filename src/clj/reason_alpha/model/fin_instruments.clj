@@ -8,7 +8,7 @@
    [:symbol/ticker {:min 1} string?]
    [:symbol/holding-id {:optional true} uuid?]
    [:symbol/provider
-    [:enum {:enum/titles {:marketstack   "Marketstack"
+    [:enum {:enum/titles {:eodhd         "EODHD"
                           :saxo-dma      "Saxo/DMA"
                           :easy-equities "Easy Equities"}}
                          :marketstack :saxo-dma :easy-equities]]])

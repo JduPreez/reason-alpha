@@ -4,61 +4,89 @@
             [clojure.string :as str]
             [outpace.config :refer [defconfig]]
             [reason-alpha.utils :as utils]
-            [tick.core :as tick]))
+            [tick.core :as tick]
+            [tick.locale-en-us]))
 
 (defconfig dev-api-token)
 
 (defconfig conf)
 
-(def *real-time-api (delay (:real-time-api conf)))
+(def *real-time-api-uri (delay (:real-time-api-uri conf)))
 
-(def *historic-eod-api (delay (:historic-eod conf)))
+(def *historic-eod-api-uri (delay (:historic-eod-api-uri conf)))
 
 (defn- handle-historic-prices-err
-  [*res result])
+  [{:keys [*result symbol-ticker date-range]} result]
+  (deliver *result {:result-id (utils/new-id)
+                    :type      :error
+                    :result    {:symbol-ticker symbol-ticker
+                                :date-range    date-range}
+                    :error     result}))
 
 (defn- handle-historic-prices
-  [*res result])
+  [{:keys [*result symbol-ticker date-range]} result]
+  (->> result
+       (map
+        (fn [{:keys [date open high low close adjusted_close volume]}]
+          (let [id (str symbol-ticker "/" date)]
+            {:price/id              id
+             :price/creation-id     id
+             :price/symbol-ticker   symbol-ticker
+             :price/symbol-provider :eodhd
+             :price/time            date
+             :price/type            :historic
+             :price/open            open
+             :price/close           close
+             :price/high            high
+             :price/low             low
+             :price/volume          volume
+             :price/adj-close       adjusted_close})))
+       (assoc {:symbol-ticker symbol-ticker
+               :date-range    date-range}
+              :prices)
+       (assoc {:result-id (utils/new-id)
+               :type      :success}
+              :result)
+       (deliver *result)))
+
+(defn- inst-time->date-str
+  [t]
+  (->> t
+       tick/date
+       (tick/format date-formatter)))
 
 (defn- request-historic-prices
-  [api-token symbol-ticker [start-date end-date]]
-  (let [*res (promise)
-        uri  (format @*historic-eod-api main-sym)]
+  [api-token *res symbol-ticker [from to :as dr]]
+  (let [uri (format @*historic-eod-api-uri symbol-ticker)]
     (GET uri
          {:params          {:api_token api-token
-                            :fmt       "json"}
-          :handler         #(handle-historic-prices *res %)
-          :error-handler   #(handle-historic-prices-err *res %)
+                            :fmt       "json"
+                            :from      (inst-time->date-str from)
+                            :to        (inst-time->date-str to)}
+          :handler         #(handle-historic-prices {:symbol-ticker symbol-ticker
+                                                     :*result       *res
+                                                     :date-range    dr} %)
+          :error-handler   #(handle-historic-prices-err {:symbol-ticker symbol-ticker
+                                                         :*result       *res
+                                                         :date-range    dr} %)
           :response-format :json
           :keywords?       true})
     *res))
 
-(defn get-historic-prices
-  [api-token symbol-ticker->date-ranges]
+(def date-formatter (tick/formatter "yyyy-MM-dd"))
+
+(defn quote-historic-prices
+  [api-token & {:keys [symbol-ticker date-range]}]
   (let [*result (promise)]
-    (future
-      (let [r (->> symbol-ticker->date-ranges
-                   (mapcat (fn [[symbol-ticker date-ranges]
-                                (for [dr date-ranges]
-                                  [symbol-ticker dr])]))
-                   (pmap
-                    (fn [[symbol-ticker date-range]]
-                      (let [*res :*result (request-historic-prices
-                                           api-token
-                                           symbol-ticker
-                                           date-range)]
-                        {:symbol-ticker symbol-ticker
-                         :date-range    date-range
-                         :prices        @*res})))
-                   (reduce (fn [symtic->dt-range {st :symbol-ticker
-                                                  dr :date-range
-                                                  ps :prices}]
-                             (assoc-in symtic->dt-range [st dr] ps))
-                           {}))]
-        (deliver *result r)))
+    (request-historic-prices
+     api-token
+     *result
+     symbol-ticker
+     date-range)
     *result))
 
-#_(defn- handle-quote-live-price [*result idx-hid-tkrs response]
+#_(defn- handle-quote-live-price
+    [*result idx-hid-tkrs response]
   (let [r (map (fn [{:keys [code timestamp open previousClose
                             high low volume change close] :as quote}]
                  (let [ptime (-> timestamp
@@ -89,41 +117,42 @@
             :description (str "Error occurred quoting live stock prices: " status " " status-text)
             :type        :error}))
 
-#_(defn- quote-live-prices*
-  [api-token' ticker-promises]
-  (for [[tkrs *res] ticker-promises
-        :let        [idx-hid-tkrs   (->> tkrs
-                                         (map (fn [[hid t]][t hid]))
-                                         (into {}))
-                     symbols        (keys idx-hid-tkrs)
-                     main-sym       (first symbols)
-                     uri            (format live-stock-prices-api main-sym)
-                     adtnl-syms     (rest symbols)
-                     adtnl-syms-str (when (seq adtnl-syms)
-                                      (str/join ","
-                                                adtnl-syms))]]
-    {:uri     uri
-     :request {:params          (cond-> {:api_token api-token'
-                                         :fmt       "json"}
-                                  adtnl-syms-str (assoc :s adtnl-syms-str))
-               :handler         #(handle-quote-live-price *res idx-hid-tkrs %)
-               :error-handler   #(handle-quote-live-price-err *res idx-hid-tkrs %)
-               :response-format :json
-               :keywords?       true}}))
+(defn- request-latest-intraday-prices
+  [api-token *sym-ticker-proms]
+  (doseq [[sym-tkrs *r] *sym-ticker-proms
+          :let          [idx-hid-tkrs   (->> sym-tkrs
+                                             (map (fn [[hid t]][t hid]))
+                                             (into {}))
+                         symbols        (keys idx-hid-tkrs)
+                         main-sym       (first symbols)
+                         uri            (format @*real-time-api-uri main-sym)
+                         adtnl-syms     (rest symbols)
+                         adtnl-syms-str (when (seq adtnl-syms)
+                                          (str/join ","
+                                                    adtnl-syms))]]
+    (GET uri
+         {:params          (cond-> {:api_token api-token
+                                    :fmt       "json"}
+                             adtnl-syms-str (assoc :s adtnl-syms-str))
+          :handler         #(handle-quote-live-price *r idx-hid-tkrs %)
+          :error-handler   #(handle-quote-live-price-err *r idx-hid-tkrs %)
+          :response-format :json
+          :keywords?       true})))
 
-#_(defn quote-live-prices
-  [api-token' tickers & [{:keys [batch-size]}]]
-  (let [batch-size (or batch-size 2)
-        parts      (if (< (count tickers) batch-size)
-                     [tickers]
-                     (vec (partition-all batch-size tickers)))
-        tkr-parts  (mapv (fn [tickers] [tickers (promise)]) parts)
-        requests   (quote-live-prices* api-token' tkr-parts)
-        *results   (mapv second tkr-parts)]
-    (doall
-     (for [{:keys [uri request]} requests]
-       (GET uri request)))
-    *results))
+(defn quote-latest-intraday-prices
+  [api-token & {:keys [symbol-tickers batch-size]}]
+  (let [batch-size     (or batch-size 2)
+        parts          (if (< (count symbol-tickers) batch-size)
+                         [symbol-tickers]
+                         (vec (partition-all batch-size symbol-tickers)))
+        tkr-parts      (mapv (fn [symbol-tickers] [symbol-tickers (promise)]) parts)
+        *results       (mapv second tkr-parts)
+        *many->1result (promise)]
+    (request-latest-intraday-prices api-token tkr-parts)
+    (->> *results
+         (pmap #(deref %))
+         concat)
+    *many->1result))
 
 
 (comment
