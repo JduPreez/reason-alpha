@@ -19,6 +19,7 @@
                            :date-range    dt-range
                            :type          type}))))
 
+;; TODO: What about shares don't support intraday???
 (defn get-position-prices
   [fn-repo-get-prices positions & {:keys [access-key]}]
   ;; Split into historic & intraday prices

@@ -20,7 +20,10 @@
                                   "have a unique id")
                 :optional?   true} uuid?]
    [:result {:optional true} result-schema]
-   [:type [:enum :error :success :warn :info :failed-validation]]
+   [:type
+    [:enum
+     :error :success :some-success-err
+     :warn :info :failed-validation]]
    [:title {:optional true} string?]
    [:error {:optional true} any?]
    [:description {:optional true}

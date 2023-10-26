@@ -19,14 +19,18 @@
    [:price/adj-high {:optional true} [:maybe number?]]
    [:price/adj-low {:optional true} [:maybe number?]]
    [:price/adj-close {:optional true} [:maybe number?]]
-   [:price/adj-volume {:optional true} [:maybe int?]]])
+   [:price/adj-volume {:optional true} [:maybe int?]]
+   [:price/previous-close {:optional true} [:maybe number?]]
+   [:price/change {:optional true} [:maybe number?]]])
 
 (def-model PricesResult
   ::prices-result
   [:map
    [:result-id string?]
    [:result {:optional true} [:sequential Price]]
-   [:type [:enum :error :success :warn :info :failed-validation]]
+   [:type
+    [:enum :error :success :some-success-err
+           :warn :info :failed-validation]]
    [:title {:optional true} string?]
    [:error {:optional true} any?]
    [:description {:optional true}

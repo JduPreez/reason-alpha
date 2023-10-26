@@ -15,20 +15,22 @@
 
 (def *historic-eod-api-uri (delay (:historic-eod-api-uri conf)))
 
+(def date-formatter (tick/formatter "yyyy-MM-dd"))
+
 (defn- handle-historic-prices-err
   [{:keys [*result symbol-ticker date-range]} result]
   (deliver *result {:result-id (utils/new-id)
                     :type      :error
-                    :result    {:symbol-ticker symbol-ticker
-                                :date-range    date-range}
-                    :error     result}))
+                    :error     {:symbol-ticker symbol-ticker
+                                :date-range    date-range
+                                :error         result}}))
 
 (defn- handle-historic-prices
   [{:keys [*result symbol-ticker date-range]} result]
   (->> result
        (map
         (fn [{:keys [date open high low close adjusted_close volume]}]
-          (let [id (str symbol-ticker "/" date)]
+          (let [id (str "historic/" symbol-ticker "/" date)]
             {:price/id              id
              :price/creation-id     id
              :price/symbol-ticker   symbol-ticker
@@ -55,9 +57,10 @@
        tick/date
        (tick/format date-formatter)))
 
-(defn- request-historic-prices
-  [api-token *res symbol-ticker [from to :as dr]]
-  (let [uri (format @*historic-eod-api-uri symbol-ticker)]
+(defn quote-historic-prices
+  [api-token & {:keys [symbol-ticker [from to :as date-range]]}]
+  (let [*res (promise)
+        uri  (format @*historic-eod-api-uri symbol-ticker)]
     (GET uri
          {:params          {:api_token api-token
                             :fmt       "json"
@@ -65,49 +68,71 @@
                             :to        (inst-time->date-str to)}
           :handler         #(handle-historic-prices {:symbol-ticker symbol-ticker
                                                      :*result       *res
-                                                     :date-range    dr} %)
+                                                     :date-range    date-range} %)
           :error-handler   #(handle-historic-prices-err {:symbol-ticker symbol-ticker
                                                          :*result       *res
-                                                         :date-range    dr} %)
+                                                         :date-range    date-range} %)
           :response-format :json
           :keywords?       true})
     *res))
 
-(def date-formatter (tick/formatter "yyyy-MM-dd"))
+(defn- quote-last-historic-prices
+  [api-token symbol-tickers]
+  (let [n    (tick/now)
+        to   (utils/time-at-beginning-of-day n)
+        from (->> :weeks
+                  (tick/new-duration 1)
+                  (tick/<< n)
+                  utils/time-at-beginning-of-day)
+        dr   [from to]]
+    (->> symbol-tickers
+         (pmap (fn [sym-tkr]
+                 (let [{t   :type
+                        r   :result
+                        :as res} @(quote-historic-prices api-token
+                                                         :symbol-ticker sym-tkr
+                                                         :date-range dr)]
+                   (if (= :success t)
+                     (first r)
+                     #_else res)))))))
 
-(defn quote-historic-prices
-  [api-token & {:keys [symbol-ticker date-range]}]
-  (let [*result (promise)]
-    (request-historic-prices
-     api-token
-     *result
-     symbol-ticker
-     date-range)
-    *result))
-
-#_(defn- handle-quote-live-price
-    [*result idx-hid-tkrs response]
-  (let [r (map (fn [{:keys [code timestamp open previousClose
-                            high low volume change close] :as quote}]
-                 (let [ptime (-> timestamp
-                                 (tick/new-duration :seconds)
-                                 tick/inst)]
-                   {:price-id             (utils/new-uuid)
-                    :price-creation-id    (utils/new-uuid)
-                    :symbol-ticker        code
-                    :symbol-provider      :eod-historical-data
-                    :holding-id           (get idx-hid-tkrs code)
-                    :price-time           ptime
-                    :price-open           open
-                    :price-close          close
-                    :price-high           high
-                    :price-low            low
-                    :price-previous-close previousClose
-                    :price-volume         volume
-                    :price-change         change})) response)]
-    (deliver *result
-             {:result r
-              :type   :success})))
+(defn- handle-latest-intraday-prices
+  [*result response]
+  (let [response           (if (sequential? response)
+                             response
+                             #_else [response])
+        {na     :na
+         intrad :intraday} (reduce (fn [r {:keys [code timestamp open previousClose
+                                                  high low volume change close]
+                                           :as   quote}]
+                                     (if (number? close)
+                                       (let [id    (str "intraday/" symbol-ticker "/" date)
+                                             ptime (-> timestamp
+                                                       (tick/new-duration :seconds)
+                                                       tick/inst)
+                                             p     {:price/id              id
+                                                    :price/creation-id     id
+                                                    :price/symbol-ticker   code
+                                                    :price/symbol-provider :eodhd
+                                                    :price/time            ptime
+                                                    :price/type            :intraday
+                                                    :price/open            open
+                                                    :price/close           close
+                                                    :price/high            high
+                                                    :price/low             low
+                                                    :price/volume          volume
+                                                    :price/previous-close  previousClose
+                                                    :price/change          change}]
+                                         (update r :intraday #(conj (or % #{}) p)))
+                                       #_else
+                                       (update r :na #(conj (or % []) code))))
+                                   {:intraday-prices nil
+                                    :na              nil}
+                                   response)
+        r                  (if (seq na)
+                             (concat intrad (quote-last-historic-prices api-token na))
+                             intrad)]
+    (deliver *result r)))
 
 #_(defn- handle-quote-live-price-err
   [*result idx-hid-tkrs {:keys [status status-text]
@@ -118,15 +143,11 @@
             :type        :error}))
 
 (defn- request-latest-intraday-prices
-  [api-token *sym-ticker-proms]
-  (doseq [[sym-tkrs *r] *sym-ticker-proms
-          :let          [idx-hid-tkrs   (->> sym-tkrs
-                                             (map (fn [[hid t]][t hid]))
-                                             (into {}))
-                         symbols        (keys idx-hid-tkrs)
-                         main-sym       (first symbols)
-                         uri            (format @*real-time-api-uri main-sym)
-                         adtnl-syms     (rest symbols)
+  [api-token sym-ticker-batches]
+  (doseq [[sym-tkrs *r] sym-ticker-batches
+          :let          [main-sym-tkr   (first sym-tkrs)
+                         uri            (format @*real-time-api-uri main-sym-tkr)
+                         adtnl-syms     (rest sym-tkrs)
                          adtnl-syms-str (when (seq adtnl-syms)
                                           (str/join ","
                                                     adtnl-syms))]]
@@ -134,28 +155,43 @@
          {:params          (cond-> {:api_token api-token
                                     :fmt       "json"}
                              adtnl-syms-str (assoc :s adtnl-syms-str))
-          :handler         #(handle-quote-live-price *r idx-hid-tkrs %)
-          :error-handler   #(handle-quote-live-price-err *r idx-hid-tkrs %)
+          :handler         #(handle-latest-intraday-prices *r %)
+          :error-handler   (constantly nil) ;;#(handle-quote-live-price-err *r idx-hid-tkrs %)
           :response-format :json
           :keywords?       true})))
 
 (defn quote-latest-intraday-prices
   [api-token & {:keys [symbol-tickers batch-size]}]
-  (let [batch-size     (or batch-size 2)
-        parts          (if (< (count symbol-tickers) batch-size)
-                         [symbol-tickers]
-                         (vec (partition-all batch-size symbol-tickers)))
-        tkr-parts      (mapv (fn [symbol-tickers] [symbol-tickers (promise)]) parts)
-        *results       (mapv second tkr-parts)
-        *many->1result (promise)]
-    (request-latest-intraday-prices api-token tkr-parts)
-    (->> *results
-         (pmap #(deref %))
-         concat)
+  (let [*many->1result (promise)]
+    (future
+      (let [batch-size  (or batch-size 2)
+            batches     (if (< (count symbol-tickers) batch-size)
+                          [symbol-tickers]
+                          (vec (partition-all batch-size symbol-tickers)))
+            tkr-batches (mapv (fn [symbol-tickers] [symbol-tickers (promise)]) batches)
+            *results    (mapv second tkr-batches)]
+        (request-latest-intraday-prices api-token tkr-batches)
+        (let [prices (->> *results
+                          (pmap #(deref %))
+                          (apply concat))
+              rtype  (cond
+                       (every? #(= (:type %) :success)
+                               prices)
+                       , :success
+                       (every? #(= (:type %) :error)
+                               prices)
+                       , :error
+
+                       :else :some-success-err)]
+          (deliver *many->1result {:type     rtype
+                                   :result   prices
+                                   :nr-items (count prices)}))))
     *many->1result))
 
-
 (comment
+
+  (->> [[1 2 3] [4 5 6] [7 8 9]]
+       (apply concat))
 
   (let [ticker-parts [[[[1 "ADS.XETRA"]
                         [2 "0700.HK"]
