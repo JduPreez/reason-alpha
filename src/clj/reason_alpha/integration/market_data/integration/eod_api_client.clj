@@ -58,20 +58,21 @@
        (tick/format date-formatter)))
 
 (defn quote-historic-prices
-  [api-token & {:keys [symbol-ticker [from to :as date-range]]}]
+  [api-token & {st               :symbol-ticker
+                [from to :as dr] :date-range}]
   (let [*res (promise)
-        uri  (format @*historic-eod-api-uri symbol-ticker)]
+        uri  (format @*historic-eod-api-uri st)]
     (GET uri
          {:params          {:api_token api-token
                             :fmt       "json"
                             :from      (inst-time->date-str from)
                             :to        (inst-time->date-str to)}
-          :handler         #(handle-historic-prices {:symbol-ticker symbol-ticker
+          :handler         #(handle-historic-prices {:symbol-ticker st
                                                      :*result       *res
-                                                     :date-range    date-range} %)
-          :error-handler   #(handle-historic-prices-err {:symbol-ticker symbol-ticker
+                                                     :date-range    dr} %)
+          :error-handler   #(handle-historic-prices-err {:symbol-ticker st
                                                          :*result       *res
-                                                         :date-range    date-range} %)
+                                                         :date-range    dr} %)
           :response-format :json
           :keywords?       true})
     *res))
@@ -87,17 +88,13 @@
         dr   [from to]]
     (->> symbol-tickers
          (pmap (fn [sym-tkr]
-                 (let [{t   :type
-                        r   :result
-                        :as res} @(quote-historic-prices api-token
-                                                         :symbol-ticker sym-tkr
-                                                         :date-range dr)]
-                   (if (= :success t)
-                     (first r)
-                     #_else res)))))))
+                 (let [res @(quote-historic-prices api-token
+                                                   :symbol-ticker sym-tkr
+                                                   :date-range dr)]
+                   res))))))
 
 (defn- handle-latest-intraday-prices
-  [*result response]
+  [api-token *result response]
   (let [response           (if (sequential? response)
                              response
                              #_else [response])
@@ -106,10 +103,10 @@
                                                   high low volume change close]
                                            :as   quote}]
                                      (if (number? close)
-                                       (let [id    (str "intraday/" symbol-ticker "/" date)
-                                             ptime (-> timestamp
+                                       (let [ptime (-> timestamp
                                                        (tick/new-duration :seconds)
                                                        tick/inst)
+                                             id    (str "intraday/" code "/" ptime)
                                              p     {:price/id              id
                                                     :price/creation-id     id
                                                     :price/symbol-ticker   code
@@ -123,7 +120,8 @@
                                                     :price/volume          volume
                                                     :price/previous-close  previousClose
                                                     :price/change          change}]
-                                         (update r :intraday #(conj (or % #{}) p)))
+                                         (update r :intraday #(conj (or % #{}) {:type   :success
+                                                                                :result p})))
                                        #_else
                                        (update r :na #(conj (or % []) code))))
                                    {:intraday-prices nil
@@ -134,11 +132,13 @@
                              intrad)]
     (deliver *result r)))
 
-#_(defn- handle-quote-live-price-err
-  [*result idx-hid-tkrs {:keys [status status-text]
-                         :as   response}]
+(defn- handle-latest-intraday-err
+  [*result sym-tkrs {:keys [status status-text]
+                     :as   response}]
+  ;; TODO: Map each sym-tkr to an `:error`
   (deliver *result
-           {:error       response
+           {:error       {:symbol-tickers sym-tkrs
+                          :response       response}
             :description (str "Error occurred quoting live stock prices: " status " " status-text)
             :type        :error}))
 
@@ -155,8 +155,8 @@
          {:params          (cond-> {:api_token api-token
                                     :fmt       "json"}
                              adtnl-syms-str (assoc :s adtnl-syms-str))
-          :handler         #(handle-latest-intraday-prices *r %)
-          :error-handler   (constantly nil) ;;#(handle-quote-live-price-err *r idx-hid-tkrs %)
+          :handler         #(handle-latest-intraday-prices api-token *r %)
+          :error-handler   #(handle-latest-intraday-err *r sym-tkrs %)
           :response-format :json
           :keywords?       true})))
 

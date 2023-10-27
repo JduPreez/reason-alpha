@@ -1,9 +1,10 @@
 (ns reason-alpha.integration.market-data.services.equity-service
   (:require [reason-alpha.utils :as utils]
-            [tick.core :as tick]))
+            [tick.core :as tick]
+            [reason-alpha.integration.market-data.integration.eod-api-client :as eodhd]))
 
 (defn- type+date-range
-  [symbol-ticker time r]
+  [{:keys [symbol-ticker time]}]
   (let [today    (utils/time-at-beginning-of-day (tick/now))
         t        (or time (tick/now))
         date     (utils/time-at-beginning-of-day t)
@@ -14,35 +15,54 @@
                    (let [n (tick/now)]
                      [(utils/time-at-beginning-of-day n)
                       (utils/time-at-end-of-day n)]))]
-    (update r type #(conj (or % #{})
-                          {:symbol-ticker symbol-ticker
-                           :date-range    dt-range
-                           :type          type}))))
+    {:symbol-ticker symbol-ticker
+     :date-range    dt-range
+     :type          type}))
 
-;; TODO: What about shares don't support intraday???
 (defn get-position-prices
-  [fn-repo-get-prices positions & {:keys [access-key]}]
-  ;; Split into historic & intraday prices
-  (let [today                            (utils/time-at-beginning-of-day (tick/now))
-        {cached             :cached
-         {hist   :historic
-          intrad :intraday} :not-cached} (->> positions
-                                              (pmap type+date-range)
-                                              (reduce
-                                               (fn [r {[from to] :date-range
-                                                       st        :symbol-ticker
-                                                       t         :type
-                                                       :as       price-info}]
-                                                 (let [db-ps        (fn-repo-get-prices
-                                                                     :type t
-                                                                     :date-range [from to]
-                                                                     :symbol-ticker st)
-                                                       cache-status (if (seq db-ps) :cached
-                                                                        #_else :not-cached)]
-                                                   (update-in r [cache-status t]
-                                                              #(conj (or % #{}) refresh-info))))
-                                               {}))]
-    intrad)
+  [fn-repo-get-prices positions & {:keys [api-token]}]
+  (let [today                         (utils/time-at-beginning-of-day (tick/now))
+        {stored          :stored
+         {not-stor-intrd :intraday
+          not-stor-hist} :not-stored} (->> positions
+                                           (pmap #(fn [{:keys [eodhd close-price open-price
+                                                               open-date close-date]}]
+                                                    [(type+date-range :symbol-ticker eodhd
+                                                                      :time open-date)
+                                                     (type+date-range :symbol-ticker eodhd
+                                                                      :time close-date)]))
+                                           (apply concat)
+                                           (reduce
+                                            (fn [r {[from to] :date-range
+                                                    st        :symbol-ticker
+                                                    t         :type
+                                                    :as       price-info}]
+                                              (let [db-ps        (fn-repo-get-prices
+                                                                  :type t
+                                                                  :date-range [from to]
+                                                                  :symbol-ticker st)
+                                                    store-status (if (seq db-ps) :stored
+                                                                     #_else :not-stored)]
+                                                (update-in r [store-status t]
+                                                           #(conj (or % #{})
+                                                                  (if (= t :intraday)
+                                                                    st #_else refresh-info)))))
+                                            {}))
+        fetched-intrad                (eodhd/quote-latest-intraday-prices
+                                       :symbol-tickers not-stor-intrd
+                                       :api-token api-token)
+        fetched                       (->> not-stor-hist
+                                           (pmap (fn [{t   :type
+                                                       dr  :date-range
+                                                       st  :symbol-ticker
+                                                       :as price-info}]
+                                                   @(eodhd/quote-historic-prices
+                                                     api-token
+                                                     :symbol-ticker st
+                                                     :date-range dr)))
+                                           (concat *fetched-intrad))
+        fetched                       (pmap #(deref %) (concat fetched-intrad fecthed-hist))]
+    fetched)
 
   ;; Try to get the historic prices from the DB
 
@@ -56,7 +76,7 @@
 
 (comment
 
-  (utils/time-at-end-of-day #inst "2023-08-24T00:00:00.000-00:00")
+  (require '[reason-alpha.data.xtdb :as xtdb])
 
   (let [ps [{:eodhd                           "EL"
              :open-date                       #inst "2023-08-24T00:00:00.000-00:00",
