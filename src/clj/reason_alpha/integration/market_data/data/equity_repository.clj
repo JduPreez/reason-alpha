@@ -18,7 +18,7 @@
        (data.model/save-all! db)))
 
 (defn get-prices*
-  [db & {:keys [type symbol-ticker date-range] :as args}]
+  [db {:keys [type symbol-ticker date-range]}]
   ;; Now fetch all prices for the symbol and where the `:price/year-quarter` match
   (->> {:spec '{:find  [(pull e [*])]
                 :in    [t st [from to]]
@@ -34,7 +34,7 @@
 (def get-prices (caching/wrap get-prices*
                               :fn-cache-key
                               (fn [[_ & {:keys [symbol-ticker date] :as args}]]
-                                (println ">>> " symbol-ticker ": " dates)
+                                (println ">>> " symbol-ticker ": " date)
                                 symbol-ticker)))
 
 ;; TODO: Once working, switch to mem cached function
