@@ -165,3 +165,11 @@
                               (tick/in "UTC")
                               tick/inst)]
     [bounds-start-date bounds-end-date]))
+
+(defn date-str->inst
+  [date-str]
+  (-> date-str
+      tick/date
+      tick/beginning
+      (tick/in "UTC")
+      tick/inst))

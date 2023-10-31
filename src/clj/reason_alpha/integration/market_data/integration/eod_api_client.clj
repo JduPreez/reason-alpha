@@ -27,29 +27,28 @@
 
 (defn- handle-historic-prices
   [{:keys [*result symbol-ticker date-range]} result]
-  (->> result
-       (map
-        (fn [{:keys [date open high low close adjusted_close volume]}]
-          (let [id (str "historic/" symbol-ticker "/" date)]
-            {:price/id              id
-             :price/creation-id     id
-             :price/symbol-ticker   symbol-ticker
-             :price/symbol-provider :eodhd
-             :price/time            date
-             :price/type            :historic
-             :price/open            open
-             :price/close           close
-             :price/high            high
-             :price/low             low
-             :price/volume          volume
-             :price/adj-close       adjusted_close})))
-       (assoc {:symbol-ticker symbol-ticker
-               :date-range    date-range}
-              :prices)
-       (assoc {:result-id (utils/new-id)
-               :type      :success}
-              :result)
-       (deliver *result)))
+  (let [ps (map
+            (fn [{:keys [date open high low close adjusted_close volume]}]
+              (let [id (str "historic/" symbol-ticker "/" date)]
+                {:price/id              id
+                 :price/creation-id     id
+                 :price/symbol-ticker   symbol-ticker
+                 :price/symbol-provider :eodhd
+                 :price/time            (utils/date-str->inst date)
+                 :price/type            :historic
+                 :price/open            open
+                 :price/close           close
+                 :price/high            high
+                 :price/low             low
+                 :price/volume          volume
+                 :price/adj-close       adjusted_close}))
+            result)
+        r  {:result-id (utils/new-id)
+            :type      :success
+            :result    {:symbol-ticker symbol-ticker
+                        :date-range    date-range
+                        :prices        ps}}]
+    (deliver *result r)))
 
 (defn- inst-time->date-str
   [t]
@@ -58,11 +57,11 @@
        (tick/format date-formatter)))
 
 (defn quote-historic-prices
-  [api-token & {st               :symbol-ticker
-                [from to :as dr] :date-range}]
+  [& {st               :symbol-ticker
+      [from to :as dr] :date-range
+      api-token        :api-token}]
   (let [*res (promise)
         uri  (format @*historic-eod-api-uri st)]
-    (println ::QUOTE-HISTORIC-PRICES " " st ", " dr)
     (GET uri
          {:params          {:api_token api-token
                             :fmt       "json"
@@ -89,70 +88,71 @@
         dr   [from to]]
     (->> symbol-tickers
          (pmap (fn [sym-tkr]
-                 (let [{t   :type
-                        :as r} @(quote-historic-prices api-token
-                                                       :symbol-ticker sym-tkr
-                                                       :date-range dr)]
+                 (let [{t            :type
+                        {ps :prices} :result
+                        :as          r} @(quote-historic-prices :api-token api-token
+                                                                :symbol-ticker sym-tkr
+                                                                :date-range dr)]
                    (if (= :success t)
-                     (update r :result #(-> %
-                                            :prices
-                                            last
-                                            (as-> x (assoc % :price x))
-                                            (dissoc :prices)))
+                     (update r :result #(-> % :prices last))
                      #_else r)))))))
 
 (defn- handle-latest-intraday-prices
   [api-token *result response]
-  #_(clojure.pprint/pprint {::HANDLE-LATEST-INTRADAy-PRICES response})
-  (let [response   (if (sequential? response)
-                     response
-                     #_else [response])
+  (let [response           (if (sequential? response)
+                             response
+                             #_else [response])
         {na     :na
-         intrad :intraday
-         :as    x} (reduce (fn [r {:keys [code timestamp open previousClose
-                                          high low volume change close]
-                                   :as   quote}]
-                             (if (number? close)
-                               (let [ptime (-> timestamp
-                                               (tick/new-duration :seconds)
-                                               tick/inst)
-                                     id    (str "intraday/" code "/" ptime)
-                                     p     {:price/id              id
-                                            :price/creation-id     id
-                                            :price/symbol-ticker   code
-                                            :price/symbol-provider :eodhd
-                                            :price/time            ptime
-                                            :price/type            :intraday
-                                            :price/open            open
-                                            :price/close           close
-                                            :price/high            high
-                                            :price/low             low
-                                            :price/volume          volume
-                                            :price/previous-close  previousClose
-                                            :price/change          change}]
-                                 (update r :intraday #(conj (or % #{}) {:type   :success
-                                                                        :result p})))
-                               #_else
-                               (update r :na #(conj (or % []) code))))
-                           {:intraday nil
-                            :na       nil}
-                           response)
-        ;;_          (clojure.pprint/pprint {::>>>-X x})
-        r          (if (seq na)
-                     (concat intrad (quote-last-historic-prices api-token na))
-                     intrad)]
+         intrad :intraday} (reduce (fn [r {:keys [code timestamp open previousClose
+                                                  high low volume change close]
+                                           :as   quote}]
+                                     (if (number? close)
+                                       (let [id    (str "intraday/" code "/" timestamp)
+                                             ptime (-> timestamp
+                                                       (tick/new-duration :seconds)
+                                                       tick/inst)
+                                             p     {:price/id              id
+                                                    :price/creation-id     id
+                                                    :price/symbol-ticker   code
+                                                    :price/symbol-provider :eodhd
+                                                    :price/time            ptime
+                                                    :price/type            :intraday
+                                                    :price/open            open
+                                                    :price/close           close
+                                                    :price/high            high
+                                                    :price/low             low
+                                                    :price/volume          volume
+                                                    :price/previous-close  previousClose
+                                                    :price/change          change}]
+                                         (update r :intraday #(conj (or % #{}) {:type   :success
+                                                                                :result p})))
+                                       #_else
+                                       (update r :na #(conj (or % []) code))))
+                                   {:intraday nil
+                                    :na       nil}
+                                   response)
+        r                  (if (seq na)
+                             (->> na
+                                  (quote-last-historic-prices api-token)
+                                  (map #(-> %
+                                            (assoc-in [:result :price/type]
+                                                      :intraday)
+                                            (assoc-in [:result :price/time]
+                                                      (tick/inst))))
+                                  (concat intrad))
+                             #_else intrad)]
     (deliver *result r)))
 
 (defn- handle-latest-intraday-err
   [*result sym-tkrs {:keys [status status-text]
                      :as   response}]
-  (clojure.pprint/pprint {::HANDLE-LATEST-INTRADAY-ERR response})
-  ;; TODO: Map each sym-tkr to an `:error`
-  (deliver *result
-           {:error       {:symbol-tickers sym-tkrs
-                          :response       response}
-            :description (str "Error occurred quoting live stock prices: " status " " status-text)
-            :type        :error}))
+  (->> sym-tkrs
+       (map (fn [st]
+              {:error       {:symbol-ticker st
+                             :response      response}
+               :description (str "Error occurred quoting live stock prices: " status " " status-text)
+               :type        :error}))
+       (deliver *result)))
 
 (defn- request-latest-intraday-prices
   [api-token sym-ticker-batches]
@@ -170,7 +170,6 @@
                               :error-handler   #(handle-latest-intraday-err *r sym-tkrs %)
                               :response-format :json
                               :keywords?       true}]]
-    ;;(clojure.pprint/pprint {::U uri, ::REQ req})
     (GET uri req)))
 
 (defn quote-latest-intraday-prices
@@ -183,7 +182,6 @@
                           (vec (partition-all batch-size symbol-tickers)))
             tkr-batches (mapv (fn [symbol-tickers] [symbol-tickers (promise)]) batches)
             *results    (mapv second tkr-batches)]
-        (println "About to request intradayprices")
         (request-latest-intraday-prices api-token tkr-batches)
         (let [prices (->> *results
                           (pmap #(deref %))

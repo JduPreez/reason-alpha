@@ -21,6 +21,10 @@
      :date-range    dt-range
      :type          type}))
 
+(defn- save-position-prices
+  []
+  nil)
+
 (defn get-position-prices
   [fn-repo-get-prices & {:keys [positions api-token]}]
   (let [today           (utils/time-at-beginning-of-day (tick/now))
@@ -54,19 +58,18 @@
         *fetched-intrad (eodhd/quote-latest-intraday-prices
                          :symbol-tickers not-stor-intrd
                          :api-token api-token)
-        #_#_*fetched    (->> not-stor-hist
-                             (pmap (fn [{t   :type
-                                         dr  :date-range
-                                         st  :symbol-ticker
-                                         :as price-info}]
-                                     (eodhd/quote-historic-prices
-                                      api-token
-                                      :symbol-ticker st
-                                      :date-range dr)))
-                             (concat *fetched-intrad))
-        #_#_fetched     (pmap #(deref %) *fetched)]
-    #_fetched
-    *fetched-intrad))
+        fetched         (-> (fn [{t   :type
+                                  dr  :date-range
+                                  st  :symbol-ticker
+                                  :as price-info}]
+                              (eodhd/quote-historic-prices
+                               :symbol-ticker st
+                               :date-range dr
+                               :api-token api-token))
+                            (pmap not-stor-hist)
+                            (conj *fetched-intrad)
+                            (as-> x (pmap #(deref %) x)))]
+    fetched))
 
 (comment
   (require '[reason-alpha.data.xtdb :as xtdb]
@@ -167,10 +170,9 @@
                         :long-short                      [:hedged ""],
                         :target-profit-percent           nil}]
         fn-get-prices #(repo/get-prices* db %)]
-    @(get-position-prices fn-get-prices
-                          :positions ps
-                          :api-token eodhd/dev-api-token))
-
+    (get-position-prices fn-get-prices
+                         :positions ps
+                         :api-token eodhd/dev-api-token))
 
   (quarter-bounds #inst "2023-01-21T12:12:00.000-00:00")
 
