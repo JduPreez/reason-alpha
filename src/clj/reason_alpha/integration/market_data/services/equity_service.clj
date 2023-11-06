@@ -6,7 +6,6 @@
 
 (defn- type+date-range
   [& {:keys [symbol-ticker time]}]
-  [symbol-ticker time]
   (let [today    (utils/time-at-beginning-of-day (tick/now))
         t        (or time (tick/now))
         date     (utils/time-at-beginning-of-day t)
@@ -27,56 +26,149 @@
 
 (defn get-position-prices
   [fn-repo-get-prices & {:keys [positions api-token]}]
-  (let [today           (utils/time-at-beginning-of-day (tick/now))
+  (let [today                     (utils/time-at-beginning-of-day (tick/now))
+        {without-ps :without-prices
+         with-ps    :with-prices} (reduce
+                                   (fn [r {:keys [open-price close-price] :as p}]
+                                     (if (and open-price close-price)
+                                       (update r :with-prices #(conj (or % []) p))
+                                       #_else (update r :without-prices #(conj (or % []) p))))
+                                   {}
+                                   positions)
+        types+date-ranges         (->> without-ps
+                                       (pmap (fn [{:keys [eodhd close-price open-price
+                                                          open-date close-date
+                                                          position-id position-creation-id]
+                                                   :as   p}]
+                                               (cond-> []
+                                                 (nil? open-price)
+                                                 , (conj (type+date-range
+                                                          :symbol-ticker eodhd
+                                                          :time open-date))
+                                                 (nil? close-price)
+                                                 , (conj (type+date-range
+                                                          :symbol-ticker eodhd
+                                                          :time close-date)))))
+                                       (apply concat))
         {stored :stored
          {not-stor-intrd :intraday
           not-stor-hist  :historic}
-         :not-stored}   (->> positions
-                             (pmap (fn [{:keys [eodhd close-price open-price
-                                                open-date close-date]}]
-                                     [(type+date-range :symbol-ticker eodhd
-                                                       :time open-date)
-                                      (type+date-range :symbol-ticker eodhd
-                                                       :time close-date)]))
-                             (apply concat)
-                             (reduce
-                              (fn [r {[from to] :date-range
-                                      st        :symbol-ticker
-                                      t         :type
-                                      :as       price-info}]
-                                (let [db-ps        (fn-repo-get-prices
-                                                    {:type          t
-                                                     :date-range    [from to]
-                                                     :symbol-ticker st})
-                                      store-status (if (seq db-ps) :stored
-                                                       #_else :not-stored)]
-                                  (update-in r [store-status t]
-                                             #(conj (or % #{})
-                                                    (if (= t :intraday)
-                                                      st #_else price-info)))))
-                              {}))
-        *fetched-intrad (eodhd/quote-latest-intraday-prices
-                         :symbol-tickers not-stor-intrd
-                         :api-token api-token)
-        fetched         (-> (fn [{t   :type
-                                  dr  :date-range
-                                  st  :symbol-ticker
-                                  :as price-info}]
-                              (eodhd/quote-historic-prices
-                               :symbol-ticker st
-                               :date-range dr
-                               :api-token api-token))
-                            (pmap not-stor-hist)
-                            (conj *fetched-intrad)
-                            (as-> x (pmap #(deref %) x)))]
-    fetched))
+         :not-stored}             (->> types+date-ranges
+                                       (reduce
+                                        (fn [r {dr  :date-range
+                                                st  :symbol-ticker
+                                                t   :type
+                                                :as price-info}]
+                                          (let [db-ps        (fn-repo-get-prices
+                                                              {:type          t
+                                                               :date-range    dr
+                                                               :symbol-ticker st})
+                                                store-status (if (seq db-ps) :stored
+                                                                 #_else :not-stored)]
+                                            (update-in r [store-status t]
+                                                       #(conj (or % #{})
+                                                              (if (= t :intraday)
+                                                                st #_else price-info)))))
+                                        {}))
+        *fetched-intrad           (eodhd/quote-latest-intraday-prices
+                                   :symbol-tickers not-stor-intrd
+                                   :api-token api-token)
+        idx-retrieved-ps          (-> (fn [{t   :type
+                                            dr  :date-range
+                                            st  :symbol-ticker
+                                            :as price-info}]
+                                        (eodhd/quote-historic-prices
+                                         :symbol-ticker st
+                                         :date-range dr
+                                         :api-token api-token))
+                                      (pmap not-stor-hist)
+                                      (conj *fetched-intrad)
+                                      (as-> *f (pmap
+                                                (fn [*fetched]
+                                                  ;; TODO: Handle/log errors
+                                                  (let [{r   :result
+                                                         err :error
+                                                         :as x} @*fetched
+                                                        r-items (if (:date-range r)
+                                                                  ;; Historic
+                                                                  (:prices r)
+                                                                  #_else ;; Intraday
+                                                                  (->> r
+                                                                       (map #(when (= (:type %) :success)
+                                                                               (:result %)))
+                                                                       (remove nil?)))]
+                                                    r-items)) *f))
+                                      (as-> x (apply concat x))
+                                      (concat stored)
+                                      (as-> x (pmap
+                                               (fn [{:price/keys [type time symbol-ticker close] :as p}]
+                                                 (if (= type :intraday)
+                                                   [[symbol-ticker type] close]
+                                                   #_else [[symbol-ticker type time] close])) x))
+                                      (as-> x (into {} x)))
+        complemented-ps           (->> without-ps
+                                       (pmap
+                                        (fn [{:keys [open-price open-date close-price
+                                                     close-date eodhd]
+                                              :as   pos}]
+                                          (when (= eodhd "SOL.JSE")
+                                            (clojure.pprint/pprint {:>>>-POS pos
+                                                                    :>>>-Pr  (get idx-retrieved-ps
+                                                                                  [eodhd :intraday])
+                                                                    :>>>     (and (nil? close-price)
+                                                                                  (nil? close-date))}))
+
+                                          (cond-> pos
+                                            (and (nil? open-price)
+                                                 (nil? open-date))
+                                            , (assoc :open-price
+                                                     (get idx-retrieved-ps
+                                                          [eodhd :intraday]))
+
+                                            (and (nil? open-price)
+                                                 (utils/today? open-date))
+                                            , (assoc :open-price
+                                                     (get idx-retrieved-ps
+                                                          [eodhd :intraday]))
+
+                                            (and (nil? open-price)
+                                                 open-date
+                                                 (not (utils/today? open-date)))
+                                            , (assoc :open-price
+                                                     (get idx-retrieved-ps
+                                                          [eodhd :historic open-date]))
+
+                                            (and (nil? close-price)
+                                                 (nil? close-date))
+                                            , (assoc :close-price
+                                                     (get idx-retrieved-ps
+                                                          [eodhd :intraday]))
+
+                                            (and (nil? close-price)
+                                                 (utils/today? close-date))
+                                            , (assoc :close-price
+                                                     (get idx-retrieved-ps
+                                                          [eodhd :intraday]))
+
+                                            (and (nil? close-price)
+                                                 close-date
+                                                 (not (utils/today? close-date)))
+                                            , (assoc :close-price
+                                                     (get idx-retrieved-ps
+                                                          [eodhd :historic close-date])))))
+                                       (concat with-ps))]
+    complemented-ps))
 
 (comment
+
   (require '[reason-alpha.data.xtdb :as xtdb]
            '[reason-alpha.model.common :as common]
            '[reason-alpha.infrastructure.auth :as auth]
            '[reason-alpha.integration.market-data.data.equity-repository :as repo]
-           '[reason-alpha.data.model :as data.model :refer [DataBase]])
+           '[reason-alpha.data.model :as data.model :refer [DataBase]]
+           '[tick.alpha.interval :as tick.i])
+
+  
 
   (let [db-nm      "dev-market-data"
         data-dir   "data/market-data"
@@ -91,7 +183,9 @@
 
   (let [ps            [{:eodhd                           "EL"
                         :open-date                       #inst "2023-08-24T00:00:00.000-00:00",
+                        :open-price                      nil,
                         :open-total-acc-currency         nil,
+                        :close-price                     763.7,
                         :trade-pattern
                         [#uuid "018a2c43-7a96-11a5-ab21-06f37976bbf8" "Breakout"],
                         :target-profit-acc-currency      nil,
@@ -100,7 +194,6 @@
                         :holding                         [#uuid "018a26c9-4b50-9f3f-d4ae-0206dd209197" "Adyen"],
                         :profit-loss-amount              -21.729999999999563,
                         :open-total                      31333.43,
-                        :open-price                      764.23,
                         :profit-loss-percent             "-0.07%",
                         :stop-loss                       -31333.43,
                         :holding-currency                :EUR,
@@ -108,7 +201,6 @@
                         :stop-loss-percent               "-100.0%",
                         :position-creation-id            #uuid "d561b5c7-57ab-49b0-84ce-2d04b78f588c",
                         :status                          :open,
-                        :close-price                     763.7,
                         :position-id                     #uuid "018a2cac-c474-3ec7-962c-b5b285877385",
                         :holding-position-id             #uuid "018a2caa-ba6e-c9a5-8d51-38553003af1f",
                         :holding-id                      #uuid "018a26c9-4b50-9f3f-d4ae-0206dd209197",
@@ -119,15 +211,16 @@
                        {:eodhd                           "SOL.JSE"
                         :open-date                       #inst "2023-03-24T00:00:00.000-00:00",
                         :open-total-acc-currency         nil,
+                        :open-price                      nil,
+                        :close-price                     nil,
                         :trade-pattern
                         [#uuid "018a2c43-7a96-11a5-ab21-06f37976bbf8" "Breakout"],
                         :target-profit-acc-currency      nil,
                         :stop-loss-acc-currency          nil,
                         :target-profit                   nil,
-                        :holding                         [#uuid "018a26c9-4b50-9f3f-d4ae-0206dd209197" "Adyen"],
+                        :holding                         [#uuid "018a26c9-4b50-9f3f-d4ae-0206dd209197" "Sasol"],
                         :profit-loss-amount              -21.729999999999563,
                         :open-total                      31333.43,
-                        :open-price                      764.23,
                         :profit-loss-percent             "-0.07%",
                         :stop-loss                       -31333.43,
                         :holding-currency                :EUR,
@@ -135,7 +228,6 @@
                         :stop-loss-percent               "-100.0%",
                         :position-creation-id            #uuid "cf9da077-0d0c-40d6-b570-f3edd056ca79",
                         :status                          :open,
-                        :close-price                     763.7,
                         :position-id                     #uuid "4b463c08-c0ce-4178-b5b8-1ebce5b7e53a",
                         :holding-position-id             #uuid "018a2caa-ba6e-c9a5-8d51-38553003af1f",
                         :holding-id                      #uuid "018a26c9-4b50-9f3f-d4ae-0206dd209197",
@@ -146,13 +238,14 @@
                        {:eodhd                           "ADYEN.AS"
                         :open-date                       #inst "2023-08-24T00:00:00.000-00:00",
                         :open-total-acc-currency         nil,
+                        :open-price                      764.23,
+                        :close-price                     773.4,
                         :target-profit-acc-currency      nil,
                         :stop-loss-acc-currency          nil,
                         :target-profit                   nil,
                         :holding                         [#uuid "018a465e-82bd-de65-2623-02bb30e1a1f6" "Multiple"],
                         :profit-loss-amount              375.9708007812478,
                         :open-total                      31333.42919921875,
-                        :open-price                      764.23,
                         :profit-loss-percent             "1.2%",
                         :stop-loss                       -31333.42919921875,
                         :holding-currency                :SGD,
@@ -161,7 +254,6 @@
                         :sub-positions                   '(#uuid "d561b5c7-57ab-49b0-84ce-2d04b78f588c"),
                         :position-creation-id            #uuid "3cee7b50-68a9-4fa3-b9eb-5464068ad465",
                         :status                          :open,
-                        :close-price                     773.4,
                         :close-date                      nil,
                         :position-id                     #uuid "018a2caa-ba6e-c9a5-8d51-38553003af1f",
                         :holding-id                      #uuid "018a465e-82bd-de65-2623-02bb30e1a1f6",
@@ -174,7 +266,6 @@
                          :positions ps
                          :api-token eodhd/dev-api-token))
 
-  (quarter-bounds #inst "2023-01-21T12:12:00.000-00:00")
 
 
   (-> "2023-01"
@@ -189,6 +280,8 @@
       (tick/<< (tick/new-duration 1 :days))
       (tick/in "UTC")
       tick/inst)
+
+  (-> (tick/inst) tick/instant tick/long)
 
   (let [q-start-month-nr (-> 1
                              dec

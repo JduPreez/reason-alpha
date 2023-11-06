@@ -103,42 +103,50 @@
                              response
                              #_else [response])
         {na     :na
-         intrad :intraday} (reduce (fn [r {:keys [code timestamp open previousClose
-                                                  high low volume change close]
-                                           :as   quote}]
-                                     (if (number? close)
-                                       (let [id    (str "intraday/" code "/" timestamp)
-                                             ptime (-> timestamp
-                                                       (tick/new-duration :seconds)
-                                                       tick/inst)
-                                             p     {:price/id              id
-                                                    :price/creation-id     id
-                                                    :price/symbol-ticker   code
-                                                    :price/symbol-provider :eodhd
-                                                    :price/time            ptime
-                                                    :price/type            :intraday
-                                                    :price/open            open
-                                                    :price/close           close
-                                                    :price/high            high
-                                                    :price/low             low
-                                                    :price/volume          volume
-                                                    :price/previous-close  previousClose
-                                                    :price/change          change}]
-                                         (update r :intraday #(conj (or % #{}) {:type   :success
-                                                                                :result p})))
-                                       #_else
-                                       (update r :na #(conj (or % []) code))))
-                                   {:intraday nil
-                                    :na       nil}
-                                   response)
+         intrad :intraday} (reduce
+                            (fn [r {:keys [code timestamp open previousClose
+                                           high low volume change close]
+                                    :as   quote}]
+                              (if (number? close)
+                                (let [id    (str "intraday/" code "/" timestamp)
+                                      ptime (-> timestamp
+                                                (tick/new-duration :seconds)
+                                                tick/inst)
+                                      p     {:price/id              id
+                                             :price/creation-id     id
+                                             :price/symbol-ticker   code
+                                             :price/symbol-provider :eodhd
+                                             :price/time            ptime
+                                             :price/type            :intraday
+                                             :price/open            open
+                                             :price/close           close
+                                             :price/high            high
+                                             :price/low             low
+                                             :price/volume          volume
+                                             :price/previous-close  previousClose
+                                             :price/change          change}]
+                                  (update r :intraday #(conj (or % #{}) {:type   :success
+                                                                         :result p})))
+                                #_else
+                                (update r :na #(conj (or % []) code))))
+                            {:intraday nil
+                             :na       nil}
+                            response)
         r                  (if (seq na)
                              (->> na
                                   (quote-last-historic-prices api-token)
-                                  (map #(-> %
-                                            (assoc-in [:result :price/type]
-                                                      :intraday)
-                                            (assoc-in [:result :price/time]
-                                                      (tick/inst))))
+                                  (pmap (fn [{{tkr :price/symbol-ticker} :result
+                                              :as                        r}]
+                                          (let [n  (tick/inst)
+                                                id (->> n
+                                                        tick/instant
+                                                        tick/long
+                                                        (str "intraday/" tkr "/"))]
+                                            (update r :result
+                                                    #(merge % {:price/id          id
+                                                               :price/creation-id id
+                                                               :price/type        :intraday
+                                                               :price/time        n})))))
                                   (concat intrad))
                              #_else intrad)]
     (deliver *result r)))
@@ -176,28 +184,33 @@
   [& {:keys [api-token symbol-tickers batch-size]}]
   (let [*many->1result (promise)]
     (future
-      (let [batch-size  (or batch-size 2)
-            batches     (if (< (count symbol-tickers) batch-size)
-                          [symbol-tickers]
-                          (vec (partition-all batch-size symbol-tickers)))
-            tkr-batches (mapv (fn [symbol-tickers] [symbol-tickers (promise)]) batches)
-            *results    (mapv second tkr-batches)]
-        (request-latest-intraday-prices api-token tkr-batches)
-        (let [prices (->> *results
-                          (pmap #(deref %))
-                          (apply concat))
-              rtype  (cond
-                       (every? #(= (:type %) :success)
-                               prices)
-                       , :success
-                       (every? #(= (:type %) :error)
-                               prices)
-                       , :error
+      (if (seq symbol-tickers)
+        (let [batch-size  (or batch-size 2)
+              batches     (if (< (count symbol-tickers) batch-size)
+                            [symbol-tickers]
+                            (vec (partition-all batch-size symbol-tickers)))
+              tkr-batches (mapv (fn [symbol-tickers] [symbol-tickers (promise)]) batches)
+              *results    (mapv second tkr-batches)]
+          (request-latest-intraday-prices api-token tkr-batches)
+          (let [prices (->> *results
+                            (pmap #(deref %))
+                            (apply concat))
+                rtype  (cond
+                         (every? #(= (:type %) :success)
+                                 prices)
+                         , :success
+                         (every? #(= (:type %) :error)
+                                 prices)
+                         , :error
 
-                       :else :some-success-err)]
-          (deliver *many->1result {:type     rtype
-                                   :result   prices
-                                   :nr-items (count prices)}))))
+                         :else :some-success-err)]
+            (deliver *many->1result {:type     rtype
+                                     :result   prices
+                                     :nr-items (count prices)})))
+        #_else (deliver *many->1result {:type     :warn
+                                        :description "No symbol-tickers specified"
+                                        :result   []
+                                        :nr-items 0})))
     *many->1result))
 
 (comment

@@ -173,3 +173,9 @@
       tick/beginning
       (tick/in "UTC")
       tick/inst))
+
+(defn today?
+  [t]
+  (if t
+    (= (tick/date t) (tick/date (tick/inst)))
+    false))
