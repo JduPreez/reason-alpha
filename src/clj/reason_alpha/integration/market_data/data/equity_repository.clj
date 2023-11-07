@@ -7,14 +7,16 @@
             [reason-alpha.utils :as utils]
             [tick.core :as tick]))
 
-(defn- fix-time [{t :price/time :as p}]
-  (assoc p
-         :price/time (utils/time-at-beginning-of-day t)))
+(defn- fix-time
+  [{tm :price/time, tp :price/type, :as pr}]
+  (if (= :historic tp)
+    (assoc pr :price/time (utils/time-at-beginning-of-day tm))
+    #_else pr))
 
 (defn save!
   [db prices]
   (->> prices
-       (map fix-time)
+       (pmap fix-time)
        (data.model/save-all! db)))
 
 (defn get-prices*
