@@ -1,4 +1,5 @@
 (ns circleci-test.config)
 
 {:selectors {:all         (constantly true)
-             :integration :integration}}
+             :integration :integration
+             :default     (complement :integration) }}

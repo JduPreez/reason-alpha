@@ -3,7 +3,7 @@
                     [clojure.java.io :as io]
                     [clojure.string :as str]
                     [cuid2.core :refer [cuid]]
-                    [taoensso.timbre :as timbre :refer-macros (tracef debugf infof warnf errorf)]
+                    [taoensso.timbre :as timbre :refer (tracef debugf infof warnf errorf)]
                     [tick.alpha.interval :as t.i]
                     [tick.core :as tick])
 
@@ -60,18 +60,21 @@
   (into {} (for [[k v] item]
              [(keyword k) v])))
 
-#?(:cljs
-   (defn log
-     [location {:keys [type description error] :as log}]
-     (let [l {location log}]
-       (case type
-         :error
-         , (do (errorf "%s %s" location description)
-               (cljs.pprint/pprint {:log/error l}))
-         :warn
-         , (do (warnf "%s %s" location description)
-               (cljs.pprint/pprint {:log/warn l}))
-         (cljs.pprint/pprint {:log/info l})))))
+(defn log
+  [location {:keys [type description error] :as log-data}]
+  (let [l {location log-data}]
+    (case type
+      (:error :failed-validation)
+      , (do (errorf "%s %s" "" "" location description)
+            #?(:cljs (cljs.pprint/pprint {:log/error l})
+               :clj  (clojure.pprint/pprint {:log/error l})))
+      :warn
+      , (do (warnf "%s %s" "" "" location description)
+            #?(:cljs (cljs.pprint/pprint {:log/warn l})
+               :clj  (clojure.pprint/pprint {:log/warn l}))
+            )
+      #?(:cljs (cljs.pprint/pprint {:log/info l})
+         :clj  (clojure.pprint/pprint {:log/info l})))))
 
 #?(:clj
    (defn list-resource-files [dir file-type]

@@ -73,7 +73,7 @@
   [*val]
   [:div.invalid-feedback
    [:<>
-    (for [d (:description @*val)]
+    (for [d (:error @*val)]
       ^{:key (js/encodeURI "invalid-feedback-component" d)}
       [:span d])]])
 

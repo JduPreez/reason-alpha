@@ -4,6 +4,7 @@
             [reason-alpha.integration.market-data.model.fin-instruments :as fin-instr]
             [reason-alpha.model.core :as model]
             [reason-alpha.model.mapping :as mapping]
+            [reason-alpha.model.validation :as v]
             [reason-alpha.utils :as utils]
             [tick.core :as tick]))
 
@@ -15,9 +16,16 @@
 
 (defn save!
   [db prices]
-  (->> prices
-       (pmap fix-time)
-       (data.model/save-all! db)))
+  (if-let [{d   :description
+            :as vres} (-> ::fin-instr/price
+                          model/get-def
+                          (v/validate prices))]
+    (do
+      (utils/log ::save! vres)
+      (throw (ex-info d vres)))
+      #_else (->> prices
+                  (pmap fix-time)
+                  (data.model/save-all! db))))
 
 (defn get-prices*
   [db {:keys [type symbol-ticker date-range]}]

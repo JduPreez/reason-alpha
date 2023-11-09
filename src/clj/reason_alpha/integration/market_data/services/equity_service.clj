@@ -5,8 +5,8 @@
             [reason-alpha.utils :as utils]
             [tick.core :as tick]))
 
-(def ^:dynamic *fn-repo-get-prices*
-  repo/get-prices*) ;; TODO: Change to cached version
+(def ^:dynamic *intraday-valid-duration*
+  (tick/new-duration 3 :hours))
 
 (def ^:dynamic *fn-quote-latest-intraday-prices*
   eodhd/quote-latest-intraday-prices)
@@ -14,10 +14,11 @@
 (def ^:dynamic *fn-quote-historic-prices*
   eodhd/quote-historic-prices)
 
-(declare save-position-prices)
+(def ^:dynamic *fn-repo-get-prices*
+  (constantly []))
 
-(def ^:dynamic *fn-save-position-prices*
-  save-position-prices)
+(def ^:dynamic *fn-repo-save!*
+  (constantly nil))
 
 (defn- type+date-range
   [& {:keys [symbol-ticker time]}]
@@ -37,8 +38,18 @@
 
 (defn- save-position-prices
   [idx-retrieved-prs]
-  (future
-    (repo/save! (vals idx-retrieved-prs))))
+  ;; TODO: Log errors
+  (->> idx-retrieved-prs
+       (map (fn [[_ {:price/keys [type] :as pr}]]
+              (println pr)
+              (if (= :intraday type)
+                (assoc pr :reason-alpha.model/valid-time
+                       {:from (tick/<< (tick/inst)
+                                       (tick/new-duration 2 :minutes))
+                        :to   (tick/>> (tick/inst)
+                                       *intraday-valid-duration*)})
+                #_else pr)))
+       *fn-repo-save!*))
 
 (defn get-position-prices
   [& {:keys [positions api-token]}]
@@ -122,7 +133,8 @@
                                                    [[symbol-ticker type] p]
                                                    #_else [[symbol-ticker type time] p])) x))
                                       (as-> x (into {} x)))
-        _                         (*fn-save-position-prices* idx-retrieved-prs)
+        _                         (save-position-prices idx-retrieved-prs)
+        _                         (println ::->>>-1)
         complemented-ps           (->> without-ps
                                        (pmap
                                         (fn [{:keys [open-price open-date close-price
