@@ -234,7 +234,8 @@
     (.save! this entity nil))
 
   (save-all! [this entities {:keys [role]}]
-    (let [es (map #(vec %) entities)]
+    (let [es (map #(identity [%]) entities)]
+      (clojure.pprint/pprint {::-%%% es})
       (fn-save!
        es
        :fn-get-ctx fn-get-ctx

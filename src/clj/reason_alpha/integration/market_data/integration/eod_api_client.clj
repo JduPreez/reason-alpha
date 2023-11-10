@@ -60,6 +60,7 @@
   [& {st               :symbol-ticker
       [from to :as dr] :date-range
       api-token        :api-token}]
+  (println ::quote-historic-prices)
   (let [*res (promise)
         uri  (format @*historic-eod-api-uri st)]
     (GET uri
@@ -77,8 +78,9 @@
           :keywords?       true})
     *res))
 
-(defn- quote-last-historic-prices
+(defn quote-last-historic-prices
   [api-token symbol-tickers]
+  (println ::quote-last-historic-prices)
   (let [n    (tick/now)
         to   (utils/time-at-beginning-of-day n)
         from (->> :days
@@ -182,6 +184,7 @@
 
 (defn quote-latest-intraday-prices
   [& {:keys [api-token symbol-tickers batch-size]}]
+  (println ::quote-latest-intraday-prices)
   (let [*many->1result (promise)]
     (future
       (if (seq symbol-tickers)
@@ -207,10 +210,10 @@
             (deliver *many->1result {:type     rtype
                                      :result   prices
                                      :nr-items (count prices)})))
-        #_else (deliver *many->1result {:type     :warn
+        #_else (deliver *many->1result {:type        :warn
                                         :description "No symbol-tickers specified"
-                                        :result   []
-                                        :nr-items 0})))
+                                        :result      []
+                                        :nr-items    0})))
     *many->1result))
 
 (comment

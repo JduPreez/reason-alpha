@@ -19,13 +19,14 @@
   (if-let [{d   :description
             :as vres} (-> ::fin-instr/price
                           model/get-def
+                          (as-> d (conj [:sequential] d))
                           (v/validate prices))]
     (do
       (utils/log ::save! vres)
       (throw (ex-info d vres)))
-      #_else (->> prices
-                  (pmap fix-time)
-                  (data.model/save-all! db))))
+    #_else (-> fix-time
+               (pmap prices)
+               (as-> x (data.model/save-all! db x {:role :system})))))
 
 (defn get-prices*
   [db {:keys [type symbol-ticker date-range]}]

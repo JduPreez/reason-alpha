@@ -3,7 +3,9 @@
             [reason-alpha.integration.market-data.data.equity-repository :as repo]
             [reason-alpha.integration.market-data.integration.eod-api-client :as eodhd]
             [reason-alpha.utils :as utils]
-            [tick.core :as tick]))
+            [tick.core :as tick]
+            [reason-alpha.data.model :as data.model]
+            [xtdb.api :as xt]))
 
 (def ^:dynamic *intraday-valid-duration*
   (tick/new-duration 3 :hours))
@@ -36,23 +38,24 @@
      :date-range    dt-range
      :type          type}))
 
+;; TODO: Get `inst` without milliseconds
 (defn- save-position-prices
   [idx-retrieved-prs]
   ;; TODO: Log errors
-  (->> idx-retrieved-prs
-       (map (fn [[_ {:price/keys [type] :as pr}]]
-              (println pr)
-              (if (= :intraday type)
-                (assoc pr :reason-alpha.model/valid-time
-                       {:from (tick/<< (tick/inst)
-                                       (tick/new-duration 2 :minutes))
-                        :to   (tick/>> (tick/inst)
-                                       *intraday-valid-duration*)})
-                #_else pr)))
-       *fn-repo-save!*))
+  (future
+    (->> idx-retrieved-prs
+         (map (fn [[_ {:price/keys [type] :as pr}]]
+                (if (= :intraday type)
+                  (assoc pr :reason-alpha.model/valid-time
+                         {:from #inst "2023-11-10T14:11:52" #_(tick/<< (tick/inst)
+                                         (tick/new-duration 2 :minutes))
+                          :to  #inst "2023-11-12T14:11:52"  #_(tick/>> (tick/inst)
+                                         *intraday-valid-duration*)})
+                  #_else pr)))
+         *fn-repo-save!*)))
 
 (defn get-position-prices
-  [& {:keys [positions api-token]}]
+  [& {:keys [positions api-token await-save-prices?]}]
   (let [today                     (utils/time-at-beginning-of-day (tick/now))
         {without-ps :without-prices
          with-ps    :with-prices} (reduce
@@ -133,8 +136,7 @@
                                                    [[symbol-ticker type] p]
                                                    #_else [[symbol-ticker type time] p])) x))
                                       (as-> x (into {} x)))
-        _                         (save-position-prices idx-retrieved-prs)
-        _                         (println ::->>>-1)
+        *save-pos-prs-res         (save-position-prices idx-retrieved-prs)
         complemented-ps           (->> without-ps
                                        (pmap
                                         (fn [{:keys [open-price open-date close-price
@@ -185,6 +187,9 @@
                                                          (get [eodhd :historic close-date])
                                                          :price/close)))))
                                        (concat with-ps))]
+    ;; Mostly for testing we want to wait here, so that exceptions
+    ;; can break tests.
+    (when await-save-prices? @*save-pos-prs-res)
     complemented-ps))
 
 (comment
@@ -194,7 +199,8 @@
            '[reason-alpha.infrastructure.auth :as auth]
            '[reason-alpha.integration.market-data.data.equity-repository :as repo]
            '[reason-alpha.data.model :as data.model :refer [DataBase]]
-           '[tick.alpha.interval :as tick.i])
+           '[tick.alpha.interval :as tick.i]
+           '[xtdb.api :as xt])
 
 
   (let [db-nm      "dev-market-data"
@@ -204,15 +210,16 @@
         db         (xtdb/db :data-dir data-dir
                             :db-name db-nm
                             :fn-get-ctx fn-get-ctx
-                            :fn-authorize fn-authz)]
-    (data.model/connect db)
+                            :fn-authorize fn-authz)
+        db-inst    (data.model/connect db)]
+    (def db-inst db-inst)
     (def db db))
 
-  (let [ps [{:eodhd                           "EL"
+  (let [ps [{:eodhd                           "AMZN"
              :open-date                       #inst "2023-08-24T00:00:00.000-00:00",
              :open-price                      nil,
              :open-total-acc-currency         nil,
-             :close-price                     763.7,
+             :close-price                     nil,
              :trade-pattern
              [#uuid "018a2c43-7a96-11a5-ab21-06f37976bbf8" "Breakout"],
              :target-profit-acc-currency      nil,
@@ -235,7 +242,7 @@
              :profit-loss-amount-acc-currency nil,
              :long-short                      [:long ""],
              :target-profit-percent           nil}
-            {:eodhd                           "SOL.JSE"
+            #_{:eodhd                           "SOL.JSE"
              :open-date                       #inst "2023-03-24T00:00:00.000-00:00",
              :open-total-acc-currency         nil,
              :open-price                      nil,
@@ -262,7 +269,7 @@
              :profit-loss-amount-acc-currency nil,
              :long-short                      [:long ""],
              :target-profit-percent           nil}
-            {:eodhd                           "ADYEN.AS"
+            #_{:eodhd                           "ADYEN.AS"
              :open-date                       #inst "2023-08-24T00:00:00.000-00:00",
              :open-total-acc-currency         nil,
              :open-price                      764.23,
@@ -288,11 +295,25 @@
              :profit-loss-amount-acc-currency nil,
              :long-short                      [:hedged ""],
              :target-profit-percent           nil}]]
-    #_(mapv #(into (sorted-map) %) ps)
-    (get-position-prices :positions ps
-                         :api-token eodhd/dev-api-token))
+    (binding [*fn-repo-save!*      #(repo/save! db %)
+              *fn-repo-get-prices* #(repo/get-prices* db %)]
+      (get-position-prices :positions          ps
+                           :api-token          eodhd/dev-api-token
+                           :await-save-prices? true)))
 
+  (instance? java.util.Date #inst "2023-11-10T14:11:52")
 
+  (-> #inst "2023-11-10T14:11:52.139000000-00:00"
+      tick/date
+      tick/instant)
+
+  (xt/q (xt/db db-inst)
+        '{:find  [(pull e [*])]
+          :where [[e :price/id]]})
+
+  (xt/valid-time (xt/db db-inst))
+
+  (data.model/disconnect db)
 
   (-> "2023-01"
       tick/year-month
