@@ -16,10 +16,10 @@
 
 (defn save!
   [db prices]
+  (clojure.pprint/pprint {::->>>-S prices})
   (if-let [{d   :description
-            :as vres} (-> ::fin-instr/price
+            :as vres} (-> ::fin-instr/prices
                           model/get-def
-                          (as-> d (conj [:sequential] d))
                           (v/validate prices))]
     (do
       (utils/log ::save! vres)
@@ -29,11 +29,12 @@
                (as-> x (data.model/save-all! db x {:role :system})))))
 
 (defn get-prices*
-  [db {:keys [type symbol-ticker date-range]}]
-  ;; Now fetch all prices for the symbol and where the `:price/year-quarter` match
+  [db {:keys [type symbol-ticker date-range] :as x}]
+  (clojure.pprint/pprint {::->>>-GP* x})
   (->> {:spec '{:find  [(pull e [*])]
                 :in    [t st [from to]]
-                :where [[e :price/type t]
+                :where [[e :price/id]
+                        [e :price/type t]
                         [e :price/symbol-ticker st]
                         [e :price/time tm]
                         [(>= tm from)]

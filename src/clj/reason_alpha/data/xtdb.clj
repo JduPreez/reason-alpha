@@ -152,19 +152,22 @@
 
 (defn- xtdb-save!
   [[e1 :as entities] & {:keys [*db-node fn-get-ctx role fn-authorize]}]
-  (let [id-k        (mutils/some-ns-key :id e1)
-        fn-get-acc  #(get-account fn-get-ctx @*db-node)
-        ents-owners (when id-k (entities-owners @*db-node entities))
-        ents        (fn-authorize {:fn-get-account  fn-get-acc
-                                   :crud            (if id-k [:update] [:create])
-                                   :role            role
-                                   :entities-owners ents-owners}
-                                  entities)]
-    (when (seq ents)
-      (let [ents-with-ids (maybe-add-id ents)]
-        (xt/submit-tx @*db-node
-                      (xtdb-puts ents-with-ids))
-        ents-with-ids))))
+  (if-not (seq entities)
+    entities
+    #_else
+    (let [id-k        (mutils/some-ns-key :id e1)
+          fn-get-acc  #(get-account fn-get-ctx @*db-node)
+          ents-owners (when id-k (entities-owners @*db-node entities))
+          ents        (fn-authorize {:fn-get-account  fn-get-acc
+                                     :crud            (if id-k [:update] [:create])
+                                     :role            role
+                                     :entities-owners ents-owners}
+                                    entities)]
+      (when (seq ents)
+        (let [ents-with-ids (maybe-add-id ents)]
+          (xt/submit-tx @*db-node
+                        (xtdb-puts ents-with-ids))
+          ents-with-ids)))))
 
 (defn- xtdb-delete!
   [db-node {:keys [spec] :as del-command}]

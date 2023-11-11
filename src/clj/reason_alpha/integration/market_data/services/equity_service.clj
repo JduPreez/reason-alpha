@@ -5,7 +5,8 @@
             [reason-alpha.utils :as utils]
             [tick.core :as tick]
             [reason-alpha.data.model :as data.model]
-            [xtdb.api :as xt]))
+            [xtdb.api :as xt]
+            [malli.core :as m]))
 
 (def ^:dynamic *intraday-valid-duration*
   (tick/new-duration 3 :hours))
@@ -46,11 +47,14 @@
     (->> idx-retrieved-prs
          (map (fn [[_ {:price/keys [type] :as pr}]]
                 (if (= :intraday type)
-                  (assoc pr :reason-alpha.model/valid-time
-                         {:from #inst "2023-11-10T14:11:52" #_(tick/<< (tick/inst)
-                                         (tick/new-duration 2 :minutes))
-                          :to  #inst "2023-11-12T14:11:52"  #_(tick/>> (tick/inst)
-                                         *intraday-valid-duration*)})
+                  (let [now (tick/inst)]
+                    (assoc pr :reason-alpha.model/valid-time
+                           {:from (-> now
+                                      (tick/<< (tick/new-duration 2 :minutes))
+                                      utils/inst->date-hh-mm-ss)
+                            :to   (-> now
+                                      (tick/>> *intraday-valid-duration*)
+                                      utils/inst->date-hh-mm-ss)}))
                   #_else pr)))
          *fn-repo-save!*)))
 
@@ -100,10 +104,10 @@
                                                               (if (= t :intraday)
                                                                 st #_else price-info)))))
                                         {}))
-        *fetched-intrad           (*fn-quote-latest-intraday-prices*
+        #_#_*fetched-intrad           (*fn-quote-latest-intraday-prices*
                                    :symbol-tickers not-stor-intrd
                                    :api-token api-token)
-        idx-retrieved-prs         (-> (fn [{t   :type
+        #_#_idx-retrieved-prs         (-> (fn [{t   :type
                                             dr  :date-range
                                             st  :symbol-ticker
                                             :as price-info}]
@@ -128,16 +132,16 @@
                                                                                (:result %)))
                                                                        (remove nil?)))]
                                                     r-items)) *f))
-                                      (as-> x (apply concat x))
-                                      (concat stored)
-                                      (as-> x (pmap
-                                               (fn [{:price/keys [type time symbol-ticker] :as p}]
-                                                 (if (= type :intraday)
-                                                   [[symbol-ticker type] p]
-                                                   #_else [[symbol-ticker type time] p])) x))
-                                      (as-> x (into {} x)))
-        *save-pos-prs-res         (save-position-prices idx-retrieved-prs)
-        complemented-ps           (->> without-ps
+                                      #_(as-> x (apply concat x))
+                                      #_(concat stored)
+                                      #_(as-> x (pmap
+                                                 (fn [{:price/keys [type time symbol-ticker] :as p}]
+                                                   (if (= type :intraday)
+                                                     [[symbol-ticker type] p]
+                                                     #_else [[symbol-ticker type time] p])) x))
+                                      #_(as-> x (into {} x)))
+        #_#_*save-pos-prs-res     (save-position-prices idx-retrieved-prs)
+        #_#_complemented-ps       (->> without-ps
                                        (pmap
                                         (fn [{:keys [open-price open-date close-price
                                                      close-date eodhd]
@@ -189,8 +193,9 @@
                                        (concat with-ps))]
     ;; Mostly for testing we want to wait here, so that exceptions
     ;; can break tests.
-    (when await-save-prices? @*save-pos-prs-res)
-    complemented-ps))
+    #_(when await-save-prices? @*save-pos-prs-res)
+    #_complemented-ps
+    stored))
 
 (comment
 
@@ -200,8 +205,11 @@
            '[reason-alpha.integration.market-data.data.equity-repository :as repo]
            '[reason-alpha.data.model :as data.model :refer [DataBase]]
            '[tick.alpha.interval :as tick.i]
-           '[xtdb.api :as xt])
+           '[xtdb.api :as xt]
+           '[malli.provider :as mp]
+           '[malli.core :as m])
 
+  (m/validate [:sequential [:maybe [:map [:id string?]]]] '())
 
   (let [db-nm      "dev-market-data"
         data-dir   "data/market-data"
@@ -243,75 +251,83 @@
              :long-short                      [:long ""],
              :target-profit-percent           nil}
             #_{:eodhd                           "SOL.JSE"
-             :open-date                       #inst "2023-03-24T00:00:00.000-00:00",
-             :open-total-acc-currency         nil,
-             :open-price                      nil,
-             :close-price                     nil,
-             :trade-pattern
-             [#uuid "018a2c43-7a96-11a5-ab21-06f37976bbf8" "Breakout"],
-             :target-profit-acc-currency      nil,
-             :stop-loss-acc-currency          nil,
-             :target-profit                   nil,
-             :holding                         [#uuid "018a26c9-4b50-9f3f-d4ae-0206dd209197" "Sasol"],
-             :profit-loss-amount              -21.729999999999563,
-             :open-total                      31333.43,
-             :profit-loss-percent             "-0.07%",
-             :stop-loss                       -31333.43,
-             :holding-currency                :EUR,
-             :stop                            0,
-             :stop-loss-percent               "-100.0%",
-             :position-creation-id            #uuid "cf9da077-0d0c-40d6-b570-f3edd056ca79",
-             :status                          :open,
-             :position-id                     #uuid "4b463c08-c0ce-4178-b5b8-1ebce5b7e53a",
-             :holding-position-id             #uuid "018a2caa-ba6e-c9a5-8d51-38553003af1f",
-             :holding-id                      #uuid "018a26c9-4b50-9f3f-d4ae-0206dd209197",
-             :quantity                        5,
-             :profit-loss-amount-acc-currency nil,
-             :long-short                      [:long ""],
-             :target-profit-percent           nil}
+               :open-date                       #inst "2023-03-24T00:00:00.000-00:00",
+               :open-total-acc-currency         nil,
+               :open-price                      nil,
+               :close-price                     nil,
+               :trade-pattern
+               [#uuid "018a2c43-7a96-11a5-ab21-06f37976bbf8" "Breakout"],
+               :target-profit-acc-currency      nil,
+               :stop-loss-acc-currency          nil,
+               :target-profit                   nil,
+               :holding                         [#uuid "018a26c9-4b50-9f3f-d4ae-0206dd209197" "Sasol"],
+               :profit-loss-amount              -21.729999999999563,
+               :open-total                      31333.43,
+               :profit-loss-percent             "-0.07%",
+               :stop-loss                       -31333.43,
+               :holding-currency                :EUR,
+               :stop                            0,
+               :stop-loss-percent               "-100.0%",
+               :position-creation-id            #uuid "cf9da077-0d0c-40d6-b570-f3edd056ca79",
+               :status                          :open,
+               :position-id                     #uuid "4b463c08-c0ce-4178-b5b8-1ebce5b7e53a",
+               :holding-position-id             #uuid "018a2caa-ba6e-c9a5-8d51-38553003af1f",
+               :holding-id                      #uuid "018a26c9-4b50-9f3f-d4ae-0206dd209197",
+               :quantity                        5,
+               :profit-loss-amount-acc-currency nil,
+               :long-short                      [:long ""],
+               :target-profit-percent           nil}
             #_{:eodhd                           "ADYEN.AS"
-             :open-date                       #inst "2023-08-24T00:00:00.000-00:00",
-             :open-total-acc-currency         nil,
-             :open-price                      764.23,
-             :close-price                     773.4,
-             :target-profit-acc-currency      nil,
-             :stop-loss-acc-currency          nil,
-             :target-profit                   nil,
-             :holding                         [#uuid "018a465e-82bd-de65-2623-02bb30e1a1f6" "Multiple"],
-             :profit-loss-amount              375.9708007812478,
-             :open-total                      31333.42919921875,
-             :profit-loss-percent             "1.2%",
-             :stop-loss                       -31333.42919921875,
-             :holding-currency                :SGD,
-             :stop                            0.0,
-             :stop-loss-percent               "-100.0%",
-             :sub-positions                   '(#uuid "d561b5c7-57ab-49b0-84ce-2d04b78f588c"),
-             :position-creation-id            #uuid "3cee7b50-68a9-4fa3-b9eb-5464068ad465",
-             :status                          :open,
-             :close-date                      nil,
-             :position-id                     #uuid "018a2caa-ba6e-c9a5-8d51-38553003af1f",
-             :holding-id                      #uuid "018a465e-82bd-de65-2623-02bb30e1a1f6",
-             :quantity                        41,
-             :profit-loss-amount-acc-currency nil,
-             :long-short                      [:hedged ""],
-             :target-profit-percent           nil}]]
+               :open-date                       #inst "2023-08-24T00:00:00.000-00:00",
+               :open-total-acc-currency         nil,
+               :open-price                      764.23,
+               :close-price                     773.4,
+               :target-profit-acc-currency      nil,
+               :stop-loss-acc-currency          nil,
+               :target-profit                   nil,
+               :holding                         [#uuid "018a465e-82bd-de65-2623-02bb30e1a1f6" "Multiple"],
+               :profit-loss-amount              375.9708007812478,
+               :open-total                      31333.42919921875,
+               :profit-loss-percent             "1.2%",
+               :stop-loss                       -31333.42919921875,
+               :holding-currency                :SGD,
+               :stop                            0.0,
+               :stop-loss-percent               "-100.0%",
+               :sub-positions                   '(#uuid "d561b5c7-57ab-49b0-84ce-2d04b78f588c"),
+               :position-creation-id            #uuid "3cee7b50-68a9-4fa3-b9eb-5464068ad465",
+               :status                          :open,
+               :close-date                      nil,
+               :position-id                     #uuid "018a2caa-ba6e-c9a5-8d51-38553003af1f",
+               :holding-id                      #uuid "018a465e-82bd-de65-2623-02bb30e1a1f6",
+               :quantity                        41,
+               :profit-loss-amount-acc-currency nil,
+               :long-short                      [:hedged ""],
+               :target-profit-percent           nil}]]
     (binding [*fn-repo-save!*      #(repo/save! db %)
               *fn-repo-get-prices* #(repo/get-prices* db %)]
       (get-position-prices :positions          ps
                            :api-token          eodhd/dev-api-token
                            :await-save-prices? true)))
 
-  (instance? java.util.Date #inst "2023-11-10T14:11:52")
-
-  (-> #inst "2023-11-10T14:11:52.139000000-00:00"
-      tick/date
-      tick/instant)
 
   (xt/q (xt/db db-inst)
         '{:find  [(pull e [*])]
           :where [[e :price/id]]})
 
-  (xt/valid-time (xt/db db-inst))
+  (xt/q (xt/db db-inst)
+        '{:find  [(pull e [*])]
+          :in    [t st [from to]]
+          :where [[e :price/id]
+                  [e :price/type t]
+                  [e :price/symbol-ticker st]
+                  [e :price/time tm]
+                  [(>= tm from)]
+                  [(<= tm to)]]}
+        :historic
+        "AMZN"
+        [#inst "2023-07-01T00:00:00.000-00:00"
+         #inst "2023-09-30T00:00:00.000-00:00"])
+
 
   (data.model/disconnect db)
 

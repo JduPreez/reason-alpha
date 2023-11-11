@@ -23,6 +23,11 @@
    [:price/previous-close {:optional true} [:maybe number?]]
    [:price/change {:optional true} [:maybe number?]]])
 
+(def-model Prices
+  ::prices
+  [:sequential
+   [:maybe Price]])
+
 (def-model PricesResult
   ::prices-result
   [:map

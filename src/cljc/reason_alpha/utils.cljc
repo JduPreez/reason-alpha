@@ -182,3 +182,14 @@
   (if t
     (= (tick/date t) (tick/date (tick/inst)))
     false))
+
+(defn inst->date-hh-mm-ss
+  [t]
+  (let [dt-tm (tick/date-time
+               (str (tick/year t)
+                    (->> t tick/month tick/int (format "-%02d"))
+                    (->> t tick/day-of-month (format "-%02d"))
+                    (->> t tick/hour (format "T%02d"))
+                    (->> t tick/minute (format ":%02d"))
+                    (->> t tick/second (format ":%02d"))))]
+    (tick/inst dt-tm)))
