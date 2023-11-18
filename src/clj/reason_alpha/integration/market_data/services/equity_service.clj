@@ -93,21 +93,28 @@
                                                 st  :symbol-ticker
                                                 t   :type
                                                 :as price-info}]
-                                          (let [db-prs       (*fn-repo-get-prices*
-                                                              {:type          t
-                                                               :date-range    dr
-                                                               :symbol-ticker st})
-                                                store-status (if (seq db-prs) :stored
-                                                                 #_else :not-stored)]
-                                            (update-in r [store-status t]
-                                                       #(conj (or % #{})
-                                                              (if (= t :intraday)
-                                                                st #_else price-info)))))
+                                          (let [db-prs (*fn-repo-get-prices*
+                                                        {:type          t
+                                                         :date-range    dr
+                                                         :symbol-ticker st})]
+                                            (cond
+                                              (seq db-prs)
+                                              , (update r :stored #(concat
+                                                                    (or % #{})
+                                                                    db-prs))
+                                              (= t :intraday)
+                                              , (update-in r [:not-stored t] #(conj
+                                                                               (or % #{})
+                                                                               st))
+                                              :else
+                                              , (update-in r [:not-stored t] #(conj
+                                                                               (or % #{})
+                                                                               price-info)))))
                                         {}))
-        #_#_*fetched-intrad           (*fn-quote-latest-intraday-prices*
+        *fetched-intrad           (*fn-quote-latest-intraday-prices*
                                    :symbol-tickers not-stor-intrd
                                    :api-token api-token)
-        #_#_idx-retrieved-prs         (-> (fn [{t   :type
+        idx-retrieved-prs         (-> (fn [{t   :type
                                             dr  :date-range
                                             st  :symbol-ticker
                                             :as price-info}]
@@ -132,20 +139,21 @@
                                                                                (:result %)))
                                                                        (remove nil?)))]
                                                     r-items)) *f))
-                                      #_(as-> x (apply concat x))
-                                      #_(concat stored)
-                                      #_(as-> x (pmap
-                                                 (fn [{:price/keys [type time symbol-ticker] :as p}]
-                                                   (if (= type :intraday)
-                                                     [[symbol-ticker type] p]
-                                                     #_else [[symbol-ticker type time] p])) x))
-                                      #_(as-> x (into {} x)))
+                                      (as-> x (apply concat x))
+                                      (concat stored)
+                                      (as-> x (pmap
+                                               (fn [{:price/keys [type time symbol-ticker] :as p}]
+                                                 (if (= type :intraday)
+                                                   [[symbol-ticker type] p]
+                                                   #_else [[symbol-ticker type time] p])) x))
+                                      (as-> x (into {} x)))
         #_#_*save-pos-prs-res     (save-position-prices idx-retrieved-prs)
-        #_#_complemented-ps       (->> without-ps
+        complemented-ps           (->> without-ps
                                        (pmap
                                         (fn [{:keys [open-price open-date close-price
                                                      close-date eodhd]
                                               :as   pos}]
+                                          (clojure.pprint/pprint {:->>> pos})
                                           (cond-> pos
                                             (and (nil? open-price)
                                                  (nil? open-date))
@@ -194,8 +202,8 @@
     ;; Mostly for testing we want to wait here, so that exceptions
     ;; can break tests.
     #_(when await-save-prices? @*save-pos-prs-res)
-    #_complemented-ps
-    stored))
+    {:idx idx-retrieved-prs
+     :CP  complemented-ps}))
 
 (comment
 
@@ -208,8 +216,6 @@
            '[xtdb.api :as xt]
            '[malli.provider :as mp]
            '[malli.core :as m])
-
-  (m/validate [:sequential [:maybe [:map [:id string?]]]] '())
 
   (let [db-nm      "dev-market-data"
         data-dir   "data/market-data"

@@ -30,7 +30,6 @@
 
 (defn get-prices*
   [db {:keys [type symbol-ticker date-range] :as x}]
-  (clojure.pprint/pprint {::->>>-GP* x})
   (->> {:spec '{:find  [(pull e [*])]
                 :in    [t st [from to]]
                 :where [[e :price/id]
@@ -41,7 +40,8 @@
                         [(<= tm to)]]}
         :role :system
         :args [(or type :historic) symbol-ticker date-range]}
-       (data.model/query db)))
+       (data.model/query db)
+       (map first)))
 
 (def get-prices (caching/wrap get-prices*
                               :fn-cache-key
