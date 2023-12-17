@@ -1,12 +1,13 @@
 (ns reason-alpha.integration.market-data.services.equity-service
   (:require [reason-alpha.data.xtdb :as xtdb]
-            [reason-alpha.integration.market-data.data.equity-repository :as repo]
+            #_[reason-alpha.integration.market-data.data.equity-repository :as repo]
             [reason-alpha.integration.market-data.integration.eod-api-client :as eodhd]
             [reason-alpha.utils :as utils]
             [tick.core :as tick]
             [reason-alpha.data.model :as data.model]
             [xtdb.api :as xt]
-            [malli.core :as m]))
+            [malli.core :as m]
+            [clojure.string :as str]))
 
 (def ^:dynamic *intraday-valid-duration*
   (tick/new-duration 3 :hours))
@@ -59,7 +60,7 @@
          *fn-repo-save!*)))
 
 (defn get-position-prices
-  [& {:keys [positions api-token await-save-prices?]}]
+  [{:keys [positions api-token await-save-prices?] :or {await-save-prices? false}}]
   (let [today                     (utils/time-at-beginning-of-day (tick/now))
         {without-ps :without-prices
          with-ps    :with-prices} (reduce
@@ -147,63 +148,69 @@
                                                    [[symbol-ticker type] p]
                                                    #_else [[symbol-ticker type time] p])) x))
                                       (as-> x (into {} x)))
-        #_#_*save-pos-prs-res     (save-position-prices idx-retrieved-prs)
+        *save-pos-prs-res         (save-position-prices idx-retrieved-prs)
         complemented-ps           (->> without-ps
                                        (pmap
                                         (fn [{:keys [open-price open-date close-price
                                                      close-date eodhd]
                                               :as   pos}]
-                                          (clojure.pprint/pprint {:->>> pos})
-                                          (cond-> pos
-                                            (and (nil? open-price)
-                                                 (nil? open-date))
-                                            , (assoc :open-price
-                                                     (-> idx-retrieved-prs
-                                                         (get [eodhd :intraday])
-                                                         :price/close))
+                                          ;; US shares don't need a ".US" exchange post-fixed,
+                                          ;; but EODHD always returns the ticker with ".US" post-fixed.
+                                          ;; So check if share was specified by the user with a exchange
+                                          ;; post-fixed & if not, assume it's a US share & post-fix when
+                                          ;; looking it up.
+                                          (let [intrad-eodhd (if (re-seq #"^[\w\d]+\.\w+$" eodhd)
+                                                               eodhd
+                                                               #_else (str eodhd ".US"))]
+                                            (cond-> pos
+                                              (and (nil? open-price)
+                                                   (nil? open-date))
+                                              , (assoc :open-price
+                                                       (-> idx-retrieved-prs
+                                                           (get [intrad-eodhd :intraday])
+                                                           :price/close))
 
-                                            (and (nil? open-price)
-                                                 (utils/today? open-date))
-                                            , (assoc :open-price
-                                                     (-> idx-retrieved-prs
-                                                         (get [eodhd :intraday])
-                                                         :price/close))
+                                              (and (nil? open-price)
+                                                   (utils/today? open-date))
+                                              , (assoc :open-price
+                                                       (-> idx-retrieved-prs
+                                                           (get [intrad-eodhd :intraday])
+                                                           :price/close))
 
-                                            (and (nil? open-price)
-                                                 open-date
-                                                 (not (utils/today? open-date)))
-                                            , (assoc :open-price
-                                                     (-> idx-retrieved-prs
-                                                         (get [eodhd :historic open-date])
-                                                         :price/close))
+                                              (and (nil? open-price)
+                                                   open-date
+                                                   (not (utils/today? open-date)))
+                                              , (assoc :open-price
+                                                       (-> idx-retrieved-prs
+                                                           (get [eodhd :historic open-date])
+                                                           :price/close))
 
-                                            (and (nil? close-price)
-                                                 (nil? close-date))
-                                            , (assoc :close-price
-                                                     (-> idx-retrieved-prs
-                                                         (get [eodhd :intraday])
-                                                         :price/close))
+                                              (and (nil? close-price)
+                                                   (nil? close-date))
+                                              , (assoc :close-price
+                                                       (-> idx-retrieved-prs
+                                                           (get [intrad-eodhd :intraday])
+                                                           :price/close))
 
-                                            (and (nil? close-price)
-                                                 (utils/today? close-date))
-                                            , (assoc :close-price
-                                                     (-> idx-retrieved-prs
-                                                         (get [eodhd :intraday])
-                                                         :price/close))
+                                              (and (nil? close-price)
+                                                   (utils/today? close-date))
+                                              , (assoc :close-price
+                                                       (-> idx-retrieved-prs
+                                                           (get [intrad-eodhd :intraday])
+                                                           :price/close))
 
-                                            (and (nil? close-price)
-                                                 close-date
-                                                 (not (utils/today? close-date)))
-                                            , (assoc :close-price
-                                                     (-> idx-retrieved-prs
-                                                         (get [eodhd :historic close-date])
-                                                         :price/close)))))
+                                              (and (nil? close-price)
+                                                   close-date
+                                                   (not (utils/today? close-date)))
+                                              , (assoc :close-price
+                                                       (-> idx-retrieved-prs
+                                                           (get [eodhd :historic close-date])
+                                                           :price/close))))))
                                        (concat with-ps))]
     ;; Mostly for testing we want to wait here, so that exceptions
     ;; can break tests.
-    #_(when await-save-prices? @*save-pos-prs-res)
-    {:idx idx-retrieved-prs
-     :CP  complemented-ps}))
+    (when await-save-prices? @*save-pos-prs-res)
+    complemented-ps))
 
 (comment
 
@@ -256,64 +263,64 @@
              :profit-loss-amount-acc-currency nil,
              :long-short                      [:long ""],
              :target-profit-percent           nil}
-            #_{:eodhd                           "SOL.JSE"
-               :open-date                       #inst "2023-03-24T00:00:00.000-00:00",
-               :open-total-acc-currency         nil,
-               :open-price                      nil,
-               :close-price                     nil,
-               :trade-pattern
-               [#uuid "018a2c43-7a96-11a5-ab21-06f37976bbf8" "Breakout"],
-               :target-profit-acc-currency      nil,
-               :stop-loss-acc-currency          nil,
-               :target-profit                   nil,
-               :holding                         [#uuid "018a26c9-4b50-9f3f-d4ae-0206dd209197" "Sasol"],
-               :profit-loss-amount              -21.729999999999563,
-               :open-total                      31333.43,
-               :profit-loss-percent             "-0.07%",
-               :stop-loss                       -31333.43,
-               :holding-currency                :EUR,
-               :stop                            0,
-               :stop-loss-percent               "-100.0%",
-               :position-creation-id            #uuid "cf9da077-0d0c-40d6-b570-f3edd056ca79",
-               :status                          :open,
-               :position-id                     #uuid "4b463c08-c0ce-4178-b5b8-1ebce5b7e53a",
-               :holding-position-id             #uuid "018a2caa-ba6e-c9a5-8d51-38553003af1f",
-               :holding-id                      #uuid "018a26c9-4b50-9f3f-d4ae-0206dd209197",
-               :quantity                        5,
-               :profit-loss-amount-acc-currency nil,
-               :long-short                      [:long ""],
-               :target-profit-percent           nil}
-            #_{:eodhd                           "ADYEN.AS"
-               :open-date                       #inst "2023-08-24T00:00:00.000-00:00",
-               :open-total-acc-currency         nil,
-               :open-price                      764.23,
-               :close-price                     773.4,
-               :target-profit-acc-currency      nil,
-               :stop-loss-acc-currency          nil,
-               :target-profit                   nil,
-               :holding                         [#uuid "018a465e-82bd-de65-2623-02bb30e1a1f6" "Multiple"],
-               :profit-loss-amount              375.9708007812478,
-               :open-total                      31333.42919921875,
-               :profit-loss-percent             "1.2%",
-               :stop-loss                       -31333.42919921875,
-               :holding-currency                :SGD,
-               :stop                            0.0,
-               :stop-loss-percent               "-100.0%",
-               :sub-positions                   '(#uuid "d561b5c7-57ab-49b0-84ce-2d04b78f588c"),
-               :position-creation-id            #uuid "3cee7b50-68a9-4fa3-b9eb-5464068ad465",
-               :status                          :open,
-               :close-date                      nil,
-               :position-id                     #uuid "018a2caa-ba6e-c9a5-8d51-38553003af1f",
-               :holding-id                      #uuid "018a465e-82bd-de65-2623-02bb30e1a1f6",
-               :quantity                        41,
-               :profit-loss-amount-acc-currency nil,
-               :long-short                      [:hedged ""],
-               :target-profit-percent           nil}]]
+            {:eodhd                           "SOL.JSE"
+             :open-date                       #inst "2023-03-24T00:00:00.000-00:00",
+             :open-total-acc-currency         nil,
+             :open-price                      nil,
+             :close-price                     nil,
+             :trade-pattern
+             [#uuid "018a2c43-7a96-11a5-ab21-06f37976bbf8" "Breakout"],
+             :target-profit-acc-currency      nil,
+             :stop-loss-acc-currency          nil,
+             :target-profit                   nil,
+             :holding                         [#uuid "018a26c9-4b50-9f3f-d4ae-0206dd209197" "Sasol"],
+             :profit-loss-amount              -21.729999999999563,
+             :open-total                      31333.43,
+             :profit-loss-percent             "-0.07%",
+             :stop-loss                       -31333.43,
+             :holding-currency                :EUR,
+             :stop                            0,
+             :stop-loss-percent               "-100.0%",
+             :position-creation-id            #uuid "cf9da077-0d0c-40d6-b570-f3edd056ca79",
+             :status                          :open,
+             :position-id                     #uuid "4b463c08-c0ce-4178-b5b8-1ebce5b7e53a",
+             :holding-position-id             #uuid "018a2caa-ba6e-c9a5-8d51-38553003af1f",
+             :holding-id                      #uuid "018a26c9-4b50-9f3f-d4ae-0206dd209197",
+             :quantity                        5,
+             :profit-loss-amount-acc-currency nil,
+             :long-short                      [:long ""],
+             :target-profit-percent           nil}
+            {:eodhd                           "ADYEN.AS"
+             :open-date                       #inst "2023-08-24T00:00:00.000-00:00",
+             :open-total-acc-currency         nil,
+             :open-price                      764.23,
+             :close-price                     773.4,
+             :target-profit-acc-currency      nil,
+             :stop-loss-acc-currency          nil,
+             :target-profit                   nil,
+             :holding                         [#uuid "018a465e-82bd-de65-2623-02bb30e1a1f6" "Multiple"],
+             :profit-loss-amount              375.9708007812478,
+             :open-total                      31333.42919921875,
+             :profit-loss-percent             "1.2%",
+             :stop-loss                       -31333.42919921875,
+             :holding-currency                :SGD,
+             :stop                            0.0,
+             :stop-loss-percent               "-100.0%",
+             :sub-positions                   '(#uuid "d561b5c7-57ab-49b0-84ce-2d04b78f588c"),
+             :position-creation-id            #uuid "3cee7b50-68a9-4fa3-b9eb-5464068ad465",
+             :status                          :open,
+             :close-date                      nil,
+             :position-id                     #uuid "018a2caa-ba6e-c9a5-8d51-38553003af1f",
+             :holding-id                      #uuid "018a465e-82bd-de65-2623-02bb30e1a1f6",
+             :quantity                        41,
+             :profit-loss-amount-acc-currency nil,
+             :long-short                      [:hedged ""],
+             :target-profit-percent           nil}]]
     (binding [*fn-repo-save!*      #(repo/save! db %)
               *fn-repo-get-prices* #(repo/get-prices* db %)]
-      (get-position-prices :positions          ps
-                           :api-token          eodhd/dev-api-token
-                           :await-save-prices? true)))
+      (get-position-prices {:positions          ps
+                            :api-token          eodhd/dev-api-token
+                            :await-save-prices? true})))
 
 
   (xt/q (xt/db db-inst)

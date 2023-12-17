@@ -137,3 +137,10 @@
                              keyword))))]
            (merge (to-ns-keys {:commands cmds})
                   (to-ns-keys {:queries qries})))))))
+
+(defn result-msg-type
+  [msg-type]
+  (let [ns (or (namespace msg-type) "")
+        nm (str (name msg-type) "-result")]
+    (keyword ns nm)))
+

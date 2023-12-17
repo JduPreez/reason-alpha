@@ -1,5 +1,6 @@
 (ns reason-alpha.infrastructure.message-processing
   (:require [clojure.core.async :as as]
+            [reason-alpha.model.utils :as mutils]
             [reason-alpha.utils :as utils]))
 
 (def *topic-fns (atom {}))
@@ -56,14 +57,28 @@
       (utils/ignore
        (as/>!! message-chan msg)))))
 
-(defn receive-msg [topic]
+(defn receive-msg
+  [msg-type-topic]
   (let [c (as/chan)
-        s (as/sub message-pub topic c)]
+        s (as/sub message-pub msg-type-topic c)]
     c))
 
-(defn start-receive-msg [fn-receive-msg chanl]
-  (as/go-loop []
-    (let [m (as/<! chanl)]
+(defn start-receive-msg
+  [& {:keys [msg-type-topic result-msg-type-topic fn-receive-msg]}]
+  (let [chnl (receive-msg :market-data/get-equity-prices)]
+    (as/go-loop []
+      (let [{v   :msg/value
+             t   :msg/type
+             :as m} (as/<! chnl)
+            res-v   (fn-receive-msg v)]
+        (send-msg {:msg/type   result-msg-type-topic
+                   :msg/value  res-val
+                   :msg/id     (utils/new-id)
+                   :msg/source m})
+        (recur)))
+    chnl)
+  #_(as/go-loop []
+      (let [m (as/<! chanl)]
       (fn-receive-msg m)
       (recur))))
 

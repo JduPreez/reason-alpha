@@ -6,6 +6,8 @@
             [reason-alpha.data.xtdb :as xtdb]
             [reason-alpha.infrastructure.auth :as auth]
             [reason-alpha.infrastructure.message-processing :as msg-processing]
+            [reason-alpha.integration.market-data.data.equity-repository :as equity-repo]
+            [reason-alpha.integration.market-data.services.equity-service :as equity-svc]
             [reason-alpha.model.common :as common]
             [reason-alpha.model.utils :as mutils]))
 
@@ -23,15 +25,30 @@
      :db-name     db-name}))
 
 (defmethod ig/init-key ::aggregates [_ {{db :db-instance} :db}]
-  {}
-  #_{:equity
-   {:queries {:getn (as-> db d
-                      (partial ))}}})
+  (binding [equity-svc/*fn-repo-save!*      #(equity-repo/save! db %)
+            equity-svc/*fn-repo-get-prices* #(equity-repo/get-prices* db %)]
+    {:equity
+     {:queries {:get-position-prices #(equity-svc/get-position-prices %)}}}))
 
 (defmethod ig/init-key ::handlers
   [_ {:keys [aggregates]}]
-  (clojure.pprint/pprint {::aggregates aggregates})
-  (mutils/handlers aggregates))
+  (let [handlers (mutils/handlers aggregates)]
+    ;; TODO: For each handler register a `receive-msg`,
+    ;; create a `send-msg` for the result, and
+    ;; return a map of `{"hanlder-msg-type/pub-sub-topic" {:fn fn, :channel c}}`
+    (clojure.pprint/pprint {::>>>-HANLDERS handlers
+                            ::->>>-AGGR    aggregates})
+    ;; TODO: Use pmap rather
+    (for [[msg-type fn-handler] handlers
+          :let                  [res-msg-type (mutils/result-msg-type msg-type)]]
+      (msg-processing/start-receive-msg
+       :msg-type-topic msg-type
+       :result-msg-type-topic res-msg-type
+       :fn-receive-msg fn-handler))))
+
+(defmethod ig/halt-key! ::handlers
+  [_ handlers]
+  )
 
 (defn sys-def []
   {::db         {:fn-authorize auth/authorize
