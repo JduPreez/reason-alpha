@@ -60,7 +60,6 @@
   [& {st               :symbol-ticker
       [from to :as dr] :date-range
       api-token        :api-token}]
-  (println ::quote-historic-prices)
   (let [*res (promise)
         uri  (format @*historic-eod-api-uri st)]
     (GET uri
@@ -184,7 +183,6 @@
 
 (defn quote-latest-intraday-prices
   [& {:keys [api-token symbol-tickers batch-size]}]
-  (println ::quote-latest-intraday-prices)
   (let [*many->1result (promise)]
     (future
       (if (seq symbol-tickers)

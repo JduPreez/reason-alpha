@@ -32,23 +32,23 @@
 
 (defmethod ig/init-key ::handlers
   [_ {:keys [aggregates]}]
-  (let [handlers (mutils/handlers aggregates)]
-    ;; TODO: For each handler register a `receive-msg`,
-    ;; create a `send-msg` for the result, and
-    ;; return a map of `{"hanlder-msg-type/pub-sub-topic" {:fn fn, :channel c}}`
-    (clojure.pprint/pprint {::>>>-HANLDERS handlers
-                            ::->>>-AGGR    aggregates})
-    ;; TODO: Use pmap rather
-    (for [[msg-type fn-handler] handlers
-          :let                  [res-msg-type (mutils/result-msg-type msg-type)]]
-      (msg-processing/start-receive-msg
-       :msg-type-topic msg-type
-       :result-msg-type-topic res-msg-type
-       :fn-receive-msg fn-handler))))
+  (let [handlers     (mutils/handlers aggregates)
+        msg-channels (pmap (fn [[msg-type fn-handler]]
+                             (let [res-msg-type (mutils/result-msg-type msg-type)
+                                   channel      (msg-processing/start-receive-msg
+                                                 msg-type
+                                                 :result-msg-type-topic res-msg-type
+                                                 :fn-receive-msg fn-handler)]
+                               [msg-type channel]))
+                           handlers)]
+    (clojure.pprint/pprint {:>>>-HS handlers
+                            :>>>-MC msg-channels})
+    msg-channels))
 
 (defmethod ig/halt-key! ::handlers
   [_ handlers]
-  )
+  (doseq [[_msg-type chnl] handlers]
+    (msg-processing/stop-receive-msg chnl)))
 
 (defn sys-def []
   {::db         {:fn-authorize auth/authorize

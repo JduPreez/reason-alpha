@@ -90,8 +90,8 @@
 (deftest ^:integration test-get-position-prices
   (let [db (TempMemDb. (atom nil))]
     (binding [sut/*fn-repo-save!* #(repo/save! db %)]
-      (let [pos-with-prices (sut/get-position-prices :positions positions
-                                                     :api-token eodhd/dev-api-token)]
+      (let [pos-with-prices (sut/get-position-prices {:positions positions
+                                                      :api-token eodhd/dev-api-token})]
         (testing (str "If an `close-price` was entered by the user, "
                       "then that `close-price` will be used")
           (let [adyen-close-pr (some (fn [{:keys [eodhd close-price]}]

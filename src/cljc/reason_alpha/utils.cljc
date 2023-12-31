@@ -63,18 +63,26 @@
 (defn log
   [location {:keys [type description error] :as log-data}]
   (let [l {location log-data}]
-    (case type
-      (:error :failed-validation)
-      , (do (errorf "%s %s" "" "" location description)
+    (cond
+      (and (#{:error} type) error)
+      , (do (errorf error "%s %s" location description)
             #?(:cljs (cljs.pprint/pprint {:log/error l})
                :clj  (clojure.pprint/pprint {:log/error l})))
-      :warn
-      , (do (warnf "%s %s" "" "" location description)
+      (#{:warn :failed-validation} type)
+      , (do (warnf "%s %s" location description)
             #?(:cljs (cljs.pprint/pprint {:log/warn l})
-               :clj  (clojure.pprint/pprint {:log/warn l}))
-            )
-      #?(:cljs (cljs.pprint/pprint {:log/info l})
-         :clj  (clojure.pprint/pprint {:log/info l})))))
+               :clj  (clojure.pprint/pprint {:log/warn l})))
+      :else
+      , #?(:cljs (cljs.pprint/pprint {:log/info l})
+           :clj  (clojure.pprint/pprint {:log/info l})))))
+
+(comment
+
+  (log :this.is.a/test {:type        :warn
+                        :description "testing"
+                        #_#_:error       (Exception. "Oh no")})
+
+  )
 
 #?(:clj
    (defn list-resource-files [dir file-type]

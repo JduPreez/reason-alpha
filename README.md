@@ -1,14 +1,17 @@
 # reason-alpha
 
-FIXME: description
+A trade management tool, with an emphasis on risk management.
 
 ## Installation
 
 Download from http://example.com/FIXME.
 
-## Conventions
+## Tests
 
-https://guide.clojure.style
+Run tests with:
+- Default, non-integration tests: `lein test`.
+- Integration tests only: `lein test :integration`.
+- All tests, including integration tests: `lein test :all`.
 
 ### Private vars & functions
 Are prefixed with a dash "-".

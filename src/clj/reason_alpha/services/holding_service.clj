@@ -1,18 +1,20 @@
 (ns reason-alpha.services.holding-service
   (:require [clojure.core.async :as as :refer (<! <!! go-loop close!)]
             [malli.core :as m]
+            [medley.core :as medley]
             [outpace.config :refer [defconfig]]
-            [reason-alpha.integration.market-data.integration.marketstack-api-client :as marketstack]
+            [promesa.core :as p]
+            [reason-alpha.infrastructure.message-processing :as msg-processing]
             [reason-alpha.integration.market-data.integration.exchangerate-host-api-client :as exchangerate]
+            [reason-alpha.integration.market-data.integration.marketstack-api-client :as marketstack]
             [reason-alpha.model.accounts :as accounts]
             [reason-alpha.model.common :as common]
             [reason-alpha.model.core :as model]
             [reason-alpha.model.fin-instruments :as fin-instruments]
             [reason-alpha.model.portfolio-management :as portfolio-management]
             [reason-alpha.utils :as utils]
-            [taoensso.timbre :as timbre :refer (errorf)]
-            [traversy.lens :as lens]
-            [tick.core :as tick]))
+            [tick.core :as tick]
+            [traversy.lens :as lens]))
 
 (m/=> save-holding! [:=>
                      [:cat
@@ -35,7 +37,7 @@
 (defn save-holding!
   [fn-repo-save! fn-get-account fn-get-ctx {acc-id :holding/account-id
                                             :as    instrument}]
-  (let [holding                  (if acc-id
+  (let [holding                (if acc-id
                                  instrument
                                  (->> (fn-get-account)
                                       :account/id
@@ -51,7 +53,9 @@
          :type   :success}])
       (catch Exception e
         (let [err-msg "Error saving Instrument"]
-          (errorf e err-msg)
+          (utils/log ::save-holding! {:type        :error
+                                      :error       e
+                                      :description err-msg})
           (send-message
            [:holding.command/save-holding!-result
             {:error       (ex-data e)
@@ -166,7 +170,7 @@
 
   )
 
-(defn get-close-prices<
+#_(defn get-close-prices<
   [positions & {:keys [account batch-size]}]
   (when-let [access-key (-> account
                             :account/subscriptions
@@ -215,7 +219,27 @@
           (as/close! result-out-chnl)
           result-out-chnl)))))
 
-(defn get-fx-rates<
+(defn get-close-prices*
+  [positions & {:keys [account batch-size]}]
+  (when-let [access-key (-> account
+                            :account/subscriptions
+                            :subscription/eodhd
+                            :subscription-key)])
+  (let [*result (p/deferred)]
+    (msg-processing/send-msg
+     {:msg/type  :equity.queries/get-position-prices
+      :msg/value positions}
+     :result-topic :equity.queries/get-position-prices-result
+     :fn-receive-msg #(p/resolve! *result %))))
+
+(defn get-fx-rates*
+  [positions & {{acc-currency :account/currency} :account}]
+  (p/resolved
+   (pmap #(assoc %
+                 :open-fx-rate 1.0
+                 :close-fx-rate 1.0) positions)))
+
+#_(defn get-fx-rates<
   [positions & {{acc-currency :account/currency} :account}]
   (let [result-out-chnl (as/chan)]
     (if-let [currency-conversions (and acc-currency
@@ -269,27 +293,41 @@
 ;; TODO: This can be made completely generic, by allowing the primary key,
 ;;       in this case `:position-id` to be specified.
 (defn- assoc-market-data-fn
-  [fn-repo-get-acc-by-aid fns-market-data & {:keys [batch-size]}]
+  [fn-repo-get-acc-by-aid fns-market-data & {:keys [time-limit batch-size]}]
   (fn assoc-market-data [account-id positions]
-    (if-let [acc (fn-repo-get-acc-by-aid account-id)]
-      (loop [result-chnls (pmap #(% positions
-                                    :batch-size batch-size
-                                    :account acc) fns-market-data)
-             ps           positions]
-        (if-let  [[pid->market-data c] (and (seq result-chnls)
-                                            (as/alts!! result-chnls))]
-          (let [ps (map (fn [{:keys [position-id] :as p}]
-                          (if-let [p-md (get pid->market-data position-id)]
-                            (merge p p-md)
-                            p))
-                        ps)]
-            (recur (remove #(= c %) result-chnls) ps))
-          #_else
+    (let [acc        (fn-repo-get-acc-by-aid account-id)
+          time-limit (or time-limit 10000)] ;; 10 seconds
+      (if acc
+        (let [ps (-> (fn [fn-get-market-data]
+                       (-> positions
+                           (fn-get-market-data :batch-size batch-size
+                                               :account acc)
+                           (p/timeout time-limit)
+                           (p/then #(p/resolved %))
+                           (p/catch
+                               #(let [err-msg "Market data function timed out or failed with an error"]
+                                  (utils/log ::assoc-market-data-fn
+                                             {:type        :error
+                                              :description err-msg
+                                              :error       (ex-info err-msg
+                                                                    {:exception %})})))))
+                     (pmap fns-market-data)
+                     (p/all)
+                     deref
+                     (conj positions))
+              ps (->> ps
+                      (mapcat #(identity %))
+                      (reduce (fn [pid->pos {:keys [position-id] :as pos}]
+                                (if-let [p (get pid->pos position-id)]
+                                  (->> pos (merge p) (assoc pid->pos position-id))
+                                  #_else (assoc pid->pos position-id pos)))
+                              {})
+                      vals)]
           {:result ps
-           :type   :success}))
-      #_else
-      {:result positions
-       :type   :success})))
+           :type   :success})
+        #_else
+        {:result positions
+         :type   :success}))))
 
 (def postn-comps (common/computations portfolio-management/PositionDto))
 
@@ -378,7 +416,10 @@
              [:holding.query/get-holdings-positions-result result]))
           (catch Exception e
             (let [err-msg "Error getting holdings positions"]
-              (errorf e err-msg)
+              (utils/log ::get-holdings-positions
+                         {:type        :error
+                          :description err-msg
+                          :error       e})
               (send-msg
                [:holding.query/get-holdings-positions-result
                 {:result-id   (utils/new-uuid)
@@ -466,7 +507,9 @@
            :type   :success}]))
         (catch Exception e
           (let [err-msg "Error saving position"]
-            (errorf e err-msg)
+            (utils/log {:type        :error
+                        :description err-msg
+                        :error       e})
             (send-message
              [:holding.command/save-position!-result
               {:error       (ex-data e)

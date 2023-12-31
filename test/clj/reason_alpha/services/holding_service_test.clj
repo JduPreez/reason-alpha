@@ -3,99 +3,93 @@
             [reason-alpha.integration.fake-eod-api-client :as eod]
             [reason-alpha.services.holding-service :as sut]))
 
-;; TODO: Fix this test. Need to create mock market data functions
-#_(deftest test-assoc-close-prices-fn
-  (let [fun               (#'sut/assoc-market-data-fn (fn [aid]
+(def positions [{:close-price                     763.7,
+                 :eodhd                           "EL",
+                 :holding                         [#uuid "018a26c9-4b50-9f3f-d4ae-0206dd209197" "Adyen"],
+                 :holding-currency                :USD,
+                 :holding-id                      #uuid "018a26c9-4b50-9f3f-d4ae-0206dd209197",
+                 :holding-position-id             #uuid "018a2caa-ba6e-c9a5-8d51-38553003af1f",
+                 :long-short                      [:long ""],
+                 :open-date                       #inst "2023-10-06T00:00:00.000-00:00",
+                 :open-price                      nil,
+                 :open-total                      31333.43,
+                 :open-total-acc-currency         nil,
+                 :position-creation-id            #uuid "d561b5c7-57ab-49b0-84ce-2d04b78f588c",
+                 :position-id                     #uuid "018a2cac-c474-3ec7-962c-b5b285877385",
+                 :profit-loss-amount              -21.729999999999563,
+                 :profit-loss-amount-acc-currency nil,
+                 :profit-loss-percent             "-0.07%",
+                 :quantity                        41,
+                 :status                          :open,
+                 :stop                            0,
+                 :stop-loss                       -31333.43,
+                 :stop-loss-acc-currency          nil,
+                 :stop-loss-percent               "-100.0%",
+                 :target-profit                   nil,
+                 :target-profit-acc-currency      nil,
+                 :target-profit-percent           nil,
+                 :trade-pattern                   [#uuid "018a2c43-7a96-11a5-ab21-06f37976bbf8" "Breakout"]}
+                {:close-price                     nil,
+                 :eodhd                           "SOL.JSE",
+                 :holding                         [#uuid "018a26c9-4b50-9f3f-d4ae-0206dd209197" "Sasol"],
+                 :holding-currency                :EUR,
+                 :holding-id                      #uuid "018a26c9-4b50-9f3f-d4ae-0206dd209197",
+                 :holding-position-id             #uuid "018a2caa-ba6e-c9a5-8d51-38553003af1f",
+                 :long-short                      [:long ""],
+                 :open-date                       #inst "2023-03-24T00:00:00.000-00:00",
+                 :open-price                      nil,
+                 :open-total                      31333.43,
+                 :open-total-acc-currency         nil,
+                 :position-creation-id            #uuid "cf9da077-0d0c-40d6-b570-f3edd056ca79",
+                 :position-id                     #uuid "4b463c08-c0ce-4178-b5b8-1ebce5b7e53a",
+                 :profit-loss-amount              -21.729999999999563,
+                 :profit-loss-amount-acc-currency nil,
+                 :profit-loss-percent             "-0.07%",
+                 :quantity                        5,
+                 :status                          :open,
+                 :stop                            0,
+                 :stop-loss                       -31333.43,
+                 :stop-loss-acc-currency          nil,
+                 :stop-loss-percent               "-100.0%",
+                 :target-profit                   nil,
+                 :target-profit-acc-currency      nil,
+                 :target-profit-percent           nil,
+                 :trade-pattern                   [#uuid "018a2c43-7a96-11a5-ab21-06f37976bbf8" "Breakout"]}
+                {:close-date                      nil,
+                 :close-price                     773.4,
+                 :eodhd                           "ADYEN.AS",
+                 :holding                         [#uuid "018a465e-82bd-de65-2623-02bb30e1a1f6" "Multiple"],
+                 :holding-currency                :SGD,
+                 :holding-id                      #uuid "018a465e-82bd-de65-2623-02bb30e1a1f6",
+                 :long-short                      [:hedged ""],
+                 :open-date                       (utils/time-at-beginning-of-day (tick/inst)),
+                 :open-price                      nil,
+                 :open-total                      31333.42919921875,
+                 :open-total-acc-currency         nil,
+                 :position-creation-id            #uuid "3cee7b50-68a9-4fa3-b9eb-5464068ad465",
+                 :position-id                     #uuid "018a2caa-ba6e-c9a5-8d51-38553003af1f",
+                 :profit-loss-amount              375.9708007812478,
+                 :profit-loss-amount-acc-currency nil,
+                 :profit-loss-percent             "1.2%",
+                 :quantity                        41,
+                 :status                          :open,
+                 :stop                            0.0,
+                 :stop-loss                       -31333.42919921875,
+                 :stop-loss-acc-currency          nil,
+                 :stop-loss-percent               "-100.0%",
+                 :sub-positions                   '(#uuid "d561b5c7-57ab-49b0-84ce-2d04b78f588c"),
+                 :target-profit                   nil,
+                 :target-profit-acc-currency      nil,
+                 :target-profit-percent           nil}])
+
+;; TODO: Implement this 
+#_(deftest ^:integration test-assoc-close-prices-fn
+  (let [db                (TempMemDb. (atom nil))
+        fun               (#'sut/assoc-market-data-fn (fn [aid]
                                                         {:account/subscriptions
                                                          {:subscription/eod-historical-data
                                                           {:api-token "djhjdhd"}}})
                                                       [])
-        p                 [{:holding
-                            [#uuid "018004b9-3a7f-df48-4c96-c63d6aea78b5"
-                             "Sony"],
-                            :open-price 33,
-                            :open-time
-                            #inst "2022-05-18T00:00:00.000-00:00",
-                            :stop       20,
-                            :position-creation-id
-                            #uuid "ab5e3c79-3334-4e52-86e5-e1eec94eaccc",
-                            :status     :open,
-                            :position-id
-                            #uuid "01811a3f-638f-d0de-4ddd-ec224bc81cf1",
-                            :holding-position-id
-                            #uuid "0180098b-e65e-d7ce-645b-41eef737fa0c",
-                            :holding-id
-                            #uuid "018004b9-3a7f-df48-4c96-c63d6aea78b5",
-                            :quantity   23,
-                            :eod-historical-data
-                            "6758.TSE",
-                            :long-short [:long ""]}
-                           {:trade-pattern
-                            [#uuid "01800865-9069-63c7-9c6c-4d24cdcefc9a"
-                             "Breakout"],
-                            :holding
-                            [#uuid "018004bb-227c-d6de-69ac-bc1eab688ab5"
-                             "Walt Disney"],
-                            :open-price  23,
-                            :open-time
-                            #inst "2022-04-06T00:00:00.000-00:00",
-                            :stop        56,
-                            :position-creation-id
-                            #uuid "74e921b2-fe79-454d-b47c-08c43b298019",
-                            :status      :closed,
-                            :close-price 95.86,
-                            :position-id
-                            #uuid "0180098b-e65e-d7ce-645b-41eef737fa0c",
-                            :holding-id
-                            #uuid "018004bb-227c-d6de-69ac-bc1eab688ab5",
-                            :quantity    676,
-                            :eod-historical-data
-                            "DIS.US",
-                            :long-short  [:long ""]}
-                           {:holding
-                            [#uuid "01809f38-c167-6811-e9ef-c2edd166236d"
-                             "Unity"],
-                            :open-price          34,
-                            :open-time
-                            #inst "2022-05-05T00:00:00.000-00:00",
-                            :stop                34,
-                            :position-creation-id
-                            #uuid "9f91f95c-43c3-46e6-a661-5409959a42b2",
-                            :status              :closed,
-                            :close-price         46.72,
-                            :position-id
-                            #uuid "0180ae8d-abff-be83-dcde-a31bfe42ab41",
-                            :holding-position-id
-                            #uuid "0180098b-e65e-d7ce-645b-41eef737fa0c",
-                            :holding-id
-                            #uuid "01809f38-c167-6811-e9ef-c2edd166236d",
-                            :quantity            33,
-                            :eod-historical-data "U.US",
-                            :long-short          [:long ""]}
-                           {:trade-pattern
-                            [#uuid "0180088d-aa18-6709-de16-4d2e56126947"
-                             "zzzzzz"],
-                            :holding
-                            [#uuid "018004b9-3a7f-df48-4c96-c63d6aea78b5"
-                             "Sony"],
-                            :open-price  23,
-                            :open-time
-                            #inst "2022-04-20T00:00:00.000-00:00",
-                            :stop        2342,
-                            :position-creation-id
-                            #uuid "0d4a7fdf-5ab0-4d08-a35a-c5b23fa46c6e",
-                            :status      :closed,
-                            :close-price 8.07,
-                            :position-id
-                            #uuid "018008e1-a0db-2638-b2e2-4e9f0e332d11",
-                            :holding-position-id
-                            #uuid "0180098b-e65e-d7ce-645b-41eef737fa0c",
-                            :holding-id
-                            #uuid "018004b9-3a7f-df48-4c96-c63d6aea78b5",
-                            :quantity    50,
-                            :eod-historical-data
-                            "6758.TSE",
-                            :long-short  [:long ""]}]
         p-with-cls-prices (fun "test" p)]
     (is (= (count p-with-cls-prices) 4))
     (is (every? :close-price p-with-cls-prices))))

@@ -122,23 +122,23 @@
                                                  (partial holding-svc/get-holdings-positions d
                                                           fn-repo-get-acc-by-uid
                                                           fn-repo-get-acc-by-aid
-                                                          [holding-svc/get-close-prices<
-                                                           holding-svc/get-fx-rates<]
+                                                          [holding-svc/get-fx-rates*
+                                                           holding-svc/get-close-prices*]
                                                           true
                                                           {:fn-get-ctx common/get-context}))
                  :get-holding-positions        (holding-svc/get-holding-positions-fn
                                                 #(holding-repo/get-holding-positions db %)
                                                 fn-repo-get-acc-by-aid
-                                                [holding-svc/get-close-prices<
-                                                 holding-svc/get-fx-rates<]
+                                                [holding-svc/get-fx-rates*
+                                                 holding-svc/get-close-prices*]
                                                 common/get-context)
                  :broadcast-holdings-positions (as-> db d
                                                  (partial holding-repo/get-holdings-positions d)
                                                  (partial holding-svc/get-holdings-positions d
                                                           fn-repo-get-acc-by-uid
                                                           fn-repo-get-acc-by-aid
-                                                          [holding-svc/get-close-prices<
-                                                           holding-svc/get-fx-rates<]
+                                                          [holding-svc/get-fx-rates*
+                                                           holding-svc/get-close-prices*]
                                                           false)
                                                  (partial holding-svc/broadcast-holdings-positions d))}}
      :model

@@ -18,7 +18,10 @@
   [:map
    [:subscription/marketstack {:optional true}
     [:map
-     [:access-key string?]]]])
+     [:subscription-key string?]]]
+   [:subscription/eodhd {:optional true}
+    [:map
+     [:subscription-key string?]]]])
 
 (def-model Account
   :model/account

@@ -23,6 +23,7 @@
                  [com.taoensso/sente "1.16.2"]
                  [day8.re-frame/http-fx "0.2.4"]
                  [dev.weavejester/medley "1.7.0"]
+                 [funcool/promesa "11.0.678"]
                  [http-kit "2.5.3"]
                  [integrant "0.8.0"]
                  [io.xapix/axel-f "2.0.11"]
