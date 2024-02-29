@@ -1,7 +1,8 @@
 (ns reason-alpha.model.utils
   (:require [clojure.string :as str]
             [malli.core :as m]
-            [malli.util :as mu]))
+            [malli.util :as mu]
+            [traversy.lens :as tl]))
 
 (defn creation-id-key-by-type
   [type]
@@ -118,3 +119,28 @@
     (-> enum-schema
         m/properties
         :enum/titles)))
+
+(defn handlers [aggregates]
+  (-> aggregates
+      (tl/update
+       tl/all-entries
+       (fn [[aggr-k {cmds  :commands
+                     qries :queries}]]
+         (letfn [(to-ns-keys [{:keys [commands queries]}]
+                   (-> commands
+                       (or queries {})
+                       (tl/update
+                        tl/all-keys
+                        #(-> aggr-k
+                             name
+                             (str "." (if commands "command" "query") "/" (name %))
+                             keyword))))]
+           (merge (to-ns-keys {:commands cmds})
+                  (to-ns-keys {:queries qries})))))))
+
+(defn result-msg-type
+  [msg-type]
+  (let [ns (or (namespace msg-type) "")
+        nm (str (name msg-type) "-result")]
+    (keyword ns nm)))
+

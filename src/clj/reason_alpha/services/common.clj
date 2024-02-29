@@ -59,9 +59,9 @@
                                   :type        :error}])))))))
 
 (defn save-msg-fn
-  [{:keys [fn-repo-save! fn-get-account fn-get-ctx model-type response-msg-event]}]
+  [{:keys [fn-repo-save! fn-get-account fn-get-ctx schema-k response-msg-event]}]
   (fn [entity]
-    (let [model-type-nm          (name model-type)
+    (let [model-type-nm          (name schema-k)
           acc-id-k               (keyword model-type-nm "account-id")
           creation-id-k          (keyword model-type-nm "creation-id")
           id-k                   (keyword model-type-nm "id")
@@ -73,7 +73,7 @@
                                         (assoc entity acc-id-k)))
           {:keys [send-message]} (fn-get-ctx)]
       (try
-        (if-let [v (model/validate model-type ent)]
+        (if-let [v (model/validate schema-k ent)]
           (send-message
            [response-msg-event
             {:error       v
@@ -95,18 +95,18 @@
                :type        :error}])))))))
 
 (comment
-  (model/validate :position #:position{:creation-id
-                                       #uuid "35ccc174-5563-480b-b51e-28bd27bdd396",
-                                       :holding-id
-                                       #uuid "018004b9-3a7f-df48-4c96-c63d6aea78b5",
-                                       :open
-                                       #:trade-transaction{:quantity
-                                                           "45",
-                                                           :date
-                                                           #inst "2022-05-01T00:00:00.000-00:00",
-                                                           :price
-                                                           "67.8"},
-                                       :long-short :long} )
+  (model/validate :model/position #:position{:creation-id
+                                             #uuid "35ccc174-5563-480b-b51e-28bd27bdd396",
+                                             :holding-id
+                                             #uuid "018004b9-3a7f-df48-4c96-c63d6aea78b5",
+                                             :open
+                                             #:trade-transaction{:quantity
+                                                                 "45",
+                                                                 :date
+                                                                 #inst "2022-05-01T00:00:00.000-00:00",
+                                                                 :price
+                                                                 "67.8"},
+                                             :long-short :long} )
   (get @model/*model :model/position)
   (model/get-def :model/position)
 

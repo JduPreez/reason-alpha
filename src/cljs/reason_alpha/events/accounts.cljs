@@ -12,7 +12,7 @@
  (fn [{:keys [db]} _]
    {:account/get1 nil
     :dispatch     [:model.query/getn
-                   [:model/currency
+                   [:reason-alpha.model.fin-instruments/currency
                     :model/account-dto
                     :model/account]]}))
 

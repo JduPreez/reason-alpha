@@ -1,7 +1,12 @@
-(ns reason-alpha.services.holding-service-test
-  (:require [clojure.test :refer :all]
-            [reason-alpha.integration.fake-eod-api-client :as eod]
-            [reason-alpha.services.holding-service :as sut]))
+(ns reason-alpha.integration.market-data.services.equity-service-test
+  (:require  [clojure.test :refer :all]
+             [reason-alpha.integration.market-data.data.equity-repository :as repo]
+             [reason-alpha.integration.market-data.integration.eod-api-client :as eodhd]
+             [reason-alpha.integration.market-data.services.equity-service :as sut]
+             [reason-alpha.utils :as utils]
+             [tick.core :as tick]
+             [reason-alpha.data.temp-mem-db])
+  (:import [reason_alpha.data.temp_mem_db TempMemDb]))
 
 (def positions [{:close-price                     763.7,
                  :eodhd                           "EL",
@@ -82,18 +87,46 @@
                  :target-profit-acc-currency      nil,
                  :target-profit-percent           nil}])
 
-;; TODO: Implement this 
-#_(deftest ^:integration test-assoc-close-prices-fn
-  (let [db                (TempMemDb. (atom nil))
-        fun               (#'sut/assoc-market-data-fn (fn [aid]
-                                                        {:account/subscriptions
-                                                         {:subscription/eod-historical-data
-                                                          {:api-token "djhjdhd"}}})
-                                                      [])
-        p-with-cls-prices (fun "test" p)]
-    (is (= (count p-with-cls-prices) 4))
-    (is (every? :close-price p-with-cls-prices))))
+(deftest ^:integration test-get-position-prices
+  (let [db (TempMemDb. (atom nil))]
+    (binding [sut/*fn-repo-save!* #(repo/save! db %)]
+      (let [pos-with-prices (sut/get-position-prices {:positions positions
+                                                      :api-token eodhd/dev-api-token})]
+        (testing (str "If an `close-price` was entered by the user, "
+                      "then that `close-price` will be used")
+          (let [adyen-close-pr (some (fn [{:keys [eodhd close-price]}]
+                                       (when (= "ADYEN.AS" eodhd)
+                                         close-price)) pos-with-prices)]
+            (is (= adyen-close-pr 773.4))))
+        (testing (str "If there is no `close-price`, and no `close-date` was selected, "
+                      "then the latest intraday price will be used")
+          (let [sasol-close-pr (some (fn [{:keys [eodhd close-price]}]
+                                       (when (= "SOL.JSE" eodhd)
+                                         close-price)) pos-with-prices)]
+            (is (not (empty? pos-with-prices)))
+            (is (number? sasol-close-pr))
+            (is (> sasol-close-pr 0))))
+        (testing (str "If there is no `open-price`, but an `open-date` was selected and "
+                      "the `open-date` is historic, then the price from that day will be used")
+          (let [el-open-pr (some (fn [{:keys [eodhd open-price]}]
+                                   (when (= "EL" eodhd)
+                                     open-price)) pos-with-prices)]
+            (is (= el-open-pr 145.26))))
+        (testing (str "If there is no `open-price`, but an `open-date` was selected and "
+                      "the `open-date` is today, then the latest intraday price will be used")
+          (let [adyen-open-pr (some (fn [{:keys [eodhd open-price]}]
+                                      (when (= "ADYEN.AS" eodhd)
+                                        open-price)) pos-with-prices)]
+            (is (some? adyen-open-pr))
+            (is (number? adyen-open-pr))))))))
 
 (comment
-  (clojure.test/run-tests 'reason-alpha.services.holding-service-test)
+  (clojure.test/run-tests 'reason-alpha.integration.market-data.services.equity-service-test)
+
+  (let [type :failed-validation]
+    (case type
+      (:error :failed-validation) "err or invalid"
+      :warn "warn"
+      "info"))
+
   )

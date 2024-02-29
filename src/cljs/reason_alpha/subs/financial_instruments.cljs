@@ -4,6 +4,6 @@
 
 (rf/reg-sub
  :financial-instrument/currencies
- :<- [:model :model/currency]
+ :<- [:model :reason-alpha.model.fin-instruments/currency]
  (fn [currencies _]
    (model.utils/enum-titles currencies)))

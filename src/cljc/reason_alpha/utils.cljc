@@ -1,15 +1,20 @@
 (ns reason-alpha.utils
-  #?(:clj (:require [clojure.core.cache :as cache]
-                    [clojure.edn :as edn]
+  #?(:clj (:require [clojure.edn :as edn]
                     [clojure.java.io :as io]
                     [clojure.string :as str]
-                    [taoensso.timbre :as timbre :refer-macros (tracef debugf infof warnf errorf)])
+                    [cuid2.core :refer [cuid]]
+                    [taoensso.timbre :as timbre :refer (tracef debugf infof warnf errorf)]
+                    [tick.alpha.interval :as t.i]
+                    [tick.core :as tick])
 
      :cljs (:require [clojure.string :as str]
                      [cljs-uuid-utils.core :as uuid]
                      [goog.string :as gstring]
                      [goog.string.format]
-                     [taoensso.timbre :as timbre :refer-macros (infof warnf errorf)]))
+                     [taoensso.timbre :as timbre :refer-macros (infof warnf errorf)]
+                     [tick.alpha.interval :as t.i]
+                     [tick.core :as tick]))
+
   #?(:clj (:import [java.math BigDecimal])))
 
 (defn maybe->uuid [v]
@@ -27,6 +32,10 @@
 (defn new-uuid []
   #?(:clj (java.util.UUID/randomUUID)
      :cljs (random-uuid)))
+
+#?(:clj
+   (defn new-id []
+     (cuid)))
 
 (defn get-ns [a-var]
   (-> a-var meta :ns))
@@ -51,53 +60,29 @@
   (into {} (for [[k v] item]
              [(keyword k) v])))
 
-#?(:cljs
-   (defn log
-     [location {:keys [type description error] :as log}]
-     (let [l {location log}]
-       (case type
-         :error
-         , (do (errorf "%s %s" location description)
-               (cljs.pprint/pprint {:log/error l}))
-         :warn
-         , (do (warnf "%s %s" location description)
-               (cljs.pprint/pprint {:log/warn l}))
-         (cljs.pprint/pprint {:log/info l})))))
+(defn log
+  [location {:keys [type description error] :as log-data}]
+  (let [l {location log-data}]
+    (cond
+      (and (#{:error} type) error)
+      , (do (errorf error "%s %s" location description)
+            #?(:cljs (cljs.pprint/pprint {:log/error l})
+               :clj  (clojure.pprint/pprint {:log/error l})))
+      (#{:warn :failed-validation} type)
+      , (do (warnf "%s %s" location description)
+            #?(:cljs (cljs.pprint/pprint {:log/warn l})
+               :clj  (clojure.pprint/pprint {:log/warn l})))
+      :else
+      , #?(:cljs (cljs.pprint/pprint {:log/info l})
+           :clj  (clojure.pprint/pprint {:log/info l})))))
 
-#?(:clj
-   (defn ttl-memoize
-     [f & {ttl :ttl, :or {ttl 3600000}}] ;; TTL 1 hour
-     (let [mem (atom (cache/ttl-cache-factory {} :ttl ttl))]
-       (fn [& args]
-         (let [e (cache/lookup @mem args ::nil)]
-           (if (= ::nil e)
-             (let [ret (apply f args)]
-               (swap! mem cache/miss args ret)
-               ret)
-             (do
-               (swap! mem cache/hit args)
-               e)))))))
+(comment
 
-#?(:clj
-   (defn ttl-cache
-     [& {ttl :ttl, :or {ttl 3600000}}]
-     (atom (cache/ttl-cache-factory {} :ttl ttl))))
+  (log :this.is.a/test {:type        :warn
+                        :description "testing"
+                        #_#_:error       (Exception. "Oh no")})
 
-#?(:clj
-   (defn get-cache-item
-     [*cache k]
-     ;; Use `:cache.item/nil` to enable caching `nil` values
-     (let [i (cache/lookup @*cache k ::nil-cache-item)]
-       (if (= ::nil-cache-item i)
-         ::nil-cache-item
-         (do
-           (swap! *cache cache/hit k)
-           i)))))
-
-#?(:clj
-   (defn set-cache-item
-     [*cache k v]
-     (swap! *cache cache/miss k v)))
+  )
 
 #?(:clj
    (defn list-resource-files [dir file-type]
@@ -140,3 +125,79 @@
    (defn percent-str
      [n]
      (java.lang.String/format java.util.Locale/US "%.2f%%" (to-array [n]))))
+
+(defn round-up [n]
+  (Math/ceil n))
+
+(defn time-at-beginning-of-day
+  [t]
+  (-> t
+      tick/date
+      tick/beginning
+      (tick/in "UTC")
+      tick/inst))
+
+(defn time-at-end-of-day
+  [t]
+  (-> t
+      tick/date
+      tick/end
+      (tick/in "UTC")
+      tick/inst))
+
+(defn quarter-bounds
+  [t]
+  (let [yr                (-> t tick/year str)
+        qr-start-month-nr (-> t
+                              tick/date
+                              tick/month
+                              tick/int
+                              (/ 3)
+                              round-up
+                              int
+                              dec
+                              (* 3)
+                              inc
+                              #_(as-> q (format "%02d" q)))
+        qr-end-month-nr   (+ qr-start-month-nr 2)
+        bounds-start-date (-> yr
+                              (str (format "-%02d" qr-start-month-nr))
+                              tick/year-month
+                              t.i/bounds
+                              :tick/beginning
+                              (tick/in "UTC")
+                              tick/inst)
+        bounds-end-date   (-> yr
+                              (str (format "-%02d" qr-end-month-nr))
+                              tick/year-month
+                              t.i/bounds
+                              :tick/end
+                              (tick/<< (tick/new-duration 1 :days))
+                              (tick/in "UTC")
+                              tick/inst)]
+    [bounds-start-date bounds-end-date]))
+
+(defn date-str->inst
+  [date-str]
+  (-> date-str
+      tick/date
+      tick/beginning
+      (tick/in "UTC")
+      tick/inst))
+
+(defn today?
+  [t]
+  (if t
+    (= (tick/date t) (tick/date (tick/inst)))
+    false))
+
+(defn inst->date-hh-mm-ss
+  [t]
+  (let [dt-tm (tick/date-time
+               (str (tick/year t)
+                    (->> t tick/month tick/int (format "-%02d"))
+                    (->> t tick/day-of-month (format "-%02d"))
+                    (->> t tick/hour (format "T%02d"))
+                    (->> t tick/minute (format ":%02d"))
+                    (->> t tick/second (format ":%02d"))))]
+    (tick/inst dt-tm)))

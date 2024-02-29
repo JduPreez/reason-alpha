@@ -18,16 +18,14 @@
   (:import [com.github.f4b6a3.uuid UuidCreator])
   (:require [clojure.java.io :as io]
             [me.raynes.fs :as fs]
-            [outpace.config :refer [defconfig]]
             [reason-alpha.data.model :as data.model :refer [DataBase]]
             [reason-alpha.model.core :as model]
             [reason-alpha.model.utils :as mutils]
             [xtdb.api :as xt]))
 
-(defconfig data-dir) ;; "data"
-(defconfig db-name) ;; "dev"
-
-(defn drop-db! [db]
+(defn drop-db!
+  [{db       :db-instance
+    data-dir :data-dir}]
   (fs/delete-dir (str data-dir "/" db)))
 
 (defn- put-delete-fn!
@@ -59,7 +57,8 @@
                                  (remove nil?)
                                  vec))}]]))))
 
-(defn xtdb-start! []
+(defn xtdb-start!
+  [data-dir db-name]
   (let [fn-kv-store (fn [dir]
                       {:kv-store {:xtdb/module 'xtdb.rocksdb/->kv-store
                                   :db-dir      (-> data-dir
@@ -73,7 +72,8 @@
     (put-delete-fn! {:node node})
     node))
 
-(defn- maybe-add-id [entities]
+(defn- maybe-add-id
+  [entities]
   (->> entities
        (map
         (fn [[ent]]
@@ -84,18 +84,93 @@
                 (as-> idv (assoc ent :xt/id idv))
                 (as-> ent (assoc ent id-key (:xt/id ent)))))))))
 
-(defn- xtdb-puts [entities]
+(defn- xtdb-puts
+  [entities]
   (->> entities
-       (map (fn [ent] [::xt/put ent]))
+       (map (fn [{{valid-time-from :from
+                   valid-time-to   :to} :reason-alpha.model/valid-time
+                  :as                   ent}]
+              (cond-> [::xt/put ent]
+                valid-time-from (conj valid-time-from)
+                valid-time-to   (conj valid-time-to))))
        vec))
 
-(defn- xtdb-save! [db-node entities]
-  (when (seq entities)
-    (let [ents-with-ids (maybe-add-id entities)]
-      (xt/submit-tx db-node (xtdb-puts ents-with-ids))
-      ents-with-ids)))
+(defn- xtdb-query
+  [db-node {:keys [spec args]}]
+  (->> args
+       (mapv #(if (instance? clojure.lang.IObj %)
+                (vary-meta % (fn [_] nil))
+                %))
+       (apply xt/q (xt/db db-node) spec)
+       #_(map (fn [[entity :as all]]
+                (if (map? entity)
+                  entity
+                  all)))))
 
-(defn- xtdb-delete! [db-node {:keys [spec] :as del-command}]
+(defn- get-account-by-user-id
+  [db-node user-id]
+  (let [acc (-> db-node
+                (xtdb-query
+                 {:spec '{:find  [(pull e [*])]
+                          :where [[e :account/user-id uid]]
+                          :in    [uid]}
+                  :args [user-id]})
+                ffirst)]
+    acc))
+
+(defn- get-account
+  [fn-get-ctx db-node]
+  (let [{{:keys [account/user-id]} :user-account
+         :as                       ctx} (fn-get-ctx)]
+    (when user-id
+      (get-account-by-user-id db-node user-id))))
+
+(defn- maybe-only-root-ent
+  [query-result]
+  (map (fn [[entity :as all]]
+         (if (map? entity)
+           entity
+           all))
+       query-result))
+
+(defn- entities-owners
+  [db-node [e1 :as entities]]
+  (let [id-k        (mutils/some-ns-key :id e1)
+        acc-id-k    (mutils/some-ns-key :account-id e1)
+        ids         (mapv id-k entities)
+        qry         {:spec `{:find  [e aid]
+                             :where [[e ~id-k id]
+                                     [e ~acc-id-k aid]]
+                             :in    [[id ...]]}
+                     :args [ids]}
+        ents-owners (if acc-id-k
+                      (-> db-node
+                          (xtdb-query qry)
+                          maybe-only-root-ent)
+                      [])]
+    ents-owners))
+
+(defn- xtdb-save!
+  [[e1 :as entities] & {:keys [*db-node fn-get-ctx role fn-authorize]}]
+  (if-not (seq entities)
+    entities
+    #_else
+    (let [id-k        (mutils/some-ns-key :id e1)
+          fn-get-acc  #(get-account fn-get-ctx @*db-node)
+          ents-owners (when id-k (entities-owners @*db-node entities))
+          ents        (fn-authorize {:fn-get-account  fn-get-acc
+                                     :crud            (if id-k [:update] [:create])
+                                     :role            role
+                                     :entities-owners ents-owners}
+                                    entities)]
+      (when (seq ents)
+        (let [ents-with-ids (maybe-add-id ents)]
+          (xt/submit-tx @*db-node
+                        (xtdb-puts ents-with-ids))
+          ents-with-ids)))))
+
+(defn- xtdb-delete!
+  [db-node {:keys [spec] :as del-command}]
   (let [del-cmd            (update del-command
                                    :args
                                    (fn [a]
@@ -116,55 +191,6 @@
                              :else {:was-deleted? false})]
     {:tx-details   tx-details
      :was-deleted? (not (nil? tx-id))}))
-
-(defn- xtdb-query [db-node {:keys [spec args]}]
-  (->> args
-       (mapv #(if (instance? clojure.lang.IObj %)
-                (vary-meta % (fn [_] nil))
-                %))
-       (apply xt/q (xt/db db-node) spec)
-       #_(map (fn [[entity :as all]]
-              (if (map? entity)
-                entity
-                all)))))
-
-(defn- get-account-by-user-id [db-node user-id]
-  (let [acc (-> db-node
-                (xtdb-query
-                 {:spec '{:find  [(pull e [*])]
-                          :where [[e :account/user-id uid]]
-                          :in    [uid]}
-                  :args [user-id]})
-                ffirst)]
-    acc))
-
-(defn- get-account [fn-get-ctx db-node]
-  (let [{{:keys [account/user-id]} :user-account} (fn-get-ctx)]
-    (when user-id
-      (get-account-by-user-id db-node user-id))))
-
-(defn- maybe-only-root-ent [query-result]
-  (map (fn [[entity :as all]]
-         (if (map? entity)
-           entity
-           all))
-       query-result))
-
-(defn- entities-owners [db-node entities]
-  (let [id-k        (mutils/some-ns-key :id entities)
-        acc-id-k    (mutils/some-ns-key :account-id entities)
-        ids         (mapv id-k entities)
-        qry         {:spec `{:find  [e aid]
-                             :where [[e ~id-k id]
-                                     [e ~acc-id-k aid]]
-                             :in    [[id ...]]}
-                     :args [ids]}
-        ents-owners (if acc-id-k
-                      (-> db-node
-                          (xtdb-query qry)
-                          maybe-only-root-ent)
-                      [])]
-    ents-owners))
 
 (deftype XTDB [*db-node fn-query fn-save! fn-delete!
                fn-start-db! fn-get-ctx fn-authorize]
@@ -199,27 +225,33 @@
       (fn-delete! @*db-node del-cmd)))
 
   (save! [this entity {:keys [role]}]
-    (let [ent         [entity]
-          id-k        (mutils/some-ns-key :id ent)
-          fn-get-acc  #(get-account fn-get-ctx @*db-node)
-          ents-owners (when id-k (entities-owners @*db-node ent))]
-      (->> [ent]
-           (fn-authorize {:fn-get-account  fn-get-acc
-                          :crud            (if id-k [:update] [:create])
-                          :role            role
-                          :entities-owners ents-owners})
-           (fn-save! @*db-node)
-           first)))
+    (-> [[entity]]
+        (fn-save!
+         :fn-get-ctx fn-get-ctx
+         :*db-node *db-node
+         :role (or role :member)
+         :fn-authorize fn-authorize)
+         first))
 
   (save! [this entity]
-    (.save! this entity {:role :member}))
+    (.save! this entity nil))
 
-  (add-all! [this entities]
-    (fn-save! @*db-node entities)))
+  (save-all! [this entities {:keys [role]}]
+    (let [es (map #(identity [%]) entities)]
+      (clojure.pprint/pprint {::-%%% es})
+      (fn-save!
+       es
+       :fn-get-ctx fn-get-ctx
+       :*db-node *db-node
+       :role (or role :member)
+       :fn-authorize fn-authorize)))
 
-(defn db [fn-get-ctx fn-authorize]
+  (save-all! [this entities]
+    (.save-all! this entities nil)))
+
+(defn db [& {:keys [fn-get-ctx fn-authorize data-dir db-name]}]
   (XTDB. (atom nil) xtdb-query xtdb-save! xtdb-delete!
-         xtdb-start! fn-get-ctx fn-authorize))
+         #(xtdb-start! data-dir db-name) fn-get-ctx fn-authorize))
 
 (comment
 
@@ -447,7 +479,7 @@
                 {:fin-security/creation-id #uuid "017b4ed4-393f-27d4-24ab-a62973c4098c"
                  :fin-security/amount      17834.88
                  :fin-security/ticker      "BICO"}]]
-  (add-all! db entities)
+  (save-all! db entities)
   #_(crux/submit-tx @crux-node (crux-puts entities)))
 
 (save! db {:trade-pattern/creation-id #uuid "c7057fa6-f424-4b47-b1f2-de5ae63fb5fb",

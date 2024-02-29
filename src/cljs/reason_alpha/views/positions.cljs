@@ -1,6 +1,6 @@
 (ns reason-alpha.views.positions
   (:require [re-frame.core :as rf]
-            [reason-alpha.model.validation :as validation]
+            [reason-alpha.model.validation :as v]
             [reason-alpha.utils :as utils]
             [reason-alpha.views.datagrid :as datagrid]
             [reason-alpha.views.holdings :as views.holdings]
@@ -17,7 +17,9 @@
    :default-sort-direction :asc
    :create-dispatch        [:position/create]
    :update-dispatch        [:position/update]
-   :validator              (partial validation/validate schema)
+   :validator              #(->> %
+                                 (v/validate schema)
+                                 :error)
    :default-values         [:position/default-vals]
    :context-subscription   [:account]
    :can-edit-fn            #(nil? (seq (:sub-positions %)))})

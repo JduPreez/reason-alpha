@@ -1,46 +1,37 @@
 (ns reason-alpha.model
-  (:require [clojure.pprint :as pprint]
-            [integrant.core :as ig]
+  (:require [integrant.core :as ig]
             [malli.instrument :as malli.instr]
+            [outpace.config :refer [defconfig]]
             [reason-alpha.data.model :as data.model :refer [DataBase]]
             [reason-alpha.data.repositories.account-repository :as account-repo]
             [reason-alpha.data.repositories.holding-repository :as holding-repo]
             [reason-alpha.data.repositories.trade-pattern-repository :as trade-pattern-repo]
             [reason-alpha.data.xtdb :as xtdb]
             [reason-alpha.infrastructure.auth :as auth]
+            [reason-alpha.infrastructure.message-processing :as msg-processing]
             [reason-alpha.infrastructure.server :as server]
             [reason-alpha.model.common :as common]
+            [reason-alpha.model.utils :as mutils]
             [reason-alpha.services.account-service :as account-svc]
             [reason-alpha.services.common :as svc.common]
             [reason-alpha.services.holding-service :as holding-svc]
             [reason-alpha.services.model-service :as model-svc]
-            [reason-alpha.services.trade-pattern-service :as trade-pattern-svc]
-            [traversy.lens :as tl]))
+            [reason-alpha.services.trade-pattern-service :as trade-pattern-svc]))
 
-(defn handlers [aggregates]
-  (-> aggregates
-      (tl/update
-       tl/all-entries
-       (fn [[aggr-k {cmds  :commands
-                     qries :queries}]]
-         (letfn [(to-ns-keys [{:keys [commands queries]}]
-                   (-> commands
-                       (or queries {})
-                       (tl/update
-                        tl/all-keys
-                        #(-> aggr-k
-                             name
-                             (str "." (if commands "command" "query") "/" (name %))
-                             keyword))))]
-           (merge (to-ns-keys {:commands cmds})
-                  (to-ns-keys {:queries qries})))))))
+(defconfig db-conf)
 
 (defmethod ig/init-key ::db [_ {:keys [fn-authorize fn-get-ctx]}]
-  (let [db (xtdb/db fn-get-ctx fn-authorize)]
+  (let [{:keys [data-dir db-name]} db-conf
+        db                         (xtdb/db :fn-get-ctx fn-get-ctx
+                                            :fn-authorize fn-authorize
+                                            :data-dir data-dir
+                                            :db-name db-name)]
     (data.model/connect db)
-    db))
+    {:db-instance db
+     :data-dir    data-dir
+     :db-name     db-name}))
 
-(defmethod ig/init-key ::account-svc [_ {:keys [db]}]
+(defmethod ig/init-key ::account-svc [_ {{db :db-instance} :db}]
   (let [fn-repo-save!      #(account-repo/save! db %)
         fn-repo-get-by-uid #(account-repo/get-by-id db :user-id %)]
     {:fn-get-account   #(account-svc/get-account common/get-context
@@ -51,7 +42,7 @@
 (defmethod ig/halt-key! ::db [_ db]
   (data.model/disconnect db))
 
-(defmethod ig/init-key ::aggregates [_ {db :db}]
+(defmethod ig/init-key ::aggregates [_  {{db :db-instance} :db}]
   (let [fn-repo-get-acc-by-uid (partial account-repo/get-by-id db :user-id)
         fn-repo-get-acc-by-aid (partial account-repo/get-by-id db :account-id)
         fn-get-account         (partial account-svc/get-account
@@ -129,23 +120,25 @@
                  :get-holdings-positions       (as-> db d
                                                  (partial holding-repo/get-holdings-positions d)
                                                  (partial holding-svc/get-holdings-positions d
+                                                          fn-repo-get-acc-by-uid
                                                           fn-repo-get-acc-by-aid
-                                                          [holding-svc/get-close-prices<
-                                                           holding-svc/get-fx-rates<]
+                                                          [holding-svc/get-fx-rates*
+                                                           holding-svc/get-close-prices*]
                                                           true
                                                           {:fn-get-ctx common/get-context}))
                  :get-holding-positions        (holding-svc/get-holding-positions-fn
                                                 #(holding-repo/get-holding-positions db %)
                                                 fn-repo-get-acc-by-aid
-                                                [holding-svc/get-close-prices<
-                                                 holding-svc/get-fx-rates<]
+                                                [holding-svc/get-fx-rates*
+                                                 holding-svc/get-close-prices*]
                                                 common/get-context)
                  :broadcast-holdings-positions (as-> db d
                                                  (partial holding-repo/get-holdings-positions d)
                                                  (partial holding-svc/get-holdings-positions d
+                                                          fn-repo-get-acc-by-uid
                                                           fn-repo-get-acc-by-aid
-                                                          [holding-svc/get-close-prices<
-                                                           holding-svc/get-fx-rates<]
+                                                          [holding-svc/get-fx-rates*
+                                                           holding-svc/get-close-prices*]
                                                           false)
                                                  (partial holding-svc/broadcast-holdings-positions d))}}
      :model
@@ -153,8 +146,8 @@
 
 (defmethod ig/init-key ::handlers
   [_ {:keys [aggregates]}]
-  (pprint/pprint {::aggregates aggregates})
-  (handlers aggregates))
+  (clojure.pprint/pprint {::aggregates aggregates})
+  (mutils/handlers aggregates))
 
 (defmethod ig/init-key ::broadcasters
   [_ {:keys [aggregates]}]
@@ -171,33 +164,49 @@
 (defmethod ig/halt-key! ::server [_ _]
   (server/stop!))
 
-(defmethod ig/init-key ::instrumentation [_ {:keys [nss]}]
+(defmethod ig/init-key ::module-services
+  [_ {:keys [nss]}]
+  (clojure.pprint/pprint "MODULE SERVICES!!!")
+  (let [ns-syms (map #(symbol %) nss)]
+    (doseq [ns-sym ns-syms]
+      (clojure.pprint/pprint ["INIT MODULE-SVC" ns-sym])
+      (require ns-sym)))
+  (msg-processing/send-msg {:msg/type  :module-service/switch
+                            :msg/value :module-service.state/start}))
+
+(defmethod ig/halt-key! ::module-services
+  [_ _]
+  (msg-processing/send-msg {:msg/type  :module-service/switch
+                            :msg/value :module-service.state/stop}))
+
+#_(defmethod ig/init-key ::instrumentation [_ {:keys [nss]}]
   #_(doall
    (for [n nss]
      (malli.instr/collect! {:ns (the-ns n)})))
   #_(malli.instr/instrument!))
 
-(defmethod ig/halt-key! ::instrumentation [_ _]
+#_(defmethod ig/halt-key! ::instrumentation [_ _]
   (malli.instr/unstrument!))
 
 (def sys-def
-  {::db              {:fn-authorize auth/authorize
-                      :fn-get-ctx   common/get-context}
-   ::account-svc     {:db (ig/ref ::db)}
-   ::aggregates      {:db (ig/ref ::db)}
-   ::handlers        {:aggregates (ig/ref ::aggregates)}
-   ::broadcasters    {:aggregates (ig/ref ::aggregates)}
-   ::server          {:handlers     (ig/ref ::handlers)
-                      :aggregates   (ig/ref ::aggregates)
-                      :port         5000
-                      :broadcasters (ig/ref ::broadcasters)}
-   ::instrumentation {:nss [] #_['reason-alpha.data.model
-                            'reason-alpha.data.repositories.account-repository
-                            'reason-alpha.data.repositories.holding-repository
-                            'reason-alpha.data.repositories.trade-pattern-repository
-                            'reason-alpha.infrastructure.auth
-                            'reason-alpha.model.common
-                            'reason-alpha.services.holding-service]}})
+  {::module-services     {:nss ["reason-alpha.integration.market-data.system"]}
+   ::db                  {:fn-authorize auth/authorize
+                          :fn-get-ctx   common/get-context}
+   ::account-svc         {:db (ig/ref ::db)}
+   ::aggregates          {:db (ig/ref ::db)}
+   ::handlers            {:aggregates (ig/ref ::aggregates)}
+   ::broadcasters        {:aggregates (ig/ref ::aggregates)}
+   ::server              {:handlers     (ig/ref ::handlers)
+                          :aggregates   (ig/ref ::aggregates)
+                          :port         5000
+                          :broadcasters (ig/ref ::broadcasters)}
+   #_#_::instrumentation {:nss ['reason-alpha.data.model
+                                'reason-alpha.data.repositories.account-repository
+                                'reason-alpha.data.repositories.holding-repository
+                                'reason-alpha.data.repositories.trade-pattern-repository
+                                'reason-alpha.infrastructure.auth
+                                'reason-alpha.model.common
+                                'reason-alpha.services.holding-service]}})
 
 (def *system
   (atom nil))
@@ -207,10 +216,3 @@
 
 (defn stop-system! []
   (ig/halt! @*system))
-
-(comment
-  @*system
-
-  (let [db (get-in @*system [:reason-alpha.model/db])]
-    (holding-repo/get-holdings-positions db {:account-id #uuid "017f87dc-59d1-7beb-9e1d-7a2a354e5a49"}))
-  )

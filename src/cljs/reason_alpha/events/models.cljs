@@ -16,7 +16,7 @@
                                       medn/read-string
                                       m/form)
          db                       (assoc-in db data/models (merge models registry))]
-    db)))
+     db)))
 
 (rf/reg-fx
  :model.query/getn-fx

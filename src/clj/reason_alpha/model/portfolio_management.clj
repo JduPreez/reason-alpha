@@ -426,7 +426,9 @@
                                     #_else
                                     (-> sub-positions first :stop-loss-acc-currency)))
         position                (assoc position
-                                       :open-price                      overall-open-price
+                                       ;; `overall-open-price` can't be used yet, because we 1st need to be able
+                                       ;; to convert sub-position values to the currency of the parent holding position
+                                       :open-price                      nil
                                        :open-total                      nil
                                        :open-total-acc-currency         overall-open-total
                                        :profit-loss-amount-acc-currency overall-pl-acc-currency

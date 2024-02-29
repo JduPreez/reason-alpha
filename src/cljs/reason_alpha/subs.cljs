@@ -2,7 +2,7 @@
   (:require [cljs-time.core :as t]
             [re-frame.core :as rf]
             [reason-alpha.data :as data]
-            [reason-alpha.model.validation :as validation]
+            [reason-alpha.model.validation :as v]
             [reason-alpha.utils :as utils]
             [reagent.core :as reagent]))
 
@@ -36,7 +36,7 @@
     (rf/subscribe [:view.data view])])
  (fn [[schema view-data] [_ _ _ member]]
    (when (and schema view-data)
-     (let [vres (validation/validate schema view-data member)]
+     (let [vres (v/validate schema view-data member)]
        (cond-> {:type :success
                 :result (member view-data)}
          vres (merge vres))))))
@@ -48,4 +48,4 @@
     (rf/subscribe [:view.data view])])
  (fn [[schema view-data] [_ _ _]]
    (when (and schema view-data)
-     (validation/valid? schema view-data))))
+     (v/valid? schema view-data))))
